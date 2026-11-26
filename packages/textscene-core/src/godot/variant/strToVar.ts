@@ -133,7 +133,8 @@ export class Tokens {
       this.startAt = this.at;
       this.startLine = this.lineAt;
       const c = this.char();
-      if (c === '') return { kind: 'eof' };
+      // A NUL ends the stream for `get_token`, as the end of the text does (variant_parser.cpp:182).
+      if (c === '' || c === '\0') return { kind: 'eof' };
       const punctuation = PUNCTUATION[c];
       if (punctuation) return { kind: punctuation } as Token;
       if (c === ';') {
@@ -177,7 +178,7 @@ export class Tokens {
     let lead = 0;
     for (;;) {
       const c = this.char();
-      if (c === '') throw new TokenError('Unterminated string');
+      if (c === '' || c === '\0') throw new TokenError('Unterminated string');
       if (c === '"') break;
       if (c !== '\\') {
         if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
@@ -218,7 +219,7 @@ export class Tokens {
 
   private escaped(): number {
     const next = this.char();
-    if (next === '') throw new TokenError('Unterminated string');
+    if (next === '' || next === '\0') throw new TokenError('Unterminated string');
     if (next !== 'u' && next !== 'U') return ESCAPES[next] ?? next.codePointAt(0)!;
     let code = 0;
     for (let i = 0; i < (next === 'U' ? 6 : 4); i++) {

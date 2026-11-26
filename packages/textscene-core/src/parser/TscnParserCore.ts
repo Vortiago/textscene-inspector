@@ -238,7 +238,7 @@ export class TscnParserCore {
           value,
           line: pendingMultiline.startLine,
           endLine: pendingMultiline.endLine,
-          isMultiline: pendingMultiline.lines.length > 1,
+          isMultiline: pendingMultiline.endLine > pendingMultiline.startLine,
           stored: resolved,
         });
       }
@@ -252,7 +252,7 @@ export class TscnParserCore {
       for (const { start, end, line } of fields) {
         // A field is one value, so one that opens with a quote is a string and holds no read.
         if (content[start] !== '"') {
-          const text = content.slice(start, end);
+          const text = withoutComments(content.slice(start, end));
           addFileValue({ text, line, place, isOpeningTag, skippedNewlines: escapedNewlinesIn(text) });
         }
       }
@@ -321,7 +321,7 @@ export class TscnParserCore {
         continue;
       }
 
-      const indent = line.search(/\S/);
+      const indent = godotIndent(line);
       const opensTag = line[indent] === '[';
       if (opensTag) {
         const tag = readTag(content, lineStarts[i]! + column + indent, godotLine);
@@ -354,7 +354,11 @@ export class TscnParserCore {
           continue;
         }
         // An unclosed heading draws nothing, and the lines its tag read are no section's body.
-        if (tag) i = Math.max(i, lineAndColumnOf(lineStarts, tag.stop, i).line - 1);
+        if (tag) {
+          const stopLine = lineAndColumnOf(lineStarts, tag.stop, i).line;
+          // The stop line belongs to the refused tag unless it opens the next one.
+          i = Math.max(i, lines[stopLine]![godotIndent(lines[stopLine]!)] === '[' ? stopLine - 1 : stopLine);
+        }
         continue;
       }
       const property = parseProperty(line);
@@ -454,6 +458,27 @@ export class TscnParserCore {
 function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
   const next = lineStarts[at + 1];
   return next !== undefined && isEscapedNewline(content, next - 1);
+}
+
+/** The first character `get_token` reads, which skips only codes up to 32, not every JavaScript space. */
+function godotIndent(line: string): number {
+  let at = 0;
+  while (at < line.length && line.charCodeAt(at) <= 32) at++;
+  return at;
+}
+
+/** A field over several lines without the `;` comments the tag reader skips, so no read sits in one. */
+function withoutComments(text: string): string {
+  if (!text.includes(';')) return text;
+  let state = INITIAL_SCAN_STATE;
+  return text
+    .split('\n')
+    .map((part) => {
+      const code = stripLineComment(part, state.inString);
+      state = scanValueChunk(code, state);
+      return code;
+    })
+    .join('\n');
 }
 
 /** True when `line` starts with a bare key and its `=`, not a value such as `"x=y"` that holds one. */

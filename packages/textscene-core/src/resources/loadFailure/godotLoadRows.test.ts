@@ -2526,6 +2526,39 @@ Vector2(5, 5)
     stop: null,
     tree: 'Root(5.0, 5.0)',
   },
+  {
+    row: 196,
+    reads: 'a line that a no-break space indents opens no heading, as get_token skips only codes up to 32',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\u00a0[node name="A" type="Node2D" parent="."]\n',
+    failing: [],
+    stop: null,
+    tree: 'Root',
+  },
+  {
+    row: 197,
+    reads: 'a NUL inside a heading string is an unterminated string',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="A\u0000" type="Node2D" parent="."]\n',
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row197.tscn:5]',
+  },
+  {
+    row: 198,
+    reads: 'a read inside a comment of a heading field is no read',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[connection signal="ready" from="." to="." method="f" binds=[1, ; Resource("res://missing_c.tres")\n2]]\n',
+    failing: [],
+    stop: null,
+  },
+  {
+    row: 199,
+    reads: 'a backslash in a comment of a heading field escapes no newline',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[connection signal="ready" from="." to="." method="f" binds=[1, ; x\\\n2, Resource("res://missing_r.tres")]]\n',
+    failing: [{ path: 'res://missing_r.tres', kind: 'node Resource', line: 6 }],
+    stop: null,
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */

@@ -106,6 +106,15 @@ describe('Tokens', () => {
     expect(lineOfSecondToken('"x\ny" b')).toBe(2);
   });
 
+  it('reads a NUL as the end of the stream', () => {
+    expect(new Tokens('\0a').next()).toEqual({ kind: 'eof' });
+  });
+
+  it('refuses a string a NUL cuts, as Godot does', () => {
+    expect(new Tokens('"a\0b"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
+    expect(new Tokens('"a\\\0b"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
+  });
+
   it('is not at the end before a read finds it', () => {
     const tokens = new Tokens('a');
     expect(tokens.isEof).toBe(false);

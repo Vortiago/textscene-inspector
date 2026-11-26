@@ -49,12 +49,12 @@ function readerAfter(previous: string | null): TagReader {
   return previous === 'node' ? 'node body' : 'section';
 }
 
-/** A tracker to feed each heading in file order. A file whose first heading is no header is never judged. */
+/** A tracker to feed each heading in file order. A first heading other than a header is never misplaced. */
 export function headingOrder(): {
   read(type: string, line: number): void;
   /** The type of the last heading read, null before the first. */
   previous(): string | null;
-  /** Records a heading `parse_tag` refuses, where the loader reads no further. */
+  /** Records a heading `parse_tag` refuses, where the loader reads no further, the first heading included. */
   refuse(unparsed: Omit<UnparsedHeading, 'readBy'>): void;
   /** The first heading the loader stops at. */
   stop(): HeadingStop | null;

@@ -57,6 +57,7 @@ describe('LanguageDocument', () => {
   it('spans a value that starts on the line after its key', () => {
     const text = ['[node name="Root" type="Node2D"]', 'position =', '', 'Vector2(1, 2)', ''].join('\n');
     const property = new LanguageDocument(text).propertyAt(2)?.property;
+    expect(property?.isMultiline).toBe(true);
     expect(property?.startLine).toBe(2);
     expect(property?.endLine).toBe(4);
   });
