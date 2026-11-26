@@ -56,4 +56,4 @@ still draws every list, as `dungeon-zoomed-in-pan` budgets. Reading the inputs c
 the light meshes and their uniforms each frame, on the CPU.
 
 A new kind of input to the pass needs a line in `lightPassInputs.ts`. The golden
-`light2d-writes-after-load` writes eight inputs after load, and fails when the pass misses one.
+`pointlight2d-writes-after-load` writes eight inputs after load, and fails when the pass misses one.

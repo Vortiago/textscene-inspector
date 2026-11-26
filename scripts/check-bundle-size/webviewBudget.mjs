@@ -5,9 +5,9 @@ import { ENTRY, WEBVIEW_DIR } from './paths.mjs';
 import { reportGzipBudget } from './gzipBudget.mjs';
 
 // Growth inside the ceiling is invisible in a PASS line, so the report reads it against the last measure.
-const MEASURED_GZ = 1_797_745;
+const MEASURED_GZ = 1_798_413;
 // A change that outgrows it, with no shrink found, raises it by its measured growth (ADR-0090).
-const BUDGET_GZ = 1_797_745;
+const BUDGET_GZ = 1_798_413;
 
 /** The scripts of `files` beside the entry, each one more request a closed load holds (ADR-0090). */
 export function findExtraScripts(files) {

@@ -8,8 +8,8 @@ export const LIGHTING_2D_SCENES = [
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn' },
   // The light pass keeps its buffers while its inputs hold, so each write after load must reach them.
   {
-    name: 'light2d-writes-after-load',
-    file: 'unit-light2d-writes-after-load.tscn',
+    name: 'pointlight2d-writes-after-load',
+    file: 'unit-pointlight2d-writes-after-load.tscn',
     hostCalls: [
       { path: 'Lamp', property: 'energy', text: '1.2' },
       { path: 'Lamp', property: 'color', text: 'Color(1, 0.8, 0.5, 1)' },
