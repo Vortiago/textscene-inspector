@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
+import { MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
 import { lightReachesItem, type LightCullKey } from './lightCullKey.js';
 import { rect2Intersects, type Rect2 } from '../../godot/math/rect2.js';
 import { perObject } from '../../utils/perObject.js';
@@ -54,9 +54,6 @@ export interface ItemPlacement {
   readonly takenLights: readonly number[] | null;
 }
 
-/** The positional lights an item takes, `renderer_canvas_render_rd.cpp:2380`. */
-export const MAX_POSITIONAL_LIGHTS_PER_ITEM = MAX_LIGHTS_PER_ITEM - 1;
-
 /** The ordinals of the lights `rankOf` ranks, in list order: rank, then ordinal. */
 function listOrder(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
@@ -96,36 +93,25 @@ export function positionalCandidates(
   });
 }
 
-/**
- * Godot's per-item loop (`renderer_canvas_render_rd.cpp:2366-2385`) takes the first 15 of an item's
- * `positionalCandidates` whose rect meets the item's. A light that misses adds nothing at the
- * item's pixels, so the list keeps it and drops only the lights that meet the item past the 15th:
- * items then share lists. Null while none drops, for the placement's own list. A light with no
- * rect in `lightRects` draws nothing, so it meets no item.
- */
+/** An item's positional lights: the classic pass's list, and the list a template draw takes. */
+export interface ItemPositionalLights {
+  /** The candidates less those meeting the item past the 15th, so items share lists. Null if none drops. */
+  readonly positional: number[] | null;
+  /** The first 15 candidates that meet the item, as Godot's loop takes them. */
+  readonly godot: number[];
+}
+
+/** Godot's per-item loop (`renderer_canvas_render_rd.cpp:2366-2385`): a light with no rect meets no item. */
 export function itemPositionalLights(
   candidates: readonly number[],
   itemRect: Rect2,
   lightRects: ReadonlyMap<number, Rect2>
-): number[] | null {
+): ItemPositionalLights {
   const meeting = candidates.filter((ordinal) => meetsItem(ordinal, itemRect, lightRects));
-  if (meeting.length <= MAX_POSITIONAL_LIGHTS_PER_ITEM) return null;
+  const godot = meeting.slice(0, MAX_POSITIONAL_LIGHTS_PER_ITEM);
+  if (meeting.length === godot.length) return { positional: null, godot };
   const dropped = new Set(meeting.slice(MAX_POSITIONAL_LIGHTS_PER_ITEM));
-  return candidates.filter((ordinal) => !dropped.has(ordinal));
-}
-
-/** The first 15 of `candidates` whose rect meets the item's: the lights Godot's per-item loop takes. */
-export function meetingLights(
-  candidates: readonly number[],
-  itemRect: Rect2,
-  lightRects: ReadonlyMap<number, Rect2>
-): number[] {
-  const meeting: number[] = [];
-  for (const ordinal of candidates) {
-    if (!meetsItem(ordinal, itemRect, lightRects)) continue;
-    if (meeting.push(ordinal) === MAX_POSITIONAL_LIGHTS_PER_ITEM) break;
-  }
-  return meeting;
+  return { positional: candidates.filter((ordinal) => !dropped.has(ordinal)), godot };
 }
 
 function meetsItem(ordinal: number, itemRect: Rect2, lightRects: ReadonlyMap<number, Rect2>): boolean {

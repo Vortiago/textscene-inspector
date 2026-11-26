@@ -7,12 +7,11 @@
 import * as THREE from 'three';
 import { computeWorldBoundingBox } from '../bounds.js';
 import { MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering.js';
+import { MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
 import { reachesCanvasLayer } from './lightCullKey.js';
 import {
   directionalListOrder,
   itemPositionalLights,
-  meetingLights,
-  MAX_POSITIONAL_LIGHTS_PER_ITEM,
   positionalListOrder,
   placementId,
   positionalCandidates,
@@ -33,7 +32,7 @@ export interface CappedItem {
   /** Hands the item its whole light list (`ItemPlacement.takenLights`), or null for its placement's. */
   take(takenLights: readonly number[] | null): void;
   /** Hands a template item the first 15 positional lights that meet its rect, or null while all fit. */
-  takeGodotLights?(godotLights: readonly number[] | null): void;
+  takeGodotLights(godotLights: readonly number[] | null): void;
 }
 
 interface ItemLightCap {
@@ -211,8 +210,9 @@ class FrameBudget {
     const dropsLight = taken !== candidates || dropsDirectional;
     if (!dropsLight && candidates.length <= MAX_POSITIONAL_LIGHTS_PER_ITEM) return null;
     const itemRect = worldRect(item.geometry.current);
-    const godotLights = meetingLights(taken, itemRect, this.rects);
-    const positional = itemPositionalLights(taken, itemRect, this.rects) ?? (dropsLight ? taken : null);
+    const lists = itemPositionalLights(taken, itemRect, this.rects);
+    const godotLights = lists.godot;
+    const positional = lists.positional ?? (dropsLight ? taken : null);
     if (!positional) return { list: null, godotLights, itemRect };
     const list = positional === taken ? this.wholeList(taken, directional) : [...positional, ...directional];
     return { list, godotLights, itemRect };
@@ -282,7 +282,7 @@ export function capItemLights({ lights, items, passMeshes, viewport, windows }: 
 
 function handGodotLights(item: CappedItem, godotLights: readonly number[] | null): void {
   const handed = handedGodotLights(item);
-  if (!item.takeGodotLights || sameLights(godotLights, handed.lights)) return;
+  if (sameLights(godotLights, handed.lights)) return;
   handed.lights = godotLights;
   item.takeGodotLights(godotLights);
 }

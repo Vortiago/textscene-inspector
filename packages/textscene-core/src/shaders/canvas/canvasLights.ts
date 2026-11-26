@@ -1,4 +1,4 @@
-import { MAX_LIGHTS_PER_ITEM, MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering.js';
+import { MAX_LIGHTS_PER_RENDER, MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
 import type { Rgba } from '../../godot/math/math.js';
 import {
   multiplyTransform2D,
@@ -7,7 +7,7 @@ import {
   type Transform2DColumns,
 } from '../../godot/math/transform2d.js';
 import { normalizedVector2, type Vector2 } from '../../godot/math/vector.js';
-import type { Rect2 } from '../../godot/math/rect2.js';
+import { ZERO_RECT, type Rect2 } from '../../godot/math/rect2.js';
 import type { NodeFrame } from 'three/webgpu';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasDraw } from './transpileCanvas.js';
@@ -64,7 +64,16 @@ const LIGHT_FLAGS_BLEND_SHIFT = 16;
 const LIGHT_FLAGS_FILTER_SHIFT = 22;
 
 const ZERO_TRANSFORM: Transform2DColumns = Object.freeze({ a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0 });
-const NO_ATLAS_RECT: Rect2 = Object.freeze({ x: 0, y: 0, w: 0, h: 0 });
+
+/** An unlit row, for a declared light whose row is not registered yet: its index still holds. */
+export const DARK_LIGHT_ROW: CanvasLightRow = Object.freeze({
+  textureMatrix: ZERO_TRANSFORM,
+  color: { r: 0, g: 0, b: 0, a: 0 },
+  flags: 0,
+  height: 0,
+  position: { x: 0, y: 0 },
+  atlasRect: ZERO_RECT,
+});
 
 /** Shadows stay on the classic pass, so a row never sets `LIGHT_FLAGS_HAS_SHADOW`. */
 function lightFlags({ blendMode, shadowFilter }: Light2DValues): number {
@@ -117,7 +126,7 @@ export function directionalLightRow(light: DirectionalLightPlacement): CanvasLig
     flags: lightFlags(light),
     height: light.height,
     position: { x: -axis.x, y: -axis.y },
-    atlasRect: NO_ATLAS_RECT,
+    atlasRect: ZERO_RECT,
   };
 }
 
@@ -162,9 +171,6 @@ export function lightArrayWords(rows: readonly CanvasLightRow[]): Uint32Array {
   return words;
 }
 
-/** The positional lights an item takes (`renderer_canvas_render_rd.cpp:2380`). */
-export const MAX_POSITIONAL_LIGHTS = MAX_LIGHTS_PER_ITEM - 1;
-
 /** An item's `lights` and the light count of its `flags` (`renderer_canvas_render_rd.cpp:2366-2386`). */
 export interface ItemLightBits {
   /** The count in bits 0 to 3 (`INSTANCE_FLAGS_LIGHT_COUNT_SHIFT`). */
@@ -180,8 +186,10 @@ export const NO_ITEM_LIGHTS: ItemLightBits = Object.freeze({
 
 /** The bits of an item that takes the lights at `indices` of `light_array`, in order. */
 export function itemLightBits(indices: readonly number[]): ItemLightBits {
-  if (indices.length > MAX_POSITIONAL_LIGHTS)
-    throw new Error(`expected at most ${MAX_POSITIONAL_LIGHTS} lights on an item, got ${indices.length}`);
+  if (indices.length > MAX_POSITIONAL_LIGHTS_PER_ITEM)
+    throw new Error(
+      `expected at most ${MAX_POSITIONAL_LIGHTS_PER_ITEM} lights on an item, got ${indices.length}`
+    );
   if (indices.length === 0) return NO_ITEM_LIGHTS;
   const lights: [number, number, number, number] = [0, 0, 0, 0];
   indices.forEach((index, count) => {

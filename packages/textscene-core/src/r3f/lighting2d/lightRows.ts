@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { mutableTransform2D } from '../../godot/math/transform2d.js';
+import { ZERO_RECT } from '../../godot/math/rect2.js';
 import {
   directionalLightRow,
   pointLightRow,
@@ -8,8 +9,7 @@ import {
   type Light2DValues,
 } from '../../shaders/canvas/canvasLights.js';
 import { decalAtlasRect, holdDecalTexture, releaseDecalTexture } from '../../nodes/3d/decal/decalAtlas.js';
-import type { CanvasLightView } from '../canvasShader/canvasFrameLights.js';
-import { onScreenInto } from '../canvasShader/canvasFrameLights.js';
+import { onScreenInto, type CanvasLightView } from '../canvasShader/canvasFrameLights.js';
 import { canvasTransformInto } from '../node2dTransform.js';
 import type { DirectionalLightTerm, LightTerm, PointLightTerm } from './CanvasLight2D.js';
 import type { CanvasLightDeclaration } from './itemLightList.js';
@@ -30,8 +30,6 @@ export interface CanvasLightRows {
 const onScreen = mutableTransform2D();
 const global = mutableTransform2D();
 
-const NO_ATLAS_RECT = { x: 0, y: 0, w: 0, h: 0 };
-
 function valuesOf({ color, energy, blendMode, height, shadow }: LightTerm): Light2DValues {
   return { color, energy, blendMode, height, shadowFilter: shadow.filter };
 }
@@ -47,7 +45,7 @@ function pointRow(origin: THREE.Object3D, term: PointLightTerm, view: CanvasLigh
     textureSize: { width: image?.width ?? 1, height: image?.height ?? 1 },
     textureScale: term.textureScale,
     textureOffset: term.offset,
-    atlasRect: rect ? { x: rect.x, y: rect.y, w: rect.width, h: rect.height } : NO_ATLAS_RECT,
+    atlasRect: rect ? { x: rect.x, y: rect.y, w: rect.width, h: rect.height } : ZERO_RECT,
   });
 }
 

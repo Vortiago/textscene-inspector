@@ -1,9 +1,5 @@
-import { MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering.js';
-import {
-  itemLightBits,
-  MAX_POSITIONAL_LIGHTS,
-  type ItemLightBits,
-} from '../../shaders/canvas/canvasLights.js';
+import { MAX_LIGHTS_PER_RENDER, MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
+import { itemLightBits, type ItemLightBits } from '../../shaders/canvas/canvasLights.js';
 import { perObject } from '../../utils/perObject.js';
 import { lightReachesItem, reachesCanvasLayer } from './lightCullKey.js';
 import {
@@ -17,6 +13,8 @@ import {
 /** The lights a canvas layer's render lists, each at its index of `light_array`. */
 export interface LayerLightOrder {
   readonly ordinals: readonly number[];
+  /** Each listed light's index of `light_array`, by ordinal. */
+  readonly indexOf: ReadonlyMap<number, number>;
   /** The directional lights, which come first: `canvas_data.directional_light_count`. */
   readonly directionalCount: number;
 }
@@ -39,8 +37,10 @@ export function layerLightOrder(
   const onLayer = (ordinal: number) => reachesCanvasLayer(lights.get(ordinal)!.reach, layer);
   const directional = orders.directional.filter(onLayer).slice(0, MAX_LIGHTS_PER_RENDER);
   const positional = orders.positional.filter(onLayer);
+  const ordinals = [...directional, ...positional].slice(0, MAX_LIGHTS_PER_RENDER);
   order = {
-    ordinals: [...directional, ...positional].slice(0, MAX_LIGHTS_PER_RENDER),
+    ordinals,
+    indexOf: new Map(ordinals.map((ordinal, index) => [ordinal, index])),
     directionalCount: directional.length,
   };
   orders.byLayer.set(layer, order);
@@ -57,10 +57,10 @@ export function itemTemplateLights(
   const taken = godotLights ?? positionalCandidates(lights, ordersOf(lights).positional, placement);
   const indices: number[] = [];
   for (const ordinal of taken) {
-    const index = order.ordinals.indexOf(ordinal);
-    if (index >= order.directionalCount) indices.push(index);
+    const index = order.indexOf.get(ordinal);
+    if (index !== undefined && index >= order.directionalCount) indices.push(index);
   }
-  return itemLightBits(indices.slice(0, MAX_POSITIONAL_LIGHTS));
+  return itemLightBits(indices.slice(0, MAX_POSITIONAL_LIGHTS_PER_ITEM));
 }
 
 /** Whether a light that reaches `placement` casts a shadow on it (`canvas.glsl:747, 807`). */

@@ -180,12 +180,14 @@ describe('itemPositionalLights', () => {
 
   it('drops the candidates that meet the item past the 15th', () => {
     const candidates = ordinals(CAP + 3);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates))).toEqual(ordinals(CAP));
+    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates)).positional).toEqual(
+      ordinals(CAP)
+    );
   });
 
   it('keeps the candidates in their order', () => {
     const candidates = [...ordinals(CAP + 1)].reverse();
-    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates))).toEqual(
+    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates)).positional).toEqual(
       candidates.slice(0, CAP)
     );
   });
@@ -195,28 +197,35 @@ describe('itemPositionalLights', () => {
     const candidates = ordinals(CAP + 2);
     const rects = rectsOver(candidates);
     rects.set(0, PAST_ITEM);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toEqual(ordinals(CAP + 1));
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).positional).toEqual(ordinals(CAP + 1));
   });
 
   it('is null while the lights that meet the item fit, so it shares the placement list', () => {
     const candidates = ordinals(CAP + 5);
     const rects = rectsOver(candidates.slice(0, CAP), OVER_ITEM);
     for (const ordinal of candidates.slice(CAP)) rects.set(ordinal, PAST_ITEM);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).positional).toBeNull();
   });
 
   it('counts a rect that only touches the item as a miss', () => {
     const candidates = ordinals(CAP + 1);
     const rects = rectsOver(candidates);
     rects.set(0, { x: 10, y: 0, w: 10, h: 10 });
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).positional).toBeNull();
   });
 
   it('counts a light with no rect as a miss, as it draws nothing', () => {
     const candidates = ordinals(CAP + 1);
     const rects = rectsOver(candidates);
     rects.delete(0);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).positional).toBeNull();
+  });
+
+  it("hands a template draw the first 15 lights that meet the item, as Godot's loop takes them", () => {
+    const candidates = ordinals(CAP + 2);
+    const rects = rectsOver(candidates);
+    rects.set(0, PAST_ITEM);
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).godot).toEqual(ordinals(CAP + 1).slice(1));
   });
 });
 

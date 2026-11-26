@@ -172,8 +172,10 @@ class IntegerVectorUniform {
     return vector.fromArray(this.lanes.map((lane) => lane.value as number));
   }
 
-  set value(vector: { toArray(): number[] }) {
-    vector.toArray().forEach((lane, index) => (this.lanes[index]!.value = lane));
+  // Indexed, not `toArray`: `writeBindings` sets it before each draw.
+  set value(vector: { getComponent(index: number): number }) {
+    for (let index = 0; index < this.lanes.length; index++)
+      this.lanes[index]!.value = vector.getComponent(index);
   }
 }
 

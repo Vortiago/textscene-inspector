@@ -41,7 +41,7 @@ describe('layerLightOrder', () => {
       [2, positional(2)],
       [3, directional(0)],
     ]);
-    expect(layerLightOrder(lights, 0)).toEqual({ ordinals: [3, 1, 2, 0], directionalCount: 2 });
+    expect(layerLightOrder(lights, 0)).toMatchObject({ ordinals: [3, 1, 2, 0], directionalCount: 2 });
   });
 
   it('leaves out a light whose layer window misses the canvas layer', () => {
@@ -50,8 +50,8 @@ describe('layerLightOrder', () => {
       [1, positional(1, { reach: { ...DEFAULT_LIGHT_CULL_KEY, layerMin: 1, layerMax: 3 } })],
       [2, directional(0, { reach: directionalLightCullKey(2, 2) })],
     ]);
-    expect(layerLightOrder(lights, 2)).toEqual({ ordinals: [2, 1], directionalCount: 1 });
-    expect(layerLightOrder(lights, 0)).toEqual({ ordinals: [0], directionalCount: 0 });
+    expect(layerLightOrder(lights, 2)).toMatchObject({ ordinals: [2, 1], directionalCount: 1 });
+    expect(layerLightOrder(lights, 0)).toMatchObject({ ordinals: [0], directionalCount: 0 });
   });
 
   it("keeps the first 256 lights of a layer, Godot's budget for a render", () => {

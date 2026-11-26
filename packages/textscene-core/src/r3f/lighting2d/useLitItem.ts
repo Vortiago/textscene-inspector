@@ -27,8 +27,7 @@ import {
 } from './normalMappedLighting.js';
 import type { ApartLightBuffers, CanvasLightList } from './lightPassContext.js';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture.js';
-import type { ItemLightBits } from '../../shaders/canvas/canvasLights.js';
-import type { CanvasLightRows } from './lightRows.js';
+import type { ItemLighting } from '../canvasShader/canvasShaderDraw.js';
 import { isShadowedByLight, itemTemplateLights } from './templateLights.js';
 
 export type { CanvasItemLightingProps };
@@ -153,10 +152,7 @@ export interface LitItem {
 }
 
 /** A lit item as Godot's canvas template draws it (`renderer_canvas_render_rd.cpp:2366-2391`). */
-export interface ItemTemplateLighting {
-  readonly rows: CanvasLightRows;
-  readonly layer: number;
-  readonly bits: ItemLightBits;
+export interface ItemTemplateLighting extends ItemLighting {
   /** Whether the item draws with `use_lighting`: a light reaches it. */
   readonly isLit: boolean;
   /** Whether a light shadows it, which the template draws only once 2D shadows are ported. */

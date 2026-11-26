@@ -236,8 +236,9 @@ export function canvasShaderDraw(
     },
     setLighting: (lighting) => {
       for (const { draw } of variants.values()) lightDraw(gl, draw, lighting);
+      const wasLit = isLit;
       isLit = lighting !== null;
-      bindSource();
+      if (isLit !== wasLit) bindSource();
       lights = lighting?.bits ?? NO_ITEM_LIGHTS;
       writeColors();
     },

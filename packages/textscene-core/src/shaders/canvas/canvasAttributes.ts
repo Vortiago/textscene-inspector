@@ -207,7 +207,8 @@ function setParams(
   params.worldOfs.set(ox!, oy!);
   params.modulation.set(r, g, b, a);
   params.flags = lights.flags;
-  params.lights.set(...lights.lights);
+  const [first, second, third, fourth] = lights.lights;
+  params.lights.set(first, second, third, fourth);
   // `tex_info->flags | flags` (`renderer_canvas_render_rd.h:557`).
   params.batchFlags = (textureFlags & ~INSTANCING_BITS) | (instances ? instancingFlags(instances) : 0);
 }
