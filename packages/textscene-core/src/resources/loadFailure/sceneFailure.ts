@@ -47,7 +47,7 @@ function godotFailureLine(scenePath: string, { path, kind, uid, line }: FailingF
     return `${scenePath}:${line} - Parse Error: [ext_resource] referenced non-existent resource at: ${path}.`;
   if (kind === 'section Resource')
     return `${scenePath}:${line} - Parse Error: Can't load resource at path: ${path} with uid: ${uid}.`;
-  if (kind === 'opening Resource') return `${scenePath}:${line} - Parse Error: Unexpected end of file.`;
+  if (kind === 'opening Resource') return unexpectedEndOfFile(`${scenePath}:${line}`);
   return `Parse Error: Parse error. [Resource file ${scenePath}:${line}]`;
 }
 
@@ -57,7 +57,7 @@ function godotStopLine(scenePath: string, stop: ParseStop): string {
   if ('reason' in stop) return `${at} - Parse Error: ${misplacedError(stop)}.`;
   if ('readBy' in stop) return unparsedLine(at, stop);
   const { read, place, isOpeningTag } = stop;
-  if (isOpeningTag) return `${at} - Parse Error: Unexpected end of file.`;
+  if (isOpeningTag) return unexpectedEndOfFile(at);
   if (place !== 'section') {
     const error = read.kind === 'SubResource' ? 'Invalid parameter.' : 'Parse error.';
     return `Parse Error: ${error} [Resource file ${at}]`;
@@ -77,9 +77,14 @@ const ERROR_NAMES: Readonly<Record<ParseErrorCode, string>> = {
   ERR_FILE_CORRUPT: 'File corrupt',
 };
 
+/** The line the opening tag's reader prints for any fault in it (resource_format_text.cpp:1185). */
+function unexpectedEndOfFile(at: string): string {
+  return `${at} - Parse Error: Unexpected end of file.`;
+}
+
 /** Each caller of `parse_tag` prints its own line (resource_format_text.cpp:40, :291, :1133, :1185). */
 function unparsedLine(at: string, { error, code, readBy }: UnparsedHeading): string {
-  if (readBy === 'opening tag') return `${at} - Parse Error: Unexpected end of file.`;
+  if (readBy === 'opening tag') return unexpectedEndOfFile(at);
   if (readBy === 'node body') return `Parse Error: ${ERROR_NAMES[code]}. [Resource file ${at}]`;
   return `${at} - Parse Error: ${error}.`;
 }

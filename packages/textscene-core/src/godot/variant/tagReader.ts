@@ -24,10 +24,16 @@ export interface RefusedTag {
   readonly fields: readonly TagField[];
 }
 
+/** The name and fields read so far, kept so a refusal can report them. */
+interface TagDraft {
+  name?: string;
+  fields: TagField[];
+}
+
 /** `parse_tag` from `start`, on line `line` (variant_parser.cpp:1874). Null at the end, as `ERR_FILE_EOF`. */
 export function readTag(text: string, start: number, line: number): ReadTag | RefusedTag | null {
   const tokens = new Tokens(text, start, line);
-  const tag: { name?: string; fields: TagField[] } = { fields: [] };
+  const tag: TagDraft = { fields: [] };
   try {
     const open = tokens.next();
     if (open.kind === 'eof') return null;
@@ -41,7 +47,7 @@ export function readTag(text: string, start: number, line: number): ReadTag | Re
 }
 
 /** `_parse_tag` after its `[`, writing the name and each field into `tag` as it reads them. */
-function readBody(tokens: Tokens, tag: { name?: string; fields: TagField[] }): void {
+function readBody(tokens: Tokens, tag: TagDraft): void {
   const values = new ValueReader(tokens, {});
   const first = tokens.next();
   if (first.kind !== 'identifier') throw new ParseError('Expected identifier (tag name)');

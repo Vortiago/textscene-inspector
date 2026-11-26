@@ -238,9 +238,9 @@ export class TscnParserCore {
       const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
       const place = type === 'connection' ? 'binds' : previous === 'node' ? 'node' : 'section';
       for (const { start, end, line } of fields) {
-        const text = content.slice(start, end);
         // A field is one value, so one that opens with a quote is a string and holds no read.
-        if (text[0] !== '"') addFileValue({ text, line, place, isOpeningTag });
+        if (content[start] !== '"')
+          addFileValue({ text: content.slice(start, end), line, place, isOpeningTag });
       }
     };
 
@@ -294,8 +294,9 @@ export class TscnParserCore {
         continue;
       }
 
-      const indent = line.length - line.trimStart().length;
-      if (line[indent] === '[') {
+      const indent = line.search(/\S/);
+      const opensTag = line[indent] === '[';
+      if (opensTag) {
         const tag = readTag(content, lineStarts[i]! + column + indent, lineNumber);
         if (tag && !('error' in tag)) {
           const end = lineAndColumnOf(lineStarts, tag.end, i);
@@ -306,10 +307,10 @@ export class TscnParserCore {
             end.line + 1,
             tag.fields
           );
-          if (!isEmpty(lines[end.line]!.slice(end.column))) {
-            resumeColumn = end.column;
-            i = end.line - 1;
-          } else i = end.line;
+          // Text after the `]` is the section's body, so the next pass reads the rest of that line.
+          const hasRest = !isEmpty(lines[end.line]!.slice(end.column));
+          resumeColumn = hasRest ? end.column : 0;
+          i = hasRest ? end.line - 1 : end.line;
           continue;
         }
         if (tag) {
@@ -331,7 +332,7 @@ export class TscnParserCore {
       }
       const property = parseProperty(line);
       if (!property) {
-        if (line[indent] !== '[') {
+        if (!opensTag) {
           observer?.onError?.({
             message: `Invalid property format: "${line.trim()}"`,
             line: lineNumber,
