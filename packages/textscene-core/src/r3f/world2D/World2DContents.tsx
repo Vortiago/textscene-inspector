@@ -4,7 +4,7 @@
  * it inside its `<Canvas>`.
  */
 
-import { lazy, useLayoutEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { lazy, useLayoutEffect, useState, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../parser/types.js';
@@ -14,7 +14,9 @@ import { SceneResourcesProvider } from '../SceneResourcesContext.js';
 import { NodeDispatcher } from '../NodeDispatcher.js';
 import { CanvasWorldScope } from '../environment/WorldEnvironmentScope.js';
 import { world2DCameraPose } from './world2DCamera.js';
-import type { StageViewSource } from './stageView.js';
+import type { StageView } from './stageView.js';
+import type { ExternalStore } from '../../utils/externalStore.js';
+import { useExternalStoreValue } from '../hooks/createExternalStore.js';
 import { CanvasLighting2DProvider } from '../lighting2d/CanvasLighting2D.js';
 import { useCanvasModulateColor } from '../canvasModulate.js';
 import { ControlRasterLayer } from '../../nodes/viewport/subviewport/ControlRasterLayer.js';
@@ -39,19 +41,19 @@ export interface World2DCanvasProps {
   externalResources: readonly TscnExternalResource[];
   editableInstances?: readonly string[];
   /** Read outside React state, so a pan moves the camera without a render of the scene tree. */
-  view: StageViewSource;
+  view: ExternalStore<StageView>;
   /** The 2D editor's own parts, which read the Controls the walk solves. */
   children?: ReactNode;
 }
 
 /** Keeps the ortho camera glued to the stage's pan/zoom transform. */
-function CameraRig({ view }: { view: StageViewSource }) {
+function CameraRig({ view }: { view: ExternalStore<StageView> }) {
   const camera = useThree((s) => s.camera) as OrthographicCamera;
   const size = useThree((s) => s.size);
   const {
     pan: { x: panX, y: panY },
     zoom,
-  } = useSyncExternalStore(view.subscribe, view.current);
+  } = useExternalStoreValue(view);
   useLayoutEffect(() => {
     const pose = world2DCameraPose({ x: panX, y: panY }, zoom, size.width, size.height);
     camera.position.set(pose.x, pose.y, 1000);

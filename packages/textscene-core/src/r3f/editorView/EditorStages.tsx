@@ -23,6 +23,9 @@ const Canvas2DStage = lazy(() =>
   import('./Canvas2DStage/Canvas2DStage.js').then((m) => ({ default: m.Canvas2DStage }))
 );
 
+// One array for the stage's life: a new one each render would re-render the memoised world canvas.
+const NO_ENTRIES: readonly never[] = [];
+
 /** The root scene as the editor's 2D view lays it out, over the scene the view reads. */
 export function Editor2DStage({ className }: { className?: string }) {
   const { rootScene, nodes } = useRootScene();
@@ -31,9 +34,9 @@ export function Editor2DStage({ className }: { className?: string }) {
     <StageRoot className={className}>
       <Suspense fallback={null}>
         <Canvas2DStage
-          nodes={nodes ?? rootScene?.nodes ?? []}
-          internalResources={rootScene?.internalResources ?? []}
-          externalResources={rootScene?.externalResources ?? []}
+          nodes={nodes ?? rootScene?.nodes ?? NO_ENTRIES}
+          internalResources={rootScene?.internalResources ?? NO_ENTRIES}
+          externalResources={rootScene?.externalResources ?? NO_ENTRIES}
           editableInstances={rootScene?.editableInstances}
           scenePath={scenePath}
         />

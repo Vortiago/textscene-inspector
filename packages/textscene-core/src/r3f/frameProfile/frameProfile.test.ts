@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
-import { beginStep, countSceneRender, endStep, innermostStep } from './frameProfile';
+import { beginStep, countSceneRender, endStep, innermostStep, startFrameCount } from './frameProfile';
 import type { FrameStats } from './frameStats';
-import { startFrameCount } from './frameProfile';
 import {
   cpuOnlyRenderer,
   profiledRendererMembers,

@@ -15,10 +15,12 @@ vi.mock('@react-three/fiber', async (importOriginal) => ({
 vi.mock('../../viewStatus/CanvasViewReport', () => ({ CanvasViewReport: () => null }));
 vi.mock('../../world2D/World2DContents', async () => {
   const { useSyncExternalStore } = await import('react');
-  type Source = import('../../world2D/stageView').StageViewSource;
+  type Source = import('../../../utils/externalStore').ExternalStore<
+    import('../../world2D/stageView').StageView
+  >;
   function ViewReader({ view }: { view: Source }) {
     viewRenders.count += 1;
-    const { pan, zoom } = useSyncExternalStore(view.subscribe, view.current);
+    const { pan, zoom } = useSyncExternalStore(view.subscribe, view.get);
     return <div data-testid="world-view" data-pan={`${pan.x},${pan.y}`} data-zoom={zoom} />;
   }
   return {

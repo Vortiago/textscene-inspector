@@ -20,13 +20,13 @@ vi.mock('../NodeDispatcher.js', async () => {
 });
 
 import { World2DContents } from './World2DContents';
-import { StageViewStore } from './stageView';
+import { createExternalStore } from '../../utils/externalStore';
 
 const noScene = {
   nodes: [],
   internalResources: [],
   externalResources: [],
-  view: new StageViewStore({ pan: { x: 0, y: 0 }, zoom: 1 }),
+  view: createExternalStore({ pan: { x: 0, y: 0 }, zoom: 1 }),
 };
 
 describe('the root canvas frame', () => {

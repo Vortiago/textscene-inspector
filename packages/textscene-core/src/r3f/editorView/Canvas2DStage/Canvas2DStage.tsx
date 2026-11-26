@@ -35,7 +35,9 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { createEditRects, EditRectsProvider } from '../../editRect/editRects.js';
 import { useViewFocus } from '../viewFocus.js';
 import { FocusSelection2D, Stage2DProvider, type Stage2D } from './FocusSelection2D.js';
-import { StageViewStore, type StageView } from '../../world2D/stageView.js';
+import type { StageView } from '../../world2D/stageView.js';
+import { createExternalStore } from '../../../utils/externalStore.js';
+import { useExternalStoreValue } from '../../hooks/createExternalStore.js';
 import type { Rect2 } from '../../../godot/math/rect2.js';
 import styles from './Canvas2DStage.module.css';
 
@@ -105,24 +107,22 @@ export function Canvas2DStage({
   }, []);
   useViewFocus(stageElement);
   const [editRects] = useState(createEditRects);
-  const [view, setView] = useState<StageView>(OPENING_VIEW);
-  const { pan, zoom } = view;
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
   // project around it. A root Control resolves its anchors to this rect.
   const { width: canvasWidth, height: canvasHeight } = useProjectSettings().viewportSize;
 
-  // Ahead of React state, which goes stale after a wheel burst's first event. The world camera follows it.
-  const [viewStore] = useState(() => new StageViewStore(OPENING_VIEW));
+  // Outside React state, which goes stale after a wheel burst's first event. The memoised world follows it.
+  const [viewStore] = useState(() => createExternalStore(OPENING_VIEW));
+  const { pan, zoom } = useExternalStoreValue(viewStore);
 
   const applyView = useCallback(
     (next: StageView) => {
-      const current = viewStore.current();
+      const current = viewStore.get();
       // An identical view still re-renders the stage and the Control overlay.
       if (next.zoom === current.zoom && next.pan.x === current.pan.x && next.pan.y === current.pan.y) {
         return;
       }
       viewStore.set(next);
-      setView(next);
     },
     [viewStore]
   );
@@ -183,7 +183,7 @@ export function Canvas2DStage({
     useMemo(
       () => ({
         size: () => stageRef.current?.getBoundingClientRect() ?? { width: 0, height: 0 },
-        view: viewStore.current,
+        view: viewStore.get,
         moveView,
         restoreView: applyView,
         clampZoom,
@@ -210,7 +210,7 @@ export function Canvas2DStage({
       if (notches === 0) return;
       const r = el.getBoundingClientRect();
       moveView(
-        zoomViewAround(viewStore.current(), e.clientX - r.left, e.clientY - r.top, ZOOM_PER_NOTCH ** -notches)
+        zoomViewAround(viewStore.get(), e.clientX - r.left, e.clientY - r.top, ZOOM_PER_NOTCH ** -notches)
       );
     };
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -263,7 +263,7 @@ export function Canvas2DStage({
     }
     if (e.button !== 0) return;
     // The rendered `pan` is one commit behind a wheel or pinch earlier in this frame.
-    const origin = viewStore.current().pan;
+    const origin = viewStore.get().pan;
     pan2dDrag.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -294,7 +294,7 @@ export function Canvas2DStage({
     const centroid = touchCentroid(active);
     const span = touchSpan(active);
     const origin = touchOrigin.current;
-    const view = viewStore.current();
+    const view = viewStore.get();
     // The first move of a gesture only establishes what it started from.
     if (!origin) {
       touchOrigin.current = { centroid, span, startSpan: span, startZoom: view.zoom };
@@ -328,7 +328,7 @@ export function Canvas2DStage({
     if (!d.active) return;
     moveView({
       pan: { x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) },
-      zoom: viewStore.current().zoom,
+      zoom: viewStore.get().zoom,
     });
   };
 
@@ -358,7 +358,7 @@ export function Canvas2DStage({
     const el = stageRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    moveView(zoomViewAround(viewStore.current(), r.width / 2, r.height / 2, factor));
+    moveView(zoomViewAround(viewStore.get(), r.width / 2, r.height / 2, factor));
   }
 
   return (

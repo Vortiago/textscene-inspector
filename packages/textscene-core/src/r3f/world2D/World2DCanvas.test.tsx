@@ -8,9 +8,9 @@ import { Canvas, type CanvasProps } from '@react-three/fiber';
 import { World2DCanvas } from './World2DCanvas';
 import { World2DCamera } from './world2DCamera';
 import { PreviewVisibilityProvider } from '../contexts/PreviewVisibilityContext';
-import { StageViewStore } from './stageView';
+import { createExternalStore } from '../../utils/externalStore';
 
-const VIEW = new StageViewStore({ pan: { x: 0, y: 0 }, zoom: 1 });
+const VIEW = createExternalStore({ pan: { x: 0, y: 0 }, zoom: 1 });
 
 vi.mock('@react-three/fiber', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@react-three/fiber')>()),
@@ -40,7 +40,7 @@ describe('World2DCanvas', () => {
         nodes={[]}
         internalResources={[]}
         externalResources={[]}
-        view={new StageViewStore({ pan: { x: 5, y: 0 }, zoom: 2 })}
+        view={createExternalStore({ pan: { x: 5, y: 0 }, zoom: 2 })}
       />
     );
     expect(vi.mocked(Canvas).mock.calls.at(-1)![0].camera).toBe(first);

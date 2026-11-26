@@ -10,7 +10,9 @@ const item = vi.hoisted(() => ({ path: 'Main/Sprite', rect: null as Rect2 | null
 vi.mock('../../world2D/World2DCanvas', async () => {
   const { FocusSelection2D } = await import('./FocusSelection2D');
   const { useSyncExternalStore } = await import('react');
-  type Source = import('../../world2D/stageView').StageViewSource;
+  type Source = import('../../../utils/externalStore').ExternalStore<
+    import('../../world2D/stageView').StageView
+  >;
   const { NodePathProvider } = await import('../../contexts/NodePathContext');
   const { usePublishEditRect } = await import('../../editRect/editRects');
   function Item() {
@@ -19,7 +21,7 @@ vi.mock('../../world2D/World2DCanvas', async () => {
   }
   return {
     World2DCanvas: function World({ view }: { view: Source }) {
-      const { pan, zoom } = useSyncExternalStore(view.subscribe, view.current);
+      const { pan, zoom } = useSyncExternalStore(view.subscribe, view.get);
       return (
         <div data-testid="world" data-pan={`${pan.x},${pan.y}`} data-zoom={zoom}>
           <NodePathProvider path={item.path}>

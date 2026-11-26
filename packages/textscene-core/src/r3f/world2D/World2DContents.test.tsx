@@ -30,7 +30,7 @@ vi.mock('./CanvasFrameRender.js', () => ({
 }));
 
 import { World2DContents } from './World2DContents';
-import { StageViewStore } from './stageView';
+import { createExternalStore } from '../../utils/externalStore';
 import { withProject } from '../testing/ProjectFixture';
 import { TiledUploadQueue } from '../tiledUpload/TiledUploadQueue';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
@@ -40,7 +40,7 @@ const baseProps = {
   nodes: [],
   internalResources: [],
   externalResources: [],
-  view: new StageViewStore({ pan: { x: 0, y: 0 }, zoom: 1 }),
+  view: createExternalStore({ pan: { x: 0, y: 0 }, zoom: 1 }),
 };
 
 describe('World2DContents native-controls mount seam', () => {
@@ -133,7 +133,7 @@ describe('World2DContents renderer', () => {
 
 describe('World2DContents camera', () => {
   it('moves the camera to each new stage view', async () => {
-    const view = new StageViewStore({ pan: { x: 0, y: 0 }, zoom: 1 });
+    const view = createExternalStore({ pan: { x: 0, y: 0 }, zoom: 1 });
     const { Probe, state } = r3fStateProbe();
     await ReactThreeTestRenderer.create(
       <SelectionProvider>
