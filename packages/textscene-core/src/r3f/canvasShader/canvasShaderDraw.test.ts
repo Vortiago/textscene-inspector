@@ -40,7 +40,9 @@ const RECT_COMMAND: CanvasShaderCommand = {
   modulate: { r: 1, g: 1, b: 1, a: 1 },
 };
 
-function meshCommand(primitive: 'triangles' | 'points' = 'triangles'): CanvasShaderCommand {
+type MeshCommand = Extract<CanvasShaderCommand, { kind: 'mesh' }>;
+
+function meshCommand(primitive: 'triangles' | 'points' = 'triangles'): MeshCommand {
   return {
     kind: 'mesh',
     arrays: {
@@ -211,7 +213,7 @@ describe('canvasShaderDraw', () => {
       { transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0]), color: null, customData: null },
       { transform: new Float32Array([1, 0, 0, 9, 0, 1, 0, 0]), color: null, customData: null },
     ]);
-    const { object } = drawOf([{ ...mesh, kind: 'multimesh', instances } as CanvasShaderCommand]);
+    const { object } = drawOf([{ ...mesh, kind: 'multimesh', instances }]);
     const [batch] = object.children as THREE.Mesh[];
 
     expect([
