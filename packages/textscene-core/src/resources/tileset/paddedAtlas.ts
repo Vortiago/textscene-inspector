@@ -85,7 +85,7 @@ export function topDownPaddedAtlasPixels(
 }
 
 /** `tile_set.cpp:5622`, frame 0 only: the model holds no animation frames. */
-export function paddedAtlasPixels(pixels: ImagePixels, source: PaddedAtlasLayout): ImagePixels {
+function paddedAtlasPixels(pixels: ImagePixels, source: PaddedAtlasLayout): ImagePixels {
   const cell = paddedCellSize(source);
   const { width, height } = paddedAtlasSize(source, pixels);
   const padded: ImagePixels = { width, height, data: new Uint8Array(width * height * BYTES_PER_TEXEL) };

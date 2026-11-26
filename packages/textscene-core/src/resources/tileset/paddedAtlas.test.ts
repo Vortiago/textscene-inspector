@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ImagePixels } from '../formats/image/imagePixels';
 import { reversedRows } from '../../utils/reversedRows';
-import { atlasGridSize, topDownPaddedAtlasPixels, paddedAtlasPixels, paddedTileRegion } from './paddedAtlas';
+import { atlasGridSize, paddedTileRegion, topDownPaddedAtlasPixels } from './paddedAtlas';
 import type { AtlasSourceModel } from './types';
 
 const source = {
@@ -78,11 +78,11 @@ function atlasOf(tiles: Array<[string, { x: number; y: number }]>, regionSize: n
   };
 }
 
-describe('paddedAtlasPixels', () => {
+describe('topDownPaddedAtlasPixels of a top-down image', () => {
   const twoByOne = redImage(4, [1, 2, 5, 6, 3, 4, 7, 8]);
 
   it('repeats a tile edge texels on each side and corner', () => {
-    const padded = paddedAtlasPixels(twoByOne, atlasOf([['0:0', { x: 1, y: 1 }]], 2));
+    const padded = topDownPaddedAtlasPixels(twoByOne, false, atlasOf([['0:0', { x: 1, y: 1 }]], 2));
     expect(redRows(padded).map((row) => row.slice(0, 4))).toEqual([
       [1, 1, 2, 2],
       [1, 1, 2, 2],
@@ -92,12 +92,12 @@ describe('paddedAtlasPixels', () => {
   });
 
   it('sizes the image to the grid of padded cells', () => {
-    const padded = paddedAtlasPixels(twoByOne, atlasOf([['0:0', { x: 1, y: 1 }]], 2));
+    const padded = topDownPaddedAtlasPixels(twoByOne, false, atlasOf([['0:0', { x: 1, y: 1 }]], 2));
     expect([padded.width, padded.height]).toEqual([8, 4]);
   });
 
   it('places the second tile in its own cell', () => {
-    const padded = paddedAtlasPixels(twoByOne, atlasOf([['1:0', { x: 1, y: 1 }]], 2));
+    const padded = topDownPaddedAtlasPixels(twoByOne, false, atlasOf([['1:0', { x: 1, y: 1 }]], 2));
     expect(redRows(padded).map((row) => row.slice(4))).toEqual([
       [5, 5, 6, 6],
       [5, 5, 6, 6],
@@ -107,7 +107,7 @@ describe('paddedAtlasPixels', () => {
   });
 
   it('leaves the cell of a missing tile zero', () => {
-    const padded = paddedAtlasPixels(twoByOne, atlasOf([['0:0', { x: 1, y: 1 }]], 2));
+    const padded = topDownPaddedAtlasPixels(twoByOne, false, atlasOf([['0:0', { x: 1, y: 1 }]], 2));
     expect(redRows(padded).map((row) => row.slice(4))).toEqual([
       [0, 0, 0, 0],
       [0, 0, 0, 0],
@@ -117,13 +117,13 @@ describe('paddedAtlasPixels', () => {
   });
 
   it('starts every texel zero', () => {
-    const padded = paddedAtlasPixels(twoByOne, atlasOf([], 2));
+    const padded = topDownPaddedAtlasPixels(twoByOne, false, atlasOf([], 2));
     expect(padded.data.every((byte) => byte === 0)).toBe(true);
   });
 
   it('clips a region that runs past the source image as blit_rect does', () => {
     const narrow = redImage(3, [1, 2, 3, 4, 5, 6]);
-    const padded = paddedAtlasPixels(narrow, atlasOf([['0:0', { x: 2, y: 1 }]], 2));
+    const padded = topDownPaddedAtlasPixels(narrow, false, atlasOf([['0:0', { x: 2, y: 1 }]], 2));
     expect(redRows(padded)).toEqual([
       [1, 1, 2, 3],
       [1, 1, 2, 3],
@@ -133,7 +133,7 @@ describe('paddedAtlasPixels', () => {
   });
 });
 
-describe('topDownPaddedAtlasPixels', () => {
+describe('topDownPaddedAtlasPixels of a bottom-up image', () => {
   const twoByOne = redImage(4, [1, 2, 5, 6, 3, 4, 7, 8]);
   const layout = atlasOf([['0:0', { x: 1, y: 1 }]], 2);
 
