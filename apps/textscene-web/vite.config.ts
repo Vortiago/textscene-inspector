@@ -8,8 +8,7 @@ import { WORKSPACE_RENDERER_ALIAS } from '../../scripts/workspaceRenderer.mjs';
 const isPublicSite = isPublicSiteBuild();
 
 export default defineConfig({
-  // The job worker, as one script string the page starts from a blob URL (ADR-0042).
-  // The public edition ships no chunk graph: only `pnpm check:bundle-size:web` reads it.
+  // The job worker as a blob URL script (ADR-0042), and the chunk graph `check:bundle-size:web` reads.
   plugins: [react(), textureWorkerSource(), ...(isPublicSite ? [] : [chunkGraph()])],
   resolve: { alias: WORKSPACE_RENDERER_ALIAS },
   // Relative asset URLs: GitHub Pages serves the public edition under /<repo>/, not at
@@ -32,11 +31,7 @@ export default defineConfig({
     // more than double the size of dist/.
     sourcemap: !isPublicSite,
     rollupOptions: {
-      // three.js gets its own cacheable chunk, as it changes only on a dependency bump. Only its
-      // build, since an addon in the chunk loads with the first paint, even one a dynamic import()
-      // reaches. Only three, which is self-contained ESM: a split react ecosystem forms a CJS-interop init
-      // cycle across chunks that crashes the app on boot ("Cannot set properties of undefined
-      // (setting 'Activity')").
+      // Only the three.js build: an addon here loads with the first paint, and a split react crashes on boot.
       output: {
         // The function form classifies only modules in the graph. The object form treats ids as
         // entry points, which fails under pnpm's strict layout and can pull in unused modules.

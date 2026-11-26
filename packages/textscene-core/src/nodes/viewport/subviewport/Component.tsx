@@ -171,8 +171,7 @@ export function ViewportMount({
     <Node node={node}>
       <EnclosingViewportProvider path={path}>
         <PixelSnapProvider snaps={properties.snap_2d_transforms_to_pixel}>
-          {/* The pass first: a container both workspaces mount registers its path twice, and the
-            last mount wins, which must be the world's (`SelectionContext.registerNodeObject`). */}
+          {/* The pass first: of two mounts at one path the last wins, so the world's must be last. */}
           {rasterizes ? (
             <OffscreenViewportPass
               node={node}

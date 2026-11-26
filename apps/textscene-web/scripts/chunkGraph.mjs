@@ -2,8 +2,7 @@
 export const CHUNK_GRAPH_FILE = '.vite/chunk-graph.json';
 
 /**
- * The chunk graph `pnpm check:bundle-size:web` reads: each chunk's static imports and modules, and
- * every module some module reaches through a dynamic `import()`.
+ * Each chunk's static imports and modules, and every target of a dynamic `import()`.
  *
  * @param {Record<string, import('rollup').OutputChunk | import('rollup').OutputAsset>} bundle
  * @param {(id: string) => import('rollup').ModuleInfo | null} moduleInfo

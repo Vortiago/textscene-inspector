@@ -11,8 +11,7 @@ const MEASURED_GZ = 1_324_801;
 // A change that outgrows it, with no shrink found, raises it by its measured growth (ADR-0090).
 const BUDGET_GZ = 1_324_801;
 
-// Modules no dynamic import() reaches itself that must stay out of a first paint: the tables
-// behind the area light's LTC textures and the noise jobs' `fastnoise-lite`.
+// The LTC tables and `fastnoise-lite` load on demand, though no dynamic import() names them.
 const LAZY_LEAF_RE = /\/ltcTable\.generated\.js$|\/node_modules\/fastnoise-lite\//;
 
 /** The chunks a first paint loads: each entry and its static imports. */

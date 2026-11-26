@@ -61,7 +61,7 @@ export function useViewportSelection(): UseViewportSelectionResult {
         pressRef.current = null;
         pick(path);
       },
-      // A click on nothing is a region select of no size, which clears (`node_3d_editor_plugin.cpp:998-1003`).
+      // A click on nothing is a region select of no size, which clears (node_3d_editor_plugin.cpp:998-1003).
       onCanvasClick(e) {
         const press = pressRef.current;
         pressRef.current = null;
