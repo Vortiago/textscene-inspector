@@ -20,7 +20,7 @@ export interface ViewSettled {
 export interface ViewStatus {
   /** The settled value, or null while the view is pending. */
   settled: ViewSettled | null;
-  /** The loads this view waits for, and the page's textures and fonts, which views on one page share. */
+  /** The loads, textures and fonts this view waits for. Another view's work is not counted. */
   pending: PendingSceneWork;
   /** The last window of frame numbers, or null before the first: its `timings` need `show.performance`. */
   frame: FrameStats | null;

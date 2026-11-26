@@ -4,11 +4,12 @@
  */
 
 import { useEffect } from 'react';
-import { usePendingLoads } from './ResourceLoaderContext';
+import { useViewWork } from './ResourceLoaderContext';
+import type { ViewWork } from './viewWork';
 
-/** Counts the caller as one pending load of its view while `isPending` holds. */
-export function usePendingWhile(isPending: boolean): void {
-  const pending = usePendingLoads();
+/** Counts the caller as one piece of its view's `kind` of work while `isPending` holds. */
+export function usePendingWhile(isPending: boolean, kind: keyof ViewWork = 'resources'): void {
+  const pending = useViewWork()?.[kind];
   useEffect(() => {
     if (!pending || !isPending) return undefined;
     return pending.begin();

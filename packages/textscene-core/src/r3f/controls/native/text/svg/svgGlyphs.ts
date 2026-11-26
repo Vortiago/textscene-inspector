@@ -15,7 +15,6 @@ import {
   pixFloor,
   pixRound,
 } from '../fontMetrics';
-import { fontWork } from '../settledChannel';
 import { glyphMetricsReader } from '../sfntGlyphMetrics';
 import { parseSfntScalars, readHeadIsPpemRounded, type SfntFile } from '../sfntTables';
 import type { StrikeSize } from '../strike/strikeSize';
@@ -46,6 +45,30 @@ export interface SvgGlyphs {
   readonly version: number;
 }
 
+const NO_DRAWS: ReadonlySet<Promise<void>> = new Set();
+
+/** Written only by `glyphDrawsOf`, for the length of its read: the draws in flight that it read. */
+let drawsRead: Set<Promise<void>> | null = null;
+
+/** Runs `read`, and answers with the glyph draws in flight that it read: the draws its picture waits on. */
+export function glyphDrawsOf<T>(read: () => T): { value: T; draws: ReadonlySet<Promise<void>> } {
+  const outer = drawsRead;
+  const draws = new Set<Promise<void>>();
+  drawsRead = draws;
+  try {
+    return { value: read(), draws: draws.size > 0 ? draws : NO_DRAWS };
+  } finally {
+    drawsRead = outer;
+    for (const draw of draws) outer?.add(draw);
+  }
+}
+
+/** The bitmaps of one size, and the draws in flight of the glyphs still blank. */
+interface SizeDraws {
+  drawn: Map<number, ColourBitmap | null | undefined>;
+  inFlight: Map<number, Promise<void>>;
+}
+
 /**
  * The SVG glyphs of this many sizes of one face are kept: more than a scene draws at once, as a size
  * that drops out draws again on its next read, blank until it lands.
@@ -67,7 +90,7 @@ export async function svgGlyphsOf(
   const inflate: GzipInflate = (stream) => gunzipSync(stream);
   const pictureOf = glyphPictureReader(table, inflate, svgGlyphDocumentReader(), scalars.unitsPerEm, drawer);
   const advanceOf = glyphMetricsReader(sfnt);
-  const drawnAt = recentlyRead<string, Map<number, ColourBitmap | null | undefined>>(MAX_KEPT_SIZES);
+  const drawsAt = recentlyRead<string, SizeDraws>(MAX_KEPT_SIZES);
   const landings = batchedLandings();
   /** Written only by the draws as they land. Cleared when full, which lets each key repaint once more. */
   const landedKeys = new Set<string>();
@@ -87,18 +110,25 @@ export async function svgGlyphsOf(
     sizeAt: scalableSizeReader(sfnt, scalars.unitsPerEm, scalars.ascent, -scalars.descent),
     readerAt: (size) => {
       const key = sizeKey(size);
-      const drawn = drawnAt(key, () => new Map());
+      const { drawn, inFlight } = drawsAt(key, () => ({ drawn: new Map(), inFlight: new Map() }));
       return (glyph) => {
-        if (drawn.has(glyph)) return drawn.get(glyph);
+        if (drawn.has(glyph)) {
+          const bitmap = drawn.get(glyph);
+          if (drawsRead && bitmap === null) {
+            const draw = inFlight.get(glyph);
+            if (draw) drawsRead.add(draw);
+          }
+          return bitmap;
+        }
         const picture = pictureOf(glyph);
         drawn.set(glyph, picture === undefined ? undefined : null);
         if (!picture) return picture;
         const horiAdvance26_6 = ftMulFix(advanceOf(glyph, 0).horizontal.advance, size.xScale);
-        // Counted as font work, so a capture waits for the glyph to land.
-        const endWork = fontWork.begin();
-        void drawnBitmap(picture, size, horiAdvance26_6)
+        const draw = drawnBitmap(picture, size, horiAdvance26_6)
           .then((bitmap) => land(key, drawn, glyph, bitmap))
-          .finally(endWork);
+          .finally(() => inFlight.delete(glyph));
+        inFlight.set(glyph, draw);
+        drawsRead?.add(draw);
         return null;
       };
     },

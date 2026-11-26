@@ -1,15 +1,11 @@
-/**
- * The font loads of one preview and the readers they wake: the second stage of a font, after its
- * file arrives on the font bus (ADR-0059). Each `ResourceLoader` holds one, so a font that settles
- * in one preview wakes no reader of another.
- */
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { createExternalStore } from '../../../../utils/externalStore';
+import { createWorkCount, type WorkCount } from '../../../../resources/workCount';
 import { perObject } from '../../../../utils/perObject';
 import type { FontMetrics } from './fontMetrics';
 import type { RegisteredCanvasFontMetrics } from './runtimeFontMetrics';
 import { loadSceneFontMetrics } from './sceneFontLoad';
-import { createSettledPeek } from './settledChannel';
+import { createSettledPeek } from './settledPeek';
 import type { SfntOutlines } from './sfntOutlines';
 
 /** A face whose bytes FreeType cannot open: Godot draws no text in it (`text_server_adv.cpp:1466-1476`). */
@@ -45,6 +41,8 @@ export type ComposedFont = SettledFont & { readonly status: 'settled' };
 export type AwaitedFonts = ReadonlyMap<object, number>;
 
 export interface SettledFonts {
+  /** The loads of this preview in flight, from the peek that starts one until it settles. */
+  readonly work: WorkCount;
   /** The face of a font file's bytes, as {@link LoadedFace} answers, and undefined while it loads. */
   peekFace(bytes: ArrayBuffer, nodePath: string): LoadedFace | undefined;
   /** The outlines of a load of a font's bytes, keyed by `loadKey`: undefined while `read` runs. */
@@ -86,6 +84,8 @@ export interface SettledFonts {
 /** A load on the page, shared by every preview that peeks its key: the first peek starts it. */
 interface PageLoad<T> {
   promise?: Promise<T>;
+  /** Set once the load resolves, so a preview that peeks the key later answers at once. */
+  settled?: { readonly value: T };
 }
 
 /**
@@ -101,7 +101,10 @@ const pageFaceLoads = perObject((_loadFace: FaceLoader) =>
 
 /** The promise of `shared`, which `load` starts on the first call. */
 function pageLoad<T>(shared: PageLoad<T>, load: () => Promise<T>): Promise<T> {
-  return (shared.promise ??= load());
+  return (shared.promise ??= load().then((value) => {
+    shared.settled = { value };
+    return value;
+  }));
 }
 
 /** `answer`, after it marks the load `key` as awaited through `fonts` while the load is in flight. */
@@ -116,7 +119,10 @@ function awaitedIfPending<T>(fonts: SettledFonts, key: object, answer: T | undef
  *
  * @canonical The font loads of one preview, and the readers they wake
  */
-export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics): SettledFonts {
+export function createSettledFonts(
+  loadFace: FaceLoader = loadSceneFontMetrics,
+  work: WorkCount = createWorkCount()
+): SettledFonts {
   const settles = createExternalStore(0);
   const fontSettles = perObject((_font: object) => createExternalStore(0));
   /**
@@ -152,16 +158,24 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
   }
 
   const notePending = (load: object) => void pendingRead?.add(load);
-  const peekFaceOf = createSettledPeek<ArrayBuffer, LoadedFace>(notePending, wake);
-  const peekOutlinesOf = createSettledPeek<object, SfntOutlines | null>(notePending, wake);
+  const peekFaceOf = createSettledPeek<ArrayBuffer, LoadedFace>(work, notePending, wake);
+  const peekOutlinesOf = createSettledPeek<object, SfntOutlines | null>(work, notePending, wake);
   const fontVersion = (font: object) => fontSettles(font).get();
   /** Written only by `keep`, once for each font whose chain has settled. */
   const composed = new WeakMap<FontResource, ComposedFont>();
 
   const fonts: SettledFonts = {
-    peekFace: (bytes, nodePath) =>
-      peekFaceOf(bytes, () => pageLoad(pageFaceLoads(loadFace)(bytes), () => loadFace(bytes, nodePath))),
-    peekOutlines: (loadKey, read) => peekOutlinesOf(loadKey, () => pageLoad(pageOutlineLoads(loadKey), read)),
+    work,
+    peekFace(bytes, nodePath) {
+      const shared = pageFaceLoads(loadFace)(bytes);
+      if (shared.settled) return shared.settled.value;
+      return peekFaceOf(bytes, () => pageLoad(shared, () => loadFace(bytes, nodePath)));
+    },
+    peekOutlines(loadKey, read) {
+      const shared = pageOutlineLoads(loadKey);
+      if (shared.settled) return shared.settled.value;
+      return peekOutlinesOf(loadKey, () => pageLoad(shared, read));
+    },
     keep(font, compose) {
       const kept = composed.get(font);
       if (kept) return kept;

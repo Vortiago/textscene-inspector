@@ -30,13 +30,15 @@ said. A font in a WOFF or WOFF2 file had metrics for the 2D text and no outlines
   (`freeTypeOpen.ts`). A face it cannot open draws no text, and no fallback after it draws either.
   An empty file has no face to open: its characters fall to the chain, then to hex-code boxes.
 - A font loads in two stages. The font bus carries its file. The settled fonts of the preview
-  (`settledFonts.ts`, held by the preview's `ResourceLoader`) then load the face of each font of
+  (`settledFonts.ts`, held by the preview's `ResourceLoaderProvider`) then load the face of each font of
   its **Fallback chain**. A reader gets one answer, a **Settled font**: none, loading, or the face
   with its chain. A component reads it through `useSettledFont`, which re-renders it when that font
   settles. A settle wakes the readers of the fonts it settles, and of no other font. The Control
   solve tree hands each node a view of the settled fonts that records each font its solve and its
   painters await, and rebuilds when one of those settles. A mesh build reads the `settledFonts`
-  its context carries, and re-renders on a settle of its preview only.
+  its context carries, and re-renders on a settle of its preview only. Two previews on one
+  `ResourceLoader` share each font's decode, but each keeps its own settled fonts and counts its
+  own loads in flight.
 - A host gives the face loader through `ResourceLoaderOptions.loadFace`. Without one, the loader
   registers a `FontFace`. A test gives a loader that answers a stand-in face, or one that stays pending.
 

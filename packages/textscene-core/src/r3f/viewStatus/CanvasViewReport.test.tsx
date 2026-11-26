@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useFrame, type RootState } from '@react-three/fiber';
-import { act, type ReactNode } from 'react';
+import { act, useState, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import { TscnSceneContents } from '../SceneContents';
 import { TscnSceneProvider } from '../TscnSceneProvider';
@@ -13,8 +13,11 @@ import { r3fStateProbe } from '../testing/R3FStateProbe';
 import { CanvasViewReport } from './CanvasViewReport';
 import { ViewStatusProvider } from './ViewStatusContext';
 import { createViewStatusStore, type ViewStatusStore } from './viewStatus';
-import { fontWork } from '../controls/native/text/settledChannel';
 import { usePendingWhile } from '../../resources/usePendingWhile';
+import { createPendingProbe } from '../../resources/testing/pendingProbe';
+import { useProceduralTexture } from '../../resources/useProceduralTexture';
+import type { ProceduralTextureLookup } from '../../resources/textures/proceduralBuilds';
+import { useSettledFonts } from '../controls/native/text/useSettledFont';
 import '../nodes';
 
 /** Enough frames for work that a frame advances, such as a texture upload, to finish. */
@@ -62,6 +65,27 @@ function PendingLoad(): null {
   return null;
 }
 
+const NEVER = new Promise<never>(() => {});
+
+/** A procedural texture whose build never lands. */
+const UNBUILT_TEXTURE: ProceduralTextureLookup = {
+  status: 'pending',
+  key: 'unbuilt',
+  start: () => ({ settled: NEVER, release: () => {} }),
+};
+
+function PendingTextureBuild(): null {
+  useProceduralTexture(UNBUILT_TEXTURE);
+  return null;
+}
+
+/** Keyed by the component, so each mount of it peeks its own load. */
+function PendingFontLoad(): null {
+  const [loadKey] = useState(() => ({}));
+  useSettledFonts().peekOutlines(loadKey, () => NEVER);
+  return null;
+}
+
 /** `extra` renders inside the view, beside its contents. All views read `files`, so they share one loader. */
 async function mountEditor(source: string, extra?: ReactNode) {
   const status = createViewStatusStore();
@@ -69,12 +93,14 @@ async function mountEditor(source: string, extra?: ReactNode) {
   const gl: { current: THREE.WebGLRenderer | null } = { current: null };
   const { frames, Counter } = frameCounter();
   const { Probe, state } = r3fStateProbe();
+  const view = createPendingProbe();
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
       <ViewStatusProvider store={status}>
         <CaptureRenderer captured={gl} />
         <Counter />
         <Probe />
+        <view.Probe />
         <TscnSceneContents />
         <CanvasViewReport />
         {extra}
@@ -84,7 +110,7 @@ async function mountEditor(source: string, extra?: ReactNode) {
   await settleLoads();
   const settle = () => drawFrames(state, FRAMES_TO_SETTLE);
   const drawFrame = () => drawFrames(state, 1);
-  return { renderer, scene, status, gl: gl.current!, frames, settle, drawFrame };
+  return { renderer, scene, status, gl: gl.current!, frames, settle, drawFrame, work: view.work };
 }
 
 /** Whole frames, the render and its after effects included, which `advanceFrames` does not run. */
@@ -129,10 +155,10 @@ describe('the settled signal of an editor view', () => {
   });
 
   it('is pending once a file starts to load, before any frame draws', async () => {
-    const { status, settle } = await mountEditor(NO_CAMERA);
+    const { status, settle, work } = await mountEditor(NO_CAMERA);
     await settle();
 
-    const endFontWork = fontWork.begin();
+    const endFontWork = work().fonts.begin();
     onTestFinished(endFontWork);
     await act(async () => {});
 
@@ -140,9 +166,9 @@ describe('the settled signal of an editor view', () => {
   });
 
   it('settles only on a frame drawn after the load ends', async () => {
-    const { status, settle } = await mountEditor(NO_CAMERA);
+    const { status, settle, work } = await mountEditor(NO_CAMERA);
     await settle();
-    const endFontWork = fontWork.begin();
+    const endFontWork = work().fonts.begin();
     onTestFinished(endFontWork);
     await act(async () => {});
 
@@ -162,6 +188,28 @@ describe('the settled signal of an editor view', () => {
 
     expect(loading.status.status().pending.resources).toBe(1);
     expect(quiet.status.status().pending.resources).toBe(0);
+    expect(quiet.status.settled()).not.toBeNull();
+  });
+
+  it('stays settled while another view on the same provider builds a texture', async () => {
+    const quiet = await mountEditor(NO_CAMERA);
+    const building = await mountEditor(NO_CAMERA, <PendingTextureBuild />);
+    await building.settle();
+    await quiet.settle();
+
+    expect(building.status.status().pending.textures).toBe(1);
+    expect(quiet.status.status().pending.textures).toBe(0);
+    expect(quiet.status.settled()).not.toBeNull();
+  });
+
+  it('stays settled while another view on the same provider loads a font', async () => {
+    const quiet = await mountEditor(NO_CAMERA);
+    const loading = await mountEditor(NO_CAMERA, <PendingFontLoad />);
+    await loading.settle();
+    await quiet.settle();
+
+    expect(loading.status.status().pending.fonts).toBe(1);
+    expect(quiet.status.status().pending.fonts).toBe(0);
     expect(quiet.status.settled()).not.toBeNull();
   });
 

@@ -7,7 +7,6 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { windowLoaded } from './fakeFontFace.testkit';
 import { fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledChainFaces, peekSettledSceneFontMetrics } from './sceneFontLoader';
-import { fontWork } from './settledChannel';
 import { createSettledFonts, type SettledFonts } from './settledFonts';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { FACELESS_FONT, fontFaceSpacing, fontHeightSpacingPx } from './sceneFontResolution';
@@ -375,15 +374,15 @@ describe('SettledFonts.subscribe', () => {
   });
 });
 
-describe('fontWork', () => {
+describe('the font work of the settled fonts', () => {
   it('counts a font load from the peek that starts it until it settles, so a capture waits for it', async () => {
     const leaf = fontFile(fontBytes());
 
     peekSceneFontMetrics(fonts, leaf, 'Root/K');
-    expect(fontWork.pending()).toBe(1);
+    expect(fonts.work.pending()).toBe(1);
     await settleLoads();
 
-    expect(fontWork.pending()).toBe(0);
+    expect(fonts.work.pending()).toBe(0);
   });
 
   it('counts one load for two peeks of one font, which share it', async () => {
@@ -391,10 +390,10 @@ describe('fontWork', () => {
 
     peekSceneFontMetrics(fonts, leaf, 'Root/L');
     peekSettledSceneFontMetrics(fonts, leaf, 'Root/M');
-    expect(fontWork.pending()).toBe(1);
+    expect(fonts.work.pending()).toBe(1);
     await settleLoads();
 
-    expect(fontWork.pending()).toBe(0);
+    expect(fonts.work.pending()).toBe(0);
   });
 
   it('counts one load for a font and a copy of it with other fallbacks, which share its bytes', async () => {
@@ -403,10 +402,10 @@ describe('fontWork', () => {
 
     peekSettledSceneFontMetrics(fonts, leaf, 'Root/N');
     peekSettledSceneFontMetrics(fonts, copy, 'Root/O');
-    expect(fontWork.pending()).toBe(1);
+    expect(fonts.work.pending()).toBe(1);
     await settleLoads();
 
-    expect(fontWork.pending()).toBe(0);
+    expect(fonts.work.pending()).toBe(0);
   });
 
   it('ends the work of a load whose settled listener throws, so a capture is not held for good', async () => {
@@ -419,7 +418,7 @@ describe('fontWork', () => {
     try {
       peekSceneFontMetrics(fonts, fontFile(fontBytes()), 'Root/P');
       await settleLoads();
-      expect(fontWork.pending()).toBe(0);
+      expect(fonts.work.pending()).toBe(0);
     } finally {
       off();
       process.off('unhandledRejection', swallow);
@@ -434,7 +433,7 @@ describe('fontWork', () => {
       'Root/O'
     );
 
-    expect(fontWork.pending()).toBe(0);
+    expect(fonts.work.pending()).toBe(0);
   });
 });
 

@@ -14,7 +14,6 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createPendingProbe } from './testing/pendingProbe';
 import { createFakeResourceLoader, withJobRunner } from './testing/createFakeResourceLoader';
 import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
-import { textureWork } from './textures/textureWork';
 import { proceduralTexture2D, proceduralTexture3D } from './textures/resolveProceduralTexture';
 import { texture2DSourceAt } from './textures/texture2d/texture2DSource.testkit';
 import { TEXTURE_3D } from './textures/texture3d/kind';
@@ -226,7 +225,7 @@ async function flush(): Promise<void> {
 function withRunner(runner: JobRunner, strictMode = false) {
   const fake = createFakeResourceLoader();
   const loader = withJobRunner(fake, runner);
-  const { Probe, pending } = createPendingProbe();
+  const { Probe, pending, work } = createPendingProbe();
   const wrapper = ({ children }: { children: ReactNode }) => {
     const provided = (
       <ResourceLoaderProvider loader={loader}>
@@ -236,7 +235,7 @@ function withRunner(runner: JobRunner, strictMode = false) {
     );
     return strictMode ? <StrictMode>{provided}</StrictMode> : provided;
   };
-  return { pending, wrapper };
+  return { pending, wrapper, textures: () => work().textures };
 }
 
 function renderSlots(runner: JobRunner, sceneText: string, strictMode = false) {
@@ -282,7 +281,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
 
   it('keeps the texture work counted until the commit that shows the built texture', async () => {
     const { runner, runs } = fakeJobRunner();
-    const { wrapper } = withRunner(runner);
+    const { wrapper, textures } = withRunner(runner);
     // Marked at commit, in a layout effect: `result.current` updates later, in a passive effect.
     let isShown = false;
     const lookup = lookupOf(NOISE, noiseScene(1));
@@ -298,8 +297,8 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     );
     await flush();
     const countsBeforeShown: number[] = [];
-    const unsubscribe = textureWork.subscribe(() => {
-      if (!isShown) countsBeforeShown.push(textureWork.pending());
+    const unsubscribe = textures().subscribe(() => {
+      if (!isShown) countsBeforeShown.push(textures().pending());
     });
     runs[0]?.complete();
     await flush();
@@ -307,7 +306,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
 
     expect(isShown).toBe(true);
     expect(countsBeforeShown).not.toContain(0);
-    expect(textureWork.pending()).toBe(0);
+    expect(textures().pending()).toBe(0);
   });
 
   it('keeps the old texture through an edit, then swaps and unpins it', async () => {

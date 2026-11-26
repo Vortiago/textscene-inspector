@@ -45,7 +45,7 @@ describe('useAwaitedFontsVersion', () => {
 
     await act(async () => {
       settleLoad(null);
-      await settleFontWork();
+      await settleFontWork(fonts.work);
     });
 
     expect(result.current.version).toBe(1);

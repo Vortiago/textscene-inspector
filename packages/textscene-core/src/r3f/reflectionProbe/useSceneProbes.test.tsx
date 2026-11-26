@@ -6,8 +6,10 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { fontWork } from '../controls/native/text/settledChannel';
-import { textureWork } from '../../resources/textures/textureWork';
+import { ResourceLoader } from '../../resources/ResourceLoader';
+import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { createPendingProbe } from '../../resources/testing/pendingProbe';
+import type { ViewWork } from '../../resources/viewWork';
 import { useSceneProbes } from './useSceneProbes';
 import { ViewportDescriptionProvider } from '../viewportRender/viewportDescriptionContext';
 import { rootViewportDescription } from '../viewportRender/viewportDescription';
@@ -31,8 +33,16 @@ function Holder() {
   return null;
 }
 
-async function pendingSeenInOneFrame(): Promise<number> {
-  const renderer = await ReactThreeTestRenderer.create(<Holder />);
+/** The pending count the probes hear in one frame, after `startWork` starts work in the view. */
+async function pendingSeenInOneFrame(startWork: (work: ViewWork) => void = () => {}): Promise<number> {
+  const { Probe, work } = createPendingProbe();
+  const renderer = await ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={new ResourceLoader()}>
+      <Probe />
+      <Holder />
+    </ResourceLoaderProvider>
+  );
+  startWork(work());
   updates.length = 0;
   await renderer.advanceFrames(1, 16);
   const seen = updates.at(-1);
@@ -51,15 +61,11 @@ describe('useSceneProbes', () => {
   });
 
   it('reports a scene font load as pending, so a probe does not bake the fallback text', async () => {
-    ends.push(fontWork.begin());
-
-    expect(await pendingSeenInOneFrame()).toBe(1);
+    expect(await pendingSeenInOneFrame((work) => ends.push(work.fonts.begin()))).toBe(1);
   });
 
   it('reports a texture build as pending', async () => {
-    ends.push(textureWork.begin());
-
-    expect(await pendingSeenInOneFrame()).toBe(1);
+    expect(await pendingSeenInOneFrame((work) => ends.push(work.textures.begin()))).toBe(1);
   });
 });
 

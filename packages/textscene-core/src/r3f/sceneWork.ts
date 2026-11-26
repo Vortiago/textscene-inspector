@@ -1,6 +1,5 @@
-import type { WorkCount } from '../resources/workCount.js';
-import { textureWork } from '../resources/textures/textureWork.js';
-import { fontWork } from './controls/native/text/settledChannel.js';
+import type { ViewWork } from '../resources/viewWork.js';
+import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 
 export interface PendingSceneWork {
   resources: number;
@@ -10,13 +9,33 @@ export interface PendingSceneWork {
 
 /** Fills `into` when given, so a per-frame caller allocates nothing. */
 export function pendingSceneWork(
-  loads: WorkCount | null,
+  work: ViewWork | null,
   into: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 }
 ): PendingSceneWork {
-  into.resources = loads?.pending() ?? 0;
-  into.textures = textureWork.pending();
-  into.fonts = fontWork.pending();
+  into.resources = work?.resources.pending() ?? 0;
+  into.textures = work?.textures.pending() ?? 0;
+  into.fonts = work?.fonts.pending() ?? 0;
   return into;
+}
+
+/**
+ * Reads the counts in place, so a snapshot that runs on every render allocates nothing.
+ *
+ * @canonical Whether a view has work in flight
+ */
+export function isViewWorking(work: ViewWork | null): boolean {
+  return work !== null && work.resources.pending() + work.textures.pending() + work.fonts.pending() > 0;
+}
+
+/**
+ * A null view subscribes to nothing.
+ *
+ * @canonical Subscribing to every work count of a view
+ */
+export function subscribeSceneWork(work: ViewWork | null, onChange: () => void): () => void {
+  if (!work) return subscribeToNothing();
+  const stops = [work.resources, work.textures, work.fonts].map((count) => count.subscribe(onChange));
+  return () => stops.forEach((stop) => stop());
 }
 
 export function totalPendingWork({ resources, textures, fonts }: PendingSceneWork): number {

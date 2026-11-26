@@ -36,6 +36,7 @@ vi.mock('./src/resources/memoisedImport.js', async (importOriginal) => {
 afterAll(settleLazyImports);
 beforeEach(async () => {
   (await import('./src/r3f/controls/native/text/useSettledFont.js')).resetLoaderlessFonts();
+  (await import('./src/r3f/controls/native/testing/testSettledFonts.js')).resetTestSettledFonts();
 });
 beforeAll(async () => {
   installDetachedPaint((await import('./src/r3f/testing/detachedPaint.js')).DETACHED_PAINT);

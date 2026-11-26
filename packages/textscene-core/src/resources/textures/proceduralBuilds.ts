@@ -15,7 +15,6 @@ import {
   cacheProceduralTexture,
   clearProceduralTextures,
 } from './proceduralTextureCache';
-import { textureWork } from './textureWork';
 
 export type JobRunner = Pick<WorkerJobRunner, 'run'>;
 
@@ -149,7 +148,6 @@ function joinBuild(
 
 function startBuild(key: string, plan: ProceduralBuildPlan, label: string, runner: JobRunner): Build {
   const controller = new AbortController();
-  const endWork = textureWork.begin();
   const settled = runner.run(plan.job, plan.input, controller.signal).then(
     (output) => {
       const texture = plan.wrap(output);
@@ -167,7 +165,6 @@ function startBuild(key: string, plan: ProceduralBuildPlan, label: string, runne
   builds.set(key, build);
   const finish = () => {
     if (builds.get(key) === build) builds.delete(key);
-    endWork();
   };
   settled.then(finish, finish);
   return build;

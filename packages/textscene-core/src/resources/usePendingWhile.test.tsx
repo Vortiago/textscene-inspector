@@ -9,6 +9,11 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createPendingProbe, type PendingProbe } from './testing/pendingProbe';
 import { usePendingWhile } from './usePendingWhile';
 
+function PendingTexture() {
+  usePendingWhile(true, 'textures');
+  return null;
+}
+
 function Pending({ isPending }: { isPending: boolean }) {
   usePendingWhile(isPending);
   return null;
@@ -55,5 +60,17 @@ describe('usePendingWhile', () => {
     render(tree(new ResourceLoader(), probe, false));
 
     expect(probe.pending()).toBe(0);
+  });
+
+  it('counts on the kind of work it names, and leaves the loads alone', () => {
+    const probe = createPendingProbe();
+    render(
+      <ResourceLoaderProvider loader={new ResourceLoader()}>
+        <probe.Probe />
+        <PendingTexture />
+      </ResourceLoaderProvider>
+    );
+
+    expect([probe.work().textures.pending(), probe.pending()]).toEqual([1, 0]);
   });
 });

@@ -51,6 +51,8 @@ import {
 import { useItemLinearColor, useOwnModulate, WHITE_MODULATE } from '../../../canvasItemModulate';
 import { drawsColourGlyphs } from './colour/colourGlyphs';
 import { useSvgGlyphLandings } from './svg/useSvgGlyphLandings';
+import { glyphDrawsOf } from './svg/svgGlyphs';
+import { useGlyphDrawWork } from './svg/useGlyphDrawWork';
 import type { FontMetrics } from './fontMetrics';
 import { useCanvasColorSpace } from '../../../canvasColorSpace';
 import type { SurfaceBlend } from '../../../materials/surfaceBlend';
@@ -501,14 +503,16 @@ export function TextRunMesh({
   // A glyph the browser has not drawn yet paints nothing, so each bitmap that lands repaints the run.
   const svgGlyphLandings = useSvgGlyphLandings(fontMetrics);
 
-  const run = useMemo(
+  const { value: run, draws: awaitedGlyphDraws } = useMemo(
     () =>
-      buildTextRun(
-        layout,
-        fontSizePx,
-        { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint },
-        { strokeWidthPx, glyphDrawer, itemOriginPx: { x: originX, y: phaseY }, penSum, colourGlyphTint },
-        { textureFilter, mipmapped }
+      glyphDrawsOf(() =>
+        buildTextRun(
+          layout,
+          fontSizePx,
+          { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint },
+          { strokeWidthPx, glyphDrawer, itemOriginPx: { x: originX, y: phaseY }, penSum, colourGlyphTint },
+          { textureFilter, mipmapped }
+        )
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
     // object every render must not rebuild the mesh.
@@ -538,6 +542,7 @@ export function TextRunMesh({
       svgGlyphLandings,
     ]
   );
+  useGlyphDrawWork(awaitedGlyphDraws);
   // Apart from the run, so a label that gains or loses an instance material keeps its raster.
   const buildsGlyphQuads = glyphQuads !== undefined;
   const glyphGeometry = useMemo(

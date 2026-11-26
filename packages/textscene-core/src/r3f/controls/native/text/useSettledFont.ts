@@ -5,8 +5,7 @@
  */
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import type { FontResource } from '../../../../resources/fonts/font/types';
-import type { ResourceLoader } from '../../../../resources/ResourceLoader';
-import { useResourceLoader } from '../../../../resources/ResourceLoaderContext';
+import { useViewSettledFonts } from '../../../../resources/ResourceLoaderContext';
 import { subscribeToNothing } from '../../../../utils/subscribeToNothing';
 import { readSettledFont } from './sceneFontLoader';
 import { createSettledFonts, type AwaitedFonts, type SettledFont, type SettledFonts } from './settledFonts';
@@ -22,15 +21,13 @@ export function resetLoaderlessFonts(): void {
   loaderlessFonts = null;
 }
 
-/** The settled fonts of `loader`'s preview, or of a tree with no loader. */
-export function settledFontsOf(loader: ResourceLoader | null): SettledFonts {
-  if (loader) return loader.settledFonts;
+function loaderlessSettledFonts(): SettledFonts {
   return (loaderlessFonts ??= createSettledFonts());
 }
 
-/** The settled fonts of the preview this component renders in. */
-function useSettledFonts(): SettledFonts {
-  return settledFontsOf(useResourceLoader());
+/** The settled fonts of the view this component renders in. */
+export function useSettledFonts(): SettledFonts {
+  return useViewSettledFonts() ?? loaderlessSettledFonts();
 }
 
 /**
