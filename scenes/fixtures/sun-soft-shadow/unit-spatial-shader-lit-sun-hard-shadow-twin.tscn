@@ -1,0 +1,103 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sun_hard_shadow_twin"]
+
+; The soft shadow scene with the first sun's angular distance at 0, so it takes the PCF. The frame
+; budget measures the pair, and the Performance overlay shows the soft shadow's GPU cost between them.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 4)
+
+[sub_resource type="Shader" id="Shader_lit"]
+code = "shader_type spatial;
+
+uniform vec3 albedo = vec3(0.5);
+uniform float sss = 0.0;
+
+void fragment() {
+	ALBEDO = albedo;
+	ROUGHNESS = 1.0;
+	SSS_STRENGTH = sss;
+	SSS_TRANSMITTANCE_COLOR = vec4(1.0, 0.4, 0.2, 1.0);
+	SSS_TRANSMITTANCE_DEPTH = 0.6;
+	SSS_TRANSMITTANCE_BOOST = 0.2;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ground"]
+shader = SubResource("Shader_lit")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wall"]
+shader = SubResource("Shader_lit")
+shader_parameter/albedo = Vector3(0.8, 0.8, 0.8)
+shader_parameter/sss = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_post"]
+size = Vector3(0.1, 1, 0.1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(1.6, 0.8, 0.06)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="SpatialShaderLitSunSoftShadowRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("ShaderMaterial_ground")
+
+[node name="Post1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.25, 0, 0, 0, 1, -1.2, 0.125, -0.6)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, -0.4, 0.25, -0.6)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.0, 0, 0, 0, 1, 0.4, 0.5, -0.6)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.5, 0, 0, 0, 1, 1.2, 0.75, -0.6)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.2, 0, 0, 0, 1, -1.2, 0.6, 0.4)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, -0.4, 0.4, 0.4)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.4, 0, 0, 0, 1, 0.4, 0.2, 0.4)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.15, 0, 0, 0, 1, 1.2, 0.075, 0.4)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Wall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 1.3)
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = SubResource("ShaderMaterial_wall")
+
+[node name="SunSoft" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 2, 4, 2)
+light_energy = 1.2
+shadow_enabled = true
+shadow_blur = 1.0
+directional_shadow_blend_splits = true
+directional_shadow_max_distance = 12.0
+
+[node name="SunBehind" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 0.866025, 0.5, 0, 0.5, -0.866025, 0, 4, -2)
+light_energy = 0.5
+light_color = Color(0.6, 0.8, 1, 1)
+shadow_enabled = true
+shadow_blur = 2.0
+directional_shadow_mode = 1
