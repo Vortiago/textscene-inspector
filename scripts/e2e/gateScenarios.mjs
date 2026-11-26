@@ -8,6 +8,7 @@ import { checkViewStatus, runViewStatusScenario, VIEW_STATUS_FIXTURE } from './v
 import { checkViewKeys, measureViewKeys, runViewKeysScenario } from './viewKeysScenario.mjs';
 import { checkFrameFit, measureFrameFit, runFrameFitScenario } from './frameFitScenario.mjs';
 import { checkZoomButtons, measureZoomButtons, runZoomButtonsScenario } from './zoomButtonsScenario.mjs';
+import { checkDragPan2D, measureDragPan2D, runDragPan2DScenario } from './dragPan2DScenario.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { shardOf } from '../shards/shards.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
@@ -155,6 +156,14 @@ export const SCENARIOS = [
     run: runZoomButtonsScenario,
     check: checkZoomButtons,
     measure: measureZoomButtons,
+  },
+  {
+    name: 'drag pan 2D',
+    title: 'drag pan 2D: each mouse drag pans the full travel, with a text selection on the page too',
+    seconds: 8,
+    run: runDragPan2DScenario,
+    check: checkDragPan2D,
+    measure: measureDragPan2D,
   },
   {
     name: 'workspace',

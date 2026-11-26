@@ -27,6 +27,7 @@ import {
   sceneStillLoading,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
+import { startCameraGesture } from './cameraGestures.mjs';
 import { BUDGET_SCENES } from './scenes.mjs';
 import { SteadyWork } from './steadyWork.mjs';
 import { compareToBudget, parseWorkCounts } from './workCounts.mjs';
@@ -117,6 +118,10 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
   if (scene.writesEachFrame) await startWritesEachFrame(page, scene.writesEachFrame);
+  if (scene.gesture) {
+    const noTarget = await startCameraGesture(page, scene.gesture);
+    if (noTarget) return { work: null, reason: noTarget };
+  }
   const { work, reason: unsteady } = await steadyWork(page);
   if (loggedErrors(diagnostics).length > 0) {
     return { work: null, reason: `console error(s): ${errorReport(diagnostics)}` };
@@ -174,16 +179,14 @@ async function steadyWork(page) {
   };
 }
 
-/**
- * The overlay's frame interval, draws total and each step row's cells. The capture paints the
- * overlay out, so this reads its text.
- */
+/** Reads the overlay's text, since the capture paints the overlay out. */
 function readOverlay(page) {
-  return page.evaluate(({ overlay, frameMs, drawCalls }) => {
+  return page.evaluate(({ overlay, frameMs, drawCalls, sceneRenders }) => {
     const panel = document.querySelector(`[data-testid="${overlay}"]`);
     return {
       frameMs: panel?.querySelector(`[data-testid="${frameMs}"]`)?.textContent ?? '',
       drawCalls: panel?.querySelector(`[data-testid="${drawCalls}"]`)?.textContent ?? '',
+      sceneRenders: panel?.querySelector(`[data-testid="${sceneRenders}"]`)?.textContent ?? '',
       rows: [...(panel?.querySelectorAll('tbody tr') ?? [])].map((row) =>
         [...row.children].map((cell) => cell.textContent ?? '')
       ),

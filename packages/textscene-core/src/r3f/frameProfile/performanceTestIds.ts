@@ -7,4 +7,5 @@ export const PERFORMANCE_TESTIDS = {
   overlay: 'performance-overlay',
   frameMs: 'performance-frame',
   drawCalls: 'performance-draws',
+  sceneRenders: 'performance-scene-renders',
 } as const;

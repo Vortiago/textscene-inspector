@@ -640,15 +640,19 @@ A property value a host's code gave `set`, kept as Variant text by live path and
 _Avoid_: "patch" for a host write. A **node patch** is a pass result laid over the tree.
 
 **Frame profile** (`r3f/frameProfile/`):
-The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053).
+The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, the **scene renders**, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053).
 _Avoid_: "profiler" for the overlay. "stats" for the timing itself.
 
 **Render step**:
 A named part of a frame that a **frame profile** times, such as Shadows or Fog. Its time and draw calls are its own: a step nested in it keeps its own.
 _Avoid_: "pass" (a pass is one render, and a step can hold many). "phase".
 
+**Scene render**:
+A React render of a scene tree, counted per frame by the **frame profile** at each commit of `NodeDispatcher`. It runs outside the frame, so the frame's CPU time leaves it out. A scene at rest, or a pan or zoom of the view, makes none (ADR-0053).
+_Avoid_: "re-render" for a frame's draw. A frame draws the scene, and a scene render rebuilds its React tree.
+
 **Work budget**:
-The draw calls per frame, and the runs and draw calls of each **render step** per frame, that a budget scene may reach in `scripts/perf/budgets.json`. `pnpm test:perf` fails on a scene over its budget (ADR-0053).
+The draw calls and **scene renders** per frame, and the runs and draw calls of each **render step** per frame, that a budget scene may reach in `scripts/perf/budgets.json`. `pnpm test:perf` fails on a scene over its budget (ADR-0053).
 _Avoid_: "performance budget" (it holds counts, not times). "baseline" (a golden's image).
 
 **Sub-viewport**:

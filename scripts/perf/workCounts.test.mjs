@@ -4,6 +4,7 @@ import { compareToBudget, parseWorkCounts } from './workCounts.mjs';
 /** An overlay snapshot: the draws total, then each row's step, CPU ms, GPU ms, draws and runs. */
 const SNAPSHOT = {
   drawCalls: '12 draws',
+  sceneRenders: '0 scene renders',
   rows: [
     ['Shadows', '0.40', '–', '3', '1'],
     ['Other', '1.20', '–', '9', '1'],
@@ -12,6 +13,7 @@ const SNAPSHOT = {
 
 const WORK = {
   drawCalls: 12,
+  sceneRenders: 0,
   steps: { Shadows: { drawCalls: 3, runs: 1 }, Other: { drawCalls: 9, runs: 1 } },
 };
 
@@ -20,8 +22,12 @@ describe('parseWorkCounts', () => {
     expect(parseWorkCounts(SNAPSHOT)).toEqual(WORK);
   });
 
+  it('reads the scene renders per frame, the React work a pan must not cause', () => {
+    expect(parseWorkCounts({ ...SNAPSHOT, sceneRenders: '0.8 scene renders' }).sceneRenders).toBe(0.8);
+  });
+
   it('keeps the decimal of a count that differs between the frames of a window', () => {
-    const snapshot = { drawCalls: '12.5 draws', rows: [['Fog', '0.10', '–', '0.5', '0.5']] };
+    const snapshot = { ...SNAPSHOT, drawCalls: '12.5 draws', rows: [['Fog', '0.10', '–', '0.5', '0.5']] };
     expect(parseWorkCounts(snapshot).steps.Fog).toEqual({ drawCalls: 0.5, runs: 0.5 });
   });
 
@@ -34,8 +40,8 @@ describe('parseWorkCounts', () => {
   });
 
   it('refuses a snapshot taken before the first window, with no count to read (error case)', () => {
-    expect(() => parseWorkCounts({ drawCalls: '', rows: [] })).toThrow(
-      'expected a count such as "12 draws" in the draws total, got ""'
+    expect(() => parseWorkCounts({ drawCalls: '', sceneRenders: '', rows: [] })).toThrow(
+      'expected a number in the draws total, got ""'
     );
   });
 });
@@ -50,6 +56,12 @@ describe('compareToBudget', () => {
     expect(compareToBudget(measured, WORK).overruns).toEqual([
       'draw calls: 14, budget 12',
       'Shadows draw calls: 5, budget 3',
+    ]);
+  });
+
+  it('names scene renders over their budget', () => {
+    expect(compareToBudget({ ...WORK, sceneRenders: 1 }, WORK).overruns).toEqual([
+      'scene renders: 1, budget 0',
     ]);
   });
 

@@ -42,6 +42,11 @@ export function innermostStep(renderer: THREE.WebGLRenderer): RenderStep | null 
   return profiles.get(renderer)?.innermostStep() ?? null;
 }
 
+/** Counts one render of the scene tree on `renderer`, a React commit that runs outside every frame. */
+export function countSceneRender(renderer: THREE.WebGLRenderer): void {
+  profiles.get(renderer)?.countSceneRender();
+}
+
 /** Opens the view's own draw of its scene, whose shadow pass draws count as objects, in the open frame. */
 export function openViewDraw(renderer: THREE.WebGLRenderer): void {
   profiles.get(renderer)?.openViewDraw();
@@ -91,6 +96,7 @@ class WindowSums {
   drawCalls = 0;
   objects = 0;
   primitives = 0;
+  sceneRenders = 0;
   readonly stepCpuMs = new Map<StepKey, number>();
   readonly stepRuns = new Map<StepKey, number>();
   readonly stepDrawCalls = new Map<StepKey, number>();
@@ -192,6 +198,10 @@ class Profile implements FrameProfile {
     if (this.isViewDrawOpen) this.sums.objects += drawCalls;
   }
 
+  countSceneRender(): void {
+    if (this.isTimed) this.sums.sceneRenders += 1;
+  }
+
   openViewDraw(): void {
     this.isViewDrawOpen = this.isFrameOpen;
   }
@@ -271,7 +281,8 @@ class Profile implements FrameProfile {
   }
 
   private windowTimings(): FrameTimings {
-    const { frames, gpuFrames, gpuNs, stepCpuMs, stepRuns, stepDrawCalls, stepGpuNs } = this.sums;
+    const { frames, gpuFrames, gpuNs, sceneRenders, stepCpuMs, stepRuns, stepDrawCalls, stepGpuNs } =
+      this.sums;
     const gpuMsPerFrame = (ns: number) => (gpuFrames > 0 ? ns / NS_PER_MS / gpuFrames : null);
     const steps: StepStats[] = [];
     for (const step of STEP_KEYS) {
@@ -287,7 +298,12 @@ class Profile implements FrameProfile {
         drawCallsPerFrame: (stepDrawCalls.get(step) ?? 0) / frames,
       });
     }
-    return { gpuMs: gpuMsPerFrame(gpuNs), hasGpuTimer: this.gpu !== null, steps };
+    return {
+      gpuMs: gpuMsPerFrame(gpuNs),
+      hasGpuTimer: this.gpu !== null,
+      sceneRendersPerFrame: sceneRenders / frames,
+      steps,
+    };
   }
 }
 

@@ -7,12 +7,7 @@ import {
   transform2DOrigin,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
-
-/** Where the 2D stage looks, its CSS translate and scale: screen = pan + canvas pixel * zoom. */
-export interface StageView {
-  pan: { x: number; y: number };
-  zoom: number;
-}
+import type { StageView } from '../../world2D/stageView.js';
 
 interface StageSize {
   width: number;

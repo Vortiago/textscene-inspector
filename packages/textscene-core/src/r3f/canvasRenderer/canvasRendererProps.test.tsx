@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Canvas, useThree } from '@react-three/fiber';
 import { World2DCanvas } from '../world2D/World2DCanvas';
+import { createExternalStore } from '../../utils/externalStore';
 import { TscnCanvas } from '../TscnCanvas';
 import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRendererProps';
 
@@ -19,7 +20,12 @@ const CANVASES: [string, () => ReactElement][] = [
   [
     'World2DCanvas',
     () => (
-      <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 0, y: 0 }} zoom={1} />
+      <World2DCanvas
+        nodes={[]}
+        internalResources={[]}
+        externalResources={[]}
+        view={createExternalStore({ pan: { x: 0, y: 0 }, zoom: 1 })}
+      />
     ),
   ],
 ];

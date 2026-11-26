@@ -6,10 +6,10 @@ import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { RendererProbe } from '../../testing/recordingWebGL';
 import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
 import { createViewStatusStore } from '../viewStatus/viewStatus';
-import { FrameProfiler, SubscriberStep } from './FrameProfiler';
+import { FrameProfiler, SubscriberStep, useSceneRenderCount } from './FrameProfiler';
 import { innermostStep } from './frameProfile';
 import type { FrameStats } from './frameStats';
-import { FRAME_INTERVAL_MS, startFrameProfile } from './frameProfile.testkit';
+import { FRAME_INTERVAL_MS, FRAMES_PER_WINDOW, startFrameProfile, timingsOf } from './frameProfile.testkit';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
 
 const FRAMES_IN_A_SECOND = 50;
@@ -148,5 +148,39 @@ describe('SubscriberStep', () => {
 
   it('marks nothing while the toggle is off (edge case)', async () => {
     expect(await stepSeenAt(1, false)).toBeNull();
+  });
+});
+
+describe('useSceneRenderCount', () => {
+  function CountedTree({ commit }: { commit: number }) {
+    useSceneRenderCount();
+    return <group name={`commit ${commit}`} />;
+  }
+
+  it('counts each commit of its component as a scene render of the frame', async () => {
+    let renderer: THREE.WebGLRenderer | undefined;
+    const tree = (commit: number) => (
+      <>
+        <RendererProbe onRenderer={(found) => (renderer = found)} />
+        <CountedTree commit={commit} />
+      </>
+    );
+    const root = await ReactThreeTestRenderer.create(tree(0));
+    let window: FrameStats | null = null;
+    const profile = startFrameProfile(renderer!, (stats) => (window ??= stats));
+    for (let index = 0; index < FRAMES_PER_WINDOW; index++) {
+      profile.beginFrame(index * FRAME_INTERVAL_MS);
+      profile.endFrame();
+      if (index % 2 === 0) await root.update(tree(index + 1));
+    }
+    profile.stop();
+    await root.unmount();
+    expect(timingsOf(window).sceneRendersPerFrame).toBe(0.5);
+  });
+
+  it('commits on a renderer with no profile (edge case)', async () => {
+    const root = await ReactThreeTestRenderer.create(<CountedTree commit={0} />);
+    await expect(root.update(<CountedTree commit={1} />)).resolves.toBeUndefined();
+    await root.unmount();
   });
 });
