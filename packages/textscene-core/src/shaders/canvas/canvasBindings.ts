@@ -70,10 +70,11 @@ export function canvasDataBlock(): CanvasDataBlock {
 
 /** Writes `frame` into `block` (`renderer_canvas_render_rd.cpp:673-729`), with no new object. */
 export function writeCanvasData(block: CanvasDataBlock, frame: CanvasFrame): void {
-  const { width, height, canvasTransform, canvasModulate, usesLinearColors } = frame;
+  const { canvasModulate, usesLinearColors } = frame;
+  // Godot's canvas transform ends in its viewport's pixels, which `SCREEN_PIXEL_SIZE` counts too.
+  const canvasTransform = canvasTransformInViewport(frame);
   transform2DMatrixInto(block.canvasTransform, canvasTransform);
-  // Pixels to Vulkan's clip space, y down: `x * 2 / width - 1`.
-  block.screenTransform.set(2 / width, 0, 0, -1, 0, 2 / height, 0, -1, 0, 0, 1, 0, 0, 0, 0, 1);
+  writeScreenTransform(block.screenTransform, frame);
   transform2DMatrixInto(block.canvasNormalTransform, normalTransform(canvasTransform));
   const { r, g, b, a } = usesLinearColors ? srgbToLinearColor(canvasModulate) : canvasModulate;
   block.canvasModulation.set(r, g, b, a);
@@ -81,6 +82,48 @@ export function writeCanvasData(block: CanvasDataBlock, frame: CanvasFrame): voi
   block.time = frame.time;
   block.usesPixelSnap = frame.snapVerticesToPixel;
   block.flags = usesLinearColors ? CONVERT_ATTRIBUTES_TO_LINEAR : 0;
+}
+
+/** Scratch of `canvasTransformInViewport`, overwritten by the next write. */
+const inViewport = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+
+/** The frame's canvas transform, from target pixels into the pixels of Godot's viewport. */
+function canvasTransformInViewport({ canvasTransform, viewport }: CanvasFrame): Transform2DColumns {
+  if (!viewport) return canvasTransform;
+  const { x, y, scale } = viewport;
+  inViewport.a = canvasTransform.a / scale;
+  inViewport.b = canvasTransform.b / scale;
+  inViewport.c = canvasTransform.c / scale;
+  inViewport.d = canvasTransform.d / scale;
+  inViewport.tx = (canvasTransform.tx - x) / scale;
+  inViewport.ty = (canvasTransform.ty - y) / scale;
+  return inViewport;
+}
+
+/** The whole target as its own viewport. */
+const WHOLE_TARGET = { x: 0, y: 0, scale: 1 };
+
+/** Viewport pixels to Vulkan's clip space, y down, through the viewport's place in the target. */
+function writeScreenTransform(out: THREE.Matrix4, { width, height, viewport }: CanvasFrame): void {
+  const { x, y, scale } = viewport ?? WHOLE_TARGET;
+  out.set(
+    (2 * scale) / width,
+    0,
+    0,
+    (2 * x) / width - 1,
+    0,
+    (2 * scale) / height,
+    0,
+    (2 * y) / height - 1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1
+  );
 }
 
 /** Godot's render target is its viewport (`renderer_canvas_render_rd.cpp:701-702`), or the whole target. */

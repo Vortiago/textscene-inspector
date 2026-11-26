@@ -21,9 +21,11 @@ export function usePaddedAtlasStandIn(
   const { texture } = slot;
   const isPadded = source.usesTexturePadding && texture !== null;
   const isUnrenderedTarget = isPadded && isLiveTarget(texture);
+  const targetSize = isUnrenderedTarget ? imageSize(texture.image) : undefined;
   const snapshot = useMemo(
     () => (isUnrenderedTarget && texture ? sharedSnapshot(texture, source) : null),
-    [isUnrenderedTarget, texture, source]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the size is read off `texture`, which keeps its identity
+    [isUnrenderedTarget, texture, source, targetSize?.width, targetSize?.height]
   );
   useDisposeOnRelease(snapshot);
   // Godot pads no image, so the draw samples the empty texture's placeholder (`tile_set.cpp:5626-5629`).
@@ -37,9 +39,11 @@ const snapshotsOf = perObject((_target: THREE.Texture) => new Map<AtlasSourceMod
 /** Every run of a source shares the stand-in, which its last holder's release disposes. */
 function sharedSnapshot(target: THREE.Texture, source: AtlasSourceModel): THREE.DataTexture {
   const snapshots = snapshotsOf(target);
+  const size = standInSize(target, source);
   const held = snapshots.get(source);
-  if (held) return held;
-  const snapshot = unrenderedSnapshot(target, source);
+  // A target resized before its first render pads to the new size, as Godot reads its image then.
+  if (held && held.image.width === size.width && held.image.height === size.height) return held;
+  const snapshot = unrenderedSnapshot(target, size);
   snapshot.addEventListener('dispose', () => {
     if (snapshots.get(source) === snapshot) snapshots.delete(source);
   });
@@ -47,12 +51,17 @@ function sharedSnapshot(target: THREE.Texture, source: AtlasSourceModel): THREE.
   return snapshot;
 }
 
-/** The padded atlas Godot builds from `target`'s image before the target's first render. */
-function unrenderedSnapshot(target: THREE.Texture, source: AtlasSourceModel): THREE.DataTexture {
+/** The size of the padded atlas of `target`'s image: one texel at least, as GL holds no empty texture. */
+function standInSize(target: THREE.Texture, source: AtlasSourceModel): { width: number; height: number } {
   const padded = paddedAtlasSize(source, imageSize(target.image) ?? { width: 0, height: 0 });
-  // One texel at least: a grid with no cell draws no tile, but GL holds no empty texture.
-  const width = Math.max(padded.width, 1);
-  const height = Math.max(padded.height, 1);
+  return { width: Math.max(padded.width, 1), height: Math.max(padded.height, 1) };
+}
+
+/** The padded atlas Godot builds from `target`'s image before the target's first render. */
+function unrenderedSnapshot(
+  target: THREE.Texture,
+  { width, height }: { width: number; height: number }
+): THREE.DataTexture {
   const texels = new Uint8Array(width * height * 4);
   // One 32-bit fill, not a texel at a time: a padded atlas can hold a million texels.
   new Uint32Array(texels.buffer).fill(new Uint32Array(Uint8Array.from(unrenderedTexel(target)).buffer)[0]!);

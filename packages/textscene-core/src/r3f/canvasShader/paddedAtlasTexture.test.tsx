@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,6 +9,7 @@ import type { AtlasSourceModel } from '../../resources/tileset/types';
 import { textureWork } from '../../resources/textures/textureWork';
 import { inThreadJobRunner } from '../../workers/WorkerJobRunner';
 import { topDownTexture } from '../../resources/textures/topDownTexture';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useRuntimeAtlasTexture, type RuntimeAtlas } from './paddedAtlasTexture';
 
 const SOURCE: AtlasSourceModel = {
@@ -175,6 +177,25 @@ describe('useRuntimeAtlasTexture', () => {
     next.rerender();
 
     expect(next.result.current).toBeInstanceOf(THREE.DataTexture);
+  });
+
+  it('shows no fault for a build its runner aborts while the run still asks for it', async () => {
+    vi.spyOn(inThreadJobRunner, 'run').mockRejectedValueOnce(
+      new DOMException('The worker job was aborted', 'AbortError')
+    );
+    const faults: Error[] = [];
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ErrorBoundary fallback={() => null} onError={(error) => faults.push(error)}>
+        {children}
+      </ErrorBoundary>
+    );
+    const texture = textureOf();
+    const hook = renderHook(() => useRuntimeAtlasTexture(slotOf(texture), SOURCE), { wrapper });
+
+    await new Promise((settle) => setTimeout(settle, 10));
+    hook.rerender();
+
+    expect(faults).toEqual([]);
   });
 
   it('disposes a copy whose build lands after its last run released it', async () => {

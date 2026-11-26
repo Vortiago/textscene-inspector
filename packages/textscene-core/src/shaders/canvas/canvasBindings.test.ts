@@ -79,6 +79,24 @@ describe('writeCanvasBindings', () => {
     expect(draw.viewportInTarget.value.toArray()).toEqual([8, 4, 0.5, 0.5]);
   });
 
+  it("ends the canvas transform in Godot's viewport pixels, where SCREEN_PIXEL_SIZE counts", () => {
+    const viewport = { x: 8, y: 4, width: 50, height: 25, scale: 2 };
+
+    expect(through(written({ ...FRAME, viewport })('canvas_transform'), 3, 5)).toEqual([4, 1]);
+  });
+
+  it('draws a point inside a viewport where the target transform alone draws it', () => {
+    const viewport = { x: 8, y: 4, width: 50, height: 25, scale: 2 };
+    const value = written({ ...FRAME, viewport });
+    const inViewport = through(value('canvas_transform'), 3, 5);
+    const clip = through(value('screen_transform'), inViewport[0]!, inViewport[1]!);
+
+    const whole = written();
+    expect(clip).toEqual(
+      through(whole('screen_transform'), ...(through(whole('canvas_transform'), 3, 5) as [number, number]))
+    );
+  });
+
   it('writes no light and keeps the vertex colours as they are', () => {
     const value = written();
 

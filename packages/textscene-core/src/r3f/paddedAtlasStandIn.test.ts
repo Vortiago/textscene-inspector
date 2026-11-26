@@ -7,6 +7,7 @@ import { publishLiveTargets } from './liveTargets';
 import { createCanvasTarget } from './offscreen/targets';
 import { usePaddedAtlasStandIn } from './paddedAtlasStandIn';
 import { topDownTexture } from '../resources/textures/topDownTexture';
+import { imageSize } from '../resources/formats/image/imagePixels';
 
 const SOURCE: AtlasSourceModel = {
   texture: null,
@@ -37,6 +38,18 @@ describe('usePaddedAtlasStandIn', () => {
     const second = renderHook(() => usePaddedAtlasStandIn(slot, SOURCE));
 
     expect(second.result.current).toBe(first.result.current);
+  });
+
+  it('pads a target resized before its first render at its new size', () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport', canvasColorSpaceOf(false));
+    withdrawals.push(publishLiveTargets([target.texture], null, false));
+    const slot = { texture: target.texture as THREE.Texture };
+    const hook = renderHook(() => usePaddedAtlasStandIn(slot, SOURCE));
+
+    target.setSize(64, 16);
+    hook.rerender();
+
+    expect(imageSize(hook.result.current!.image)).toEqual({ width: 72, height: 18 });
   });
 
   it('marks the stand-in top row first, so the shader path samples it with no turned copy', () => {

@@ -10,6 +10,7 @@ import { vector2Equals } from '../../godot/math/vector';
 import { perObject } from '../../utils/perObject';
 import { inThreadJobRunner, type WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { usePaddedAtlasStandIn } from '../paddedAtlasStandIn';
+import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../useDisposeOnRelease';
 import { holdOwnFormatImage } from '../textureAtlas/godotImage';
 
 type JobRunner = Pick<WorkerJobRunner, 'run'>;
@@ -20,18 +21,25 @@ export type RuntimeAtlas = THREE.Texture | 'building' | 'unreadable';
 /** A texture whose pixels this previewer cannot read: the run samples it at its unpadded regions. */
 const UNREADABLE = 'unreadable';
 
-/** One padded copy of one version of a texture, and the runs that hold it. */
+/** One padded copy of one version of a texture, which its last holder's release disposes. */
 interface PaddedCopy {
   readonly texture: THREE.Texture;
   readonly source: AtlasSourceModel;
-  holders: number;
   readonly version: number;
   built: THREE.Texture | typeof UNREADABLE | undefined;
   readonly settled: Promise<THREE.Texture | typeof UNREADABLE>;
-  readonly controller: AbortController;
+  dispose(): void;
 }
 
-/** Written only by `joinPaddedCopy`: the newest padded copy per source, dropped with its last holder. */
+/** A build that failed, which the run throws while it still asks for that version of that source. */
+interface Failure {
+  readonly error: unknown;
+  readonly texture: THREE.Texture;
+  readonly version: number;
+  readonly source: AtlasSourceModel;
+}
+
+/** Written only by `joinPaddedCopy` and `dropPaddedCopy`: the newest copy per source, dropped on dispose. */
 const paddedCopiesOf = perObject((_texture: THREE.Texture) => new Map<AtlasSourceModel, PaddedCopy>());
 
 /** The slot's texture, its padded copy (`tile_set.cpp:5622`) or a stand-in. */
@@ -50,21 +58,24 @@ export function useRuntimeAtlasTexture(
 function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel): RuntimeAtlas {
   const runner = useResourceLoader()?.jobRunner ?? inThreadJobRunner;
   const [, landed] = useReducer((count: number) => count + 1, 0);
-  const [failure, setFailure] = useState<{ error: unknown } | null>(null);
-  if (failure) throw failure.error;
+  const [failure, setFailure] = useState<Failure | null>(null);
   // A new version is a new image, which an unreadable one may have become readable as.
   const version = texture?.version;
+  if (failure && isFailureOf(failure, texture, source)) throw failure.error;
   useEffect(() => {
     if (!texture) return undefined;
     let current = true;
-    const copy = joinPaddedCopy(texture, source, runner);
+    const { copy, release } = joinPaddedCopy(texture, source, runner);
     copy.settled.then(
       () => current && landed(),
-      (error: unknown) => current && setFailure({ error })
+      (error: unknown) => {
+        // An abort ends a build nobody waits for, such as a runner's release, and is no fault to show.
+        if (current && !isAbort(error)) setFailure({ error, texture, version: copy.version, source });
+      }
     );
     return () => {
       current = false;
-      releasePaddedCopy(copy);
+      release();
     };
   }, [texture, version, source, runner]);
   const wanted = texture ? paddedCopiesOf(texture).get(source) : undefined;
@@ -80,7 +91,8 @@ function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel):
   useEffect(() => {
     lastShown.current = shown;
   });
-  useHeldCopy(shown);
+  // Held until a later commit shows another copy, so its texture is never disposed in view.
+  useDisposeOnRelease(shown);
   const isBuilding = texture !== null && !isBuilt;
   usePendingWhile(isBuilding);
   useTextureWorkWhile(isBuilding);
@@ -98,32 +110,36 @@ function placesCellsAlike(copy: PaddedCopy, texture: THREE.Texture, source: Atla
   );
 }
 
-/** Holds the shown copy until a later commit shows another, so its texture is never disposed in view. */
-function useHeldCopy(copy: PaddedCopy | undefined): void {
-  useEffect(() => {
-    if (!copy) return undefined;
-    copy.holders += 1;
-    return () => releasePaddedCopy(copy);
-  }, [copy]);
+function isFailureOf(failure: Failure, texture: THREE.Texture | null, source: AtlasSourceModel): boolean {
+  return failure.texture === texture && failure.version === texture.version && failure.source === source;
 }
 
-function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner: JobRunner): PaddedCopy {
+function isAbort(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
+/** The source's copy of this version of `texture`, held until `release` runs. */
+function joinPaddedCopy(
+  texture: THREE.Texture,
+  source: AtlasSourceModel,
+  runner: JobRunner
+): { copy: PaddedCopy; release: () => void } {
   const copies = paddedCopiesOf(texture);
   const held = copies.get(source);
-  if (held?.version === texture.version) {
-    held.holders += 1;
-    return held;
-  }
+  if (held?.version === texture.version) return { copy: held, release: holdUntilReleased(held) };
   const controller = new AbortController();
   const settled = buildPaddedCopy(texture, source, runner, controller.signal);
   const copy: PaddedCopy = {
     texture,
     source,
-    holders: 1,
     version: texture.version,
     built: undefined,
     settled,
-    controller,
+    dispose: () => {
+      dropPaddedCopy(copy);
+      controller.abort();
+      disposeBuilt(copy.built);
+    },
   };
   // Registered before any holder's, so a holder that hears the build land reads `built`.
   settled.then(
@@ -131,12 +147,12 @@ function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner
     () => dropPaddedCopy(copy)
   );
   copies.set(source, copy);
-  return copy;
+  return { copy, release: holdUntilReleased(copy) };
 }
 
 /** A build that lands after its last holder let go has no holder left to dispose it. */
 function keepBuiltCopy(copy: PaddedCopy, built: THREE.Texture | typeof UNREADABLE): void {
-  if (copy.holders > 0) copy.built = built;
+  if (isHeld(copy)) copy.built = built;
   else disposeBuilt(built);
 }
 
@@ -144,19 +160,6 @@ function keepBuiltCopy(copy: PaddedCopy, built: THREE.Texture | typeof UNREADABL
 function dropPaddedCopy(copy: PaddedCopy): void {
   const copies = paddedCopiesOf(copy.texture);
   if (copies.get(copy.source) === copy) copies.delete(copy.source);
-}
-
-/** A microtask, not now: StrictMode and a re-render release and take a copy again in one task. */
-function releasePaddedCopy(copy: PaddedCopy): void {
-  copy.holders -= 1;
-  queueMicrotask(() => {
-    if (copy.holders > 0) return;
-    dropPaddedCopy(copy);
-    copy.controller.abort();
-    disposeBuilt(copy.built);
-    // A run releases a copy it both wants and shows twice, so the second release finds nothing to dispose.
-    copy.built = undefined;
-  });
 }
 
 function disposeBuilt(built: PaddedCopy['built']): void {
