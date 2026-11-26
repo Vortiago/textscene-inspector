@@ -23,7 +23,11 @@ import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
 import { renderedEnvironmentFog } from '../fog/fogFrame.js';
 import { sceneSuns } from '../surfaceLight/surfaceLight.js';
-import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas.js';
+import {
+  directionalShadowAtlasColour,
+  directionalShadowAtlasDepth,
+} from '../directionalShadow/shadowAtlas.js';
+import { hasDirectionalSoftShadowAngle } from '../../shaders/spatial/directionalLights.js';
 import { sceneAmbientLight } from '../surfaceLight/sceneAmbientLight.js';
 import { sceneSkyLight, unmixedAmbientLight } from '../surfaceLight/sceneSkyLight.js';
 import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
@@ -63,14 +67,23 @@ export function spatialSurfaceOf(
   const { spatial } = compile;
   recordCastsShadow(spatial.material, spatial.castsShadow);
   releasedOnUnmount(dfgTexture());
-  const specialise = () => specialiseSpatial(spatial, renderedEnvironmentFog());
+  // Written by each colour draw, so a program built between draws keeps the last one's soft shadows.
+  let drawsSoftShadows = false;
+  const specialise = () =>
+    specialiseSpatial(spatial, {
+      fog: renderedEnvironmentFog(),
+      drawsDirectionalSoftShadows: drawsSoftShadows,
+    });
   spatial.material.onBeforeProgram = specialise;
   try {
     beforeEachDraw(spatial, (drawn) => {
       prepareDrawnSurface(drawn.object);
-      writeSpatialBindings(spatial, sceneOf(gl, drawn, roughnessLimiter));
+      const scene = sceneOf(gl, drawn, roughnessLimiter);
+      writeSpatialBindings(spatial, scene);
       // A shadow or depth draw runs before the frame's fog, and folds none: only the colour draw picks it.
-      if (drawn.material === spatial.material) specialise();
+      if (drawn.material !== spatial.material) return;
+      drawsSoftShadows = hasDirectionalSoftShadowAngle(scene.directionalLights);
+      specialise();
     });
   } catch (failure) {
     disposeSpatial(spatial);
@@ -125,7 +138,10 @@ function sceneOf(
     directionalLights,
     // The atlas holds GPU memory only while a shadow draws into it.
     ...(directionalLights.some(({ shadow }) => shadow) && {
-      directionalShadowAtlas: directionalShadowAtlasDepth(),
+      directionalShadowAtlas: {
+        depth: directionalShadowAtlasDepth(),
+        colour: directionalShadowAtlasColour(),
+      },
     }),
     roughnessLimiter,
   };

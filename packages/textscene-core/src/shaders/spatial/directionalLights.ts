@@ -7,8 +7,17 @@ import {
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   MAX_DIRECTIONAL_LIGHTS,
 } from '../../godot/rendering/lights/directionalShadow.js';
-import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/rendering/lights/softShadowKernel.js';
+import {
+  SOFT_LOW_PENUMBRA_SAMPLES,
+  SOFT_LOW_SHADOW_SAMPLES,
+  vogelDisk,
+} from '../../godot/rendering/lights/softShadowKernel.js';
 import { SCENE_DATA } from './sceneDataBlock.js';
+import {
+  bindDirectionalShadowLayout,
+  directionalShadowAtlasNode,
+  type DirectionalShadowAtlasShare,
+} from './directionalShadowDepth.js';
 
 /** A sun's shadow in the directional shadow atlas, as its row reads it (`light_storage.cpp:694-756`). */
 export interface DirectionalShadow {
@@ -28,7 +37,15 @@ export interface DirectionalShadow {
   readonly depthBiases: ArrayLike<number>;
   /** In world units. */
   readonly normalBiases: ArrayLike<number>;
-  /** World space to split `split`'s atlas UV in x and y, and the depth its compare reads in z. */
+  /** In world units, along the receiver's normal. */
+  readonly transmittanceBiases: ArrayLike<number>;
+  /** Each split box's light side along the light's +Z, in world units: Godot's `range_begin`. */
+  readonly rangeBegins: ArrayLike<number>;
+  /** Each split box's depth in world units, from its light side to its far side: Godot's `farplane`. */
+  readonly zRanges: ArrayLike<number>;
+  /** Where the splits lie in the atlas, and how their stored depth maps to Godot's. */
+  readonly atlasShare: DirectionalShadowAtlasShare;
+  /** World space to split `split`'s atlas UV in x and y, and the stored depth its compare reads in z. */
   splitMatrix(split: number): THREE.Matrix4;
 }
 
@@ -134,15 +151,44 @@ function splitLanesMember(
 
 const NO_MATRIX: Readonly<THREE.Matrix4> = new THREE.Matrix4().makeScale(0, 0, 0);
 
-/** `shadow_matrix1` to `4` take a view-space vertex (`light_storage.cpp:718-720`). */
+/** Scratch for the map from a split's stored depth to Godot's, overwritten by the next. */
+const godotDepth = new THREE.Matrix4();
+
+/** `shadow_matrix1` to `4` take a view-space vertex to Godot's depth, which the atlas reads map back. */
 function splitMatrixMember(split: number): Binding<SpatialFrame> {
   const matrices = Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => new THREE.Matrix4());
   return shadowMember(
     `shadow_matrix${split + 1}`,
     'light_storage.cpp:706-728',
-    (shadow, slot, frame) =>
-      matrices[slot]!.multiplyMatrices(shadow.splitMatrix(split), frame.camera.matrixWorld),
+    (shadow, slot, frame) => {
+      const scale = shadow.atlasShare.depthScales[split]!;
+      godotDepth.set(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -scale, scale, 0, 0, 0, 1);
+      return matrices[slot]!.multiplyMatrices(godotDepth, shadow.splitMatrix(split)).multiply(
+        frame.camera.matrixWorld
+      );
+    },
     NO_MATRIX
+  );
+}
+
+const NO_UV_SCALE: Readonly<THREE.Vector2> = new THREE.Vector2();
+
+/** Scratch for one row of a split matrix. */
+const matrixRow = new THREE.Vector3();
+
+/** `uv_scale1` to `4`: the atlas UV per world unit across the split box, its matrix's first two rows. */
+function uvScaleMember(split: number): Binding<SpatialFrame> {
+  const scales = Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => new THREE.Vector2());
+  const rowLength = ({ elements }: THREE.Matrix4, row: number) =>
+    matrixRow.set(elements[row]!, elements[row + 4]!, elements[row + 8]!).length();
+  return shadowMember(
+    `uv_scale${split + 1}`,
+    'light_storage.cpp:731-748',
+    (shadow, slot) => {
+      const matrix = shadow.splitMatrix(split);
+      return scales[slot]!.set(rowLength(matrix, 0), rowLength(matrix, 1));
+    },
+    NO_UV_SCALE
   );
 }
 
@@ -172,15 +218,27 @@ export const DIRECTIONAL_LIGHT_BINDINGS: readonly Binding<SpatialFrame>[] = [
   splitLanesMember('shadow_split_offsets', 'light_storage.cpp:721', (shadow) => shadow.splitEnds),
   splitLanesMember('shadow_bias', 'light_storage.cpp:722-723', (shadow) => shadow.depthBiases),
   splitLanesMember('shadow_normal_bias', 'light_storage.cpp:724', (shadow) => shadow.normalBiases),
+  splitLanesMember(
+    'shadow_transmittance_bias',
+    'light_storage.cpp:725',
+    (shadow) => shadow.transmittanceBiases
+  ),
+  splitLanesMember('shadow_z_range', 'light_storage.cpp:726', (shadow) => shadow.zRanges),
+  splitLanesMember('shadow_range_begin', 'light_storage.cpp:727', (shadow) => shadow.rangeBegins),
   ...[0, 1, 2, 3].map(splitMatrixMember),
+  ...[0, 1, 2, 3].map(uvScaleMember),
 ];
 
 const DIRECTIONAL_SHADOW_PIXEL_SIZE = new THREE.Vector2(1, 1).divideScalar(DIRECTIONAL_SHADOW_SIZE_DEFAULT);
 
-/** `vec4 directional_soft_shadow_kernel[32]`, Soft Low's taps first (`render_scene_data_rd.cpp:124`). */
-const DIRECTIONAL_SOFT_SHADOW_KERNEL = vogelDisk(SOFT_LOW_SHADOW_SAMPLES).map(
-  ([x, y]) => new THREE.Vector4(x, y, 0, 0)
-);
+/** A kernel of Soft Low's `count` taps first, as `store_soft_shadow_kernel` writes it. */
+const kernelOf = (count: number) => vogelDisk(count).map(([x, y]) => new THREE.Vector4(x, y, 0, 0));
+
+/** `vec4 directional_soft_shadow_kernel[32]` (`render_scene_data_rd.cpp:124`). */
+const DIRECTIONAL_SOFT_SHADOW_KERNEL = kernelOf(SOFT_LOW_SHADOW_SAMPLES);
+
+/** `vec4 directional_penumbra_shadow_kernel[32]` (`render_scene_data_rd.cpp:123`). */
+const DIRECTIONAL_PENUMBRA_SHADOW_KERNEL = kernelOf(SOFT_LOW_PENUMBRA_SAMPLES);
 
 /** The members of the scene data the directional shadows read. */
 export const DIRECTIONAL_SHADOW_SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
@@ -194,16 +252,41 @@ export const DIRECTIONAL_SHADOW_SCENE_BINDINGS: readonly Binding<SpatialFrame>[]
     godot: 'render_scene_data_rd.cpp:124',
     value: () => DIRECTIONAL_SOFT_SHADOW_KERNEL,
   },
+  {
+    uniform: `${SCENE_DATA}.directional_penumbra_shadow_kernel`,
+    godot: 'render_scene_data_rd.cpp:123',
+    value: () => DIRECTIONAL_PENUMBRA_SHADOW_KERNEL,
+  },
 ];
+
+/** A shadow has an angle only while the render draws soft shadows (`light_storage.cpp:680-686`). */
+export function hasDirectionalSoftShadowAngle(lights: readonly DirectionalLight[]): boolean {
+  return lights.some(({ shadow }) => (shadow?.softShadowAngle ?? 0) > 0);
+}
 
 /** The template's texture of the directional shadows. */
 const DIRECTIONAL_SHADOW_ATLAS = 'directional_shadow_atlas';
 
-/** Gives `atlas` to the compared reads of the template's atlas, or a depth of one texel with none. */
+/** Makes the template's reads of its directional atlas take Godot's depth. Call it before the emit. */
+export function readDirectionalShadowAtlas(textures: Map<string, TextureNode>): void {
+  textures.set(DIRECTIONAL_SHADOW_ATLAS, directionalShadowAtlasNode());
+}
+
+/** Where a draw's directional atlas reads go: the depth it compares and the colour it reads raw. */
+export interface DirectionalShadowAtlasTextures {
+  readonly depth: THREE.DepthTexture;
+  readonly colour: THREE.Texture;
+}
+
+/** Binds the atlas to the template's reads, laid out for `lights`. With none, a compare reads one texel. */
 export function bindDirectionalShadowAtlas(
   textures: ReadonlyMap<string, TextureNode>,
-  atlas: THREE.DepthTexture | undefined
+  atlas: DirectionalShadowAtlasTextures | undefined,
+  lights: readonly DirectionalLight[]
 ): void {
   const node = textures.get(DIRECTIONAL_SHADOW_ATLAS);
-  if (node) comparedTextureOf(node).value = atlas ?? UNBOUND_DEPTH;
+  if (!node) return;
+  comparedTextureOf(node).value = atlas?.depth ?? UNBOUND_DEPTH;
+  const shares = lights.flatMap((light) => (light.shadow ? [light.shadow.atlasShare] : []));
+  bindDirectionalShadowLayout(node, atlas?.colour, shares);
 }

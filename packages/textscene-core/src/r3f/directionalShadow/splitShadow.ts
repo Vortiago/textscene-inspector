@@ -73,6 +73,15 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   /** Godot's `shadow_bias` of each slot in world units, which the fitter writes with `_cascadeData`. */
   readonly depthBiases = new THREE.Vector4();
 
+  /** Each slot box's light side, unmoved by the bias: Godot's `range_begin`. The fitter writes it. */
+  readonly godotRangeBegins = new THREE.Vector4();
+
+  /** Each slot box's depth from its light side to its far side: Godot's `farplane`. The fitter writes it. */
+  readonly zRanges = new THREE.Vector4();
+
+  /** Each slot's scale from its stored depth to Godot's. The fitter writes it. */
+  readonly depthScales = new THREE.Vector4(1, 1, 1, 1);
+
   /** The fade over the far end of the last split, which the fitter writes with the slots. */
   fade: DirectionalShadowFade = NO_SHADOW_FADE;
 
@@ -226,6 +235,11 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
       if (slot < this.splitCount) this.updateSplitMatrix(slot);
       else this.splitMatrices[slot]!.copy(this.splitMatrices[lastSplit]!);
     }
+  }
+
+  /** The light's rectangle of the atlas in texels, as `setSplits` last laid it out. */
+  get atlasRect(): Readonly<DirectionalShadowAtlasRect> {
+    return this.laidOutRect;
   }
 
   /** Lets go of the atlas. Other shadows share it, so it frees itself only once none holds it. */

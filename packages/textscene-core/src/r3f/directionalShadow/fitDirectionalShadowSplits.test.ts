@@ -31,6 +31,7 @@ function declaring(overrides: Partial<DirectionalShadowDeclaration> = {}): Direc
     fadeStart: 0.8,
     depthBias: -0.0003,
     normalBias: 2,
+    transmittanceBias: 0,
     filterRadius: 2,
     softShadowAngle: 0,
     drawsSoftShadow: false,

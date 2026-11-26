@@ -46,6 +46,7 @@ const SHADOW: DirectionalShadowDeclaration = {
   fadeStart: 0.8,
   depthBias: -0.001,
   normalBias: 1,
+  transmittanceBias: 0,
   filterRadius: 1,
   softShadowAngle: 0.5,
   drawsSoftShadow: true,

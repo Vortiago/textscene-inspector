@@ -61,6 +61,7 @@ import { spatialPrepassDraw } from './spatialPrepass.js';
 import { dfgTextureNode } from './dfgTexture.js';
 import { PACKED_SPECIALISATION_DEFAULTS } from './packedSpecialisation.js';
 import { radianceOctmapNode } from './sceneSky.js';
+import { readDirectionalShadowAtlas } from './directionalLights.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import { textHash, type CodeKey } from '../uniforms/programKey.js';
@@ -120,6 +121,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
   );
   resources.textures.set('dfg', dfgTextureNode());
   resources.textures.set('radiance_octmap', radianceOctmapNode());
+  readDirectionalShadowAtlas(resources.textures);
   const pipeline = spatialPipeline(parsed.tree);
   const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
   const shader = {

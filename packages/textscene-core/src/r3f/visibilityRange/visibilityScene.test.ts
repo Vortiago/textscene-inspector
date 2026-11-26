@@ -35,6 +35,7 @@ function splitCastingSun(): THREE.DirectionalLight {
     fadeStart: 0.8,
     depthBias: 0,
     normalBias: 0,
+    transmittanceBias: 0,
     filterRadius: 1,
     softShadowAngle: 0,
     drawsSoftShadow: false,

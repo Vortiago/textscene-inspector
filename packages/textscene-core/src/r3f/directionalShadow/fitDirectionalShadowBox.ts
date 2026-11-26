@@ -63,6 +63,8 @@ export interface DirectionalShadowBox {
    * light's +Z, in world units, unmoved by the caster reach. The blocker search measures from it.
    */
   rangeBegin: number;
+  /** Godot's `farplane` (`renderer_scene_cull.cpp:2340`): the depth from `rangeBegin` to the far side. */
+  zRange: number;
 }
 
 /** The light's axes, as three's `lookAt` builds them. +Z points back towards the light. */
@@ -177,6 +179,7 @@ function fitBox(
     bias: declaration.depthBias * ((zNear - zFar) / (far - near)),
     normalBias: declaration.normalBias * directionalShadowTexelSize(radius, shadowMapSize),
     rangeBegin: zNear,
+    zRange: zNear - zFar,
   };
   return isFiniteBox(box) ? box : null;
 }
@@ -192,7 +195,8 @@ function isFiniteBox(box: DirectionalShadowBox): boolean {
     Number.isFinite(box.far) &&
     Number.isFinite(box.bias) &&
     Number.isFinite(box.normalBias) &&
-    Number.isFinite(box.rangeBegin)
+    Number.isFinite(box.rangeBegin) &&
+    Number.isFinite(box.zRange)
   );
 }
 

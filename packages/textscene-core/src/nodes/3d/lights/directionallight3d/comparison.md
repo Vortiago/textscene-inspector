@@ -48,7 +48,7 @@ A shadowed light with a `light_angular_distance` and a `shadow_blur` above zero 
 
 `light_negative` makes the light subtract, on surfaces and in the sky's sun, as in Godot. `shadow_opacity` mixes the shadow towards unshadowed through three's `shadow.intensity`.
 
-A user's lit spatial shader receives the shadow through Godot's own scene shader. It reads the same split rows, bias, taps, blend and fade from the same atlas.
+A user's lit spatial shader receives the shadow through Godot's own scene shader. It reads the same split rows, bias, taps, blend and fade from the same atlas. Its soft shadow searches the split for blockers, and the light passes through a surface that writes `SSS_TRANSMITTANCE_DEPTH`, as in Godot.
 
 Godot draws the first eight visible directional lights in the scene and stops. A light past the eighth neither lights nor casts, here as in Godot. So at most eight directional lights cast a shadow.
 
@@ -57,4 +57,3 @@ Godot draws the first eight visible directional lights in the scene and stops. A
 - **Editor only** The light-tinted billboard icon appears only in Godot's editor, and here it draws when the Gizmos toggle is on.
 - **Approximated** A caster more than one view diameter towards the sun casts no shadow, where Godot still draws it.
 - **Approximated** The editor camera's clip planes follow the framing, so the shadow's splits and fade can end nearer or further than in Godot's editor.
-- **Shader missing** On a user's lit spatial shader, the light's soft shadow from `light_angular_distance` and the light that passes through a translucent surface are not drawn yet.
