@@ -90,17 +90,28 @@ function storedDepthAt(colour: TextureNode, texel: Node): Float {
   return TSL.dot(bytes, DEPTH_BYTES).div(DEPTH_STEPS) as unknown as Float;
 }
 
-/** The stored depth, filtered over four texels as Godot's linear sampler filters them. */
-function filteredStoredDepth(colour: TextureNode, uv: Vec2): Float {
+/** Godot's depth of a texel, a caster nearer the light than the split box flattened onto its side. */
+function godotDepthAt(colour: TextureNode, texel: Node, depthScale: Float): Float {
+  const godot = depthScale.mul(TSL.float(1).sub(storedDepthAt(colour, texel)));
+  return TSL.min(godot, PANCAKE_DEPTH) as unknown as Float;
+}
+
+/** Godot's depth, filtered over four texels as Godot's linear sampler filters them. */
+function filteredGodotDepth(colour: TextureNode, uv: Vec2, depthScale: Float): Float {
   const size = TSL.vec2(colour.size(TSL.int(0)) as never) as unknown as Vec2;
   const last = TSL.ivec2(size.sub(1) as never);
   const position = TSL.clamp(uv, 0, 1).mul(size).sub(0.5) as unknown as Vec2;
   const corner = TSL.ivec2(TSL.floor(position) as never);
   const weight = TSL.fract(position) as unknown as Vec2;
   const at = (x: number, y: number) =>
-    storedDepthAt(
+    godotDepthAt(
       colour,
-      TSL.clamp(corner.add(TSL.ivec2(x, y)) as never, TSL.ivec2(0) as never, last as never) as unknown as Node
+      TSL.clamp(
+        corner.add(TSL.ivec2(x, y)) as never,
+        TSL.ivec2(0) as never,
+        last as never
+      ) as unknown as Node,
+      depthScale
     );
   const bottom = TSL.mix(at(0, 0), at(1, 0), weight.x);
   const top = TSL.mix(at(0, 1), at(1, 1), weight.x);
@@ -114,11 +125,12 @@ export function directionalShadowAtlasNode(): TextureNode {
   const layout = newLayout();
   layouts.set(atlas, layout);
   readStoredDepth(atlas, {
-    read: (uv) => {
-      const stored = filteredStoredDepth(layout.colour, uv as unknown as Vec2);
-      const godot = depthScaleAt(layout, uv as unknown as Vec2).mul(TSL.float(1).sub(stored));
-      return TSL.min(godot, PANCAKE_DEPTH) as unknown as Node;
-    },
+    read: (uv) =>
+      filteredGodotDepth(
+        layout.colour,
+        uv as unknown as Vec2,
+        depthScaleAt(layout, uv as unknown as Vec2)
+      ) as unknown as Node,
     storedReference: (uv, reference) =>
       TSL.float(1).sub(
         TSL.div(reference as never, depthScaleAt(layout, uv as unknown as Vec2))
