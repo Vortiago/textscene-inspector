@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { useViewportSelection } from './useViewportSelection';
+import { CLICK_TRAVEL_PX, useViewportSelection } from './useViewportSelection';
+import { clickWith, type Click } from './viewportClicks.testkit';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { SelectionProvider, useSelectedNodePath, useSelection } from '../contexts/SelectionContext';
 
@@ -14,30 +15,6 @@ function wrap({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * A ThreeEvent-shaped mock. The node path resolves from `e.object` through `objectPathMap`, so a
- * test registers a real Object3D at a path and puts it on the event, as R3F does.
- */
-function mockPointerEvent(
-  x: number,
-  y: number,
-  object: THREE.Object3D | null = null
-): {
-  button: number;
-  clientX: number;
-  clientY: number;
-  object: THREE.Object3D | null;
-  stopPropagation: () => void;
-} {
-  return {
-    button: 0,
-    clientX: x,
-    clientY: y,
-    object,
-    stopPropagation: () => {},
-  };
-}
-
 function setup() {
   return renderHook(
     () => ({ vp: useViewportSelection(), sel: useSelection(), selected: useSelectedNodePath() }),
@@ -45,65 +22,82 @@ function setup() {
   );
 }
 
-/** Registers a fresh Object3D at `path` and returns it for use in mock events. */
-function registerObjectAt(sel: ReturnType<typeof useSelection>, path: string): THREE.Object3D {
+type View = ReturnType<typeof setup>;
+
+/** Registers a fresh Object3D at `path`, as a node component does. */
+function registerObjectAt({ result }: View, path: string): THREE.Object3D {
   const object = new THREE.Object3D();
-  act(() => sel.registerNodeObject(path, object));
+  act(() => result.current.sel.registerNodeObject(path, object));
   return object;
 }
 
-describe('useViewportSelection (WI-213: event-delegated)', () => {
-  it('selects a node on a click (pointer-down then pointer-up at same position)', () => {
-    const { result } = setup();
-    const mesh = registerObjectAt(result.current.sel, 'Root/Mesh');
+function click({ result }: View, how: Click) {
+  act(() => clickWith(result.current.vp.handlers, how));
+}
 
-    act(() => {
-      result.current.vp.handlers.onPointerDown(mockPointerEvent(100, 100, mesh) as never);
-      result.current.vp.handlers.onPointerUp(mockPointerEvent(101, 102, mesh) as never);
-    });
+describe('useViewportSelection', () => {
+  it('selects the node a click lands on', () => {
+    const view = setup();
 
-    expect(result.current.selected).toBe('Root/Mesh');
+    click(view, { on: registerObjectAt(view, 'Root/Mesh') });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
   });
 
-  it('does NOT select when the pointer drags beyond the threshold (drag = no select)', () => {
-    const { result } = setup();
-    const mesh = registerObjectAt(result.current.sel, 'Root/Mesh');
+  it('selects the node of a click that moves up to the click travel', () => {
+    const view = setup();
 
-    act(() => {
-      result.current.vp.handlers.onPointerDown(mockPointerEvent(100, 100, mesh) as never);
-      result.current.vp.handlers.onPointerUp(mockPointerEvent(200, 200, mesh) as never);
-    });
+    click(view, { on: registerObjectAt(view, 'Root/Mesh'), travel: CLICK_TRAVEL_PX });
 
-    expect(result.current.selected).toBeNull();
+    expect(view.result.current.selected).toBe('Root/Mesh');
   });
 
-  it('does not select when the hit object resolves to no registered path (e.g. the empty-state grid)', () => {
-    const { result } = setup();
-    const unregistered = new THREE.Object3D();
+  it('selects nothing for a press and release past the click travel, which orbits', () => {
+    const view = setup();
 
-    act(() => {
-      result.current.vp.handlers.onPointerDown(mockPointerEvent(0, 0, unregistered) as never);
-      result.current.vp.handlers.onPointerUp(mockPointerEvent(0, 0, unregistered) as never);
-    });
+    click(view, { on: registerObjectAt(view, 'Root/Mesh'), travel: CLICK_TRAVEL_PX + 1 });
 
-    expect(result.current.selected).toBeNull();
+    expect(view.result.current.selected).toBeNull();
   });
 
-  it('a mesh nested under a node wrapper resolves to the node path by walking up the parent chain', () => {
-    const { result } = setup();
-    const wrapper = registerObjectAt(result.current.sel, 'Root/MeshInstance3D');
+  it('clears the selection on a click on nothing that moves up to the click travel', () => {
+    const view = setup();
+    click(view, { on: registerObjectAt(view, 'Root/Mesh') });
+
+    click(view, { on: null, travel: CLICK_TRAVEL_PX });
+
+    expect(view.result.current.selected).toBeNull();
+  });
+
+  it('keeps the selection through an orbit that starts on nothing', () => {
+    const view = setup();
+    click(view, { on: registerObjectAt(view, 'Root/Mesh') });
+
+    click(view, { on: null, travel: CLICK_TRAVEL_PX + 1 });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
+  });
+
+  it('clears the selection on a click on an object of no node, such as the empty-state grid', () => {
+    const view = setup();
+    click(view, { on: registerObjectAt(view, 'Root/Mesh') });
+
+    click(view, { on: new THREE.Object3D() });
+
+    expect(view.result.current.selected).toBeNull();
+  });
+
+  it('selects the node of a mesh nested under its wrapper', () => {
+    const view = setup();
     const mesh = new THREE.Mesh();
-    wrapper.add(mesh); // the actual hit geometry, one level below the registered wrapper
+    registerObjectAt(view, 'Root/MeshInstance3D').add(mesh);
 
-    act(() => {
-      result.current.vp.handlers.onPointerDown(mockPointerEvent(0, 0, mesh) as never);
-      result.current.vp.handlers.onPointerUp(mockPointerEvent(0, 0, mesh) as never);
-    });
+    click(view, { on: mesh });
 
-    expect(result.current.selected).toBe('Root/MeshInstance3D');
+    expect(view.result.current.selected).toBe('Root/MeshInstance3D');
   });
 
-  it('returns the SAME handlers object across renders (one delegated root, not one per node)', () => {
+  it('returns the same handlers object across renders, for one delegated root', () => {
     const { result, rerender } = setup();
     const first = result.current.vp.handlers;
     rerender();

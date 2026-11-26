@@ -33,13 +33,15 @@ visible = false
 
 interface Probe {
   camera: THREE.Camera | null;
+  canvas: HTMLCanvasElement | null;
   selectedPath: string | null;
 }
 
 async function renderScene(options: { showGizmos?: boolean } = {}) {
-  const probe: Probe = { camera: null, selectedPath: null };
+  const probe: Probe = { camera: null, canvas: null, selectedPath: null };
   function Observer() {
     probe.camera = useThree((state) => state.camera);
+    probe.canvas = useThree((state) => state.gl.domElement);
     probe.selectedPath = useSelectedNodePath();
     return null;
   }
@@ -76,11 +78,12 @@ function hitThrough(probe: Probe, mesh: THREE.Mesh, ndc: [number, number]): THRE
   return raycaster.intersectObject(mesh)[0]?.object ?? null;
 }
 
-async function click(renderer: Awaited<ReturnType<typeof renderScene>>['renderer'], object: THREE.Object3D) {
+/** A press on the canvas, and a release R3F reports on `object`. */
+async function click({ renderer, probe }: Awaited<ReturnType<typeof renderScene>>, object: THREE.Object3D) {
   const root = renderer.scene.find((instance) => typeof instance.props.onPointerUp === 'function');
-  const at = { button: 0, clientX: 10, clientY: 10, object };
-  await renderer.fireEvent(root, 'onPointerDown', at);
-  await renderer.fireEvent(root, 'onPointerUp', at);
+  const at = { button: 0, clientX: 10, clientY: 10 };
+  probe.canvas!.dispatchEvent(new PointerEvent('pointerdown', at));
+  await renderer.fireEvent(root, 'onPointerUp', { ...at, object });
 }
 
 describe('NodeDispatcher: node icons', () => {
@@ -103,10 +106,10 @@ describe('NodeDispatcher: node icons', () => {
   });
 
   it('selects the node when a click lands inside the icon square', async () => {
-    const { renderer, probe } = await renderScene();
-    const { mesh } = icons(renderer).find(({ nodeName }) => nodeName === 'Cam')!;
-    await click(renderer, hitThrough(probe, mesh, [0.01, 0.01])!);
-    expect(probe.selectedPath).toBe('Root/Cam');
+    const view = await renderScene();
+    const { mesh } = icons(view.renderer).find(({ nodeName }) => nodeName === 'Cam')!;
+    await click(view, hitThrough(view.probe, mesh, [0.01, 0.01])!);
+    expect(view.probe.selectedPath).toBe('Root/Cam');
   });
 
   it('misses the icon outside its square', async () => {

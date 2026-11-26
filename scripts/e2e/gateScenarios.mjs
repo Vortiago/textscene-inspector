@@ -66,6 +66,12 @@ import {
   measureInstanceClick,
   runInstanceClickScenario,
 } from './instanceClickScenario.mjs';
+import {
+  checkClickTravel,
+  CLICK_TRAVEL_FIXTURE,
+  measureClickTravel,
+  runClickTravelScenario,
+} from './clickTravelScenario.mjs';
 
 // The 4096x4096 noise field, drawn at 1/8 scale, fills a 512x512 square: most of it is ink.
 const INK_FLOOR_LARGE_TEXTURE = 20000;
@@ -109,6 +115,14 @@ export const SCENARIOS = [
     run: runInstanceClickScenario,
     check: checkInstanceClick,
     measure: measureInstanceClick,
+  },
+  {
+    name: 'click travel',
+    title: `click travel: ${CLICK_TRAVEL_FIXTURE}`,
+    seconds: 6,
+    run: runClickTravelScenario,
+    check: checkClickTravel,
+    measure: measureClickTravel,
   },
   {
     name: 'eye and hover',

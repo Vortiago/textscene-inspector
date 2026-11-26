@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { HostSelection } from './HostSelection';
+import { clickWith } from '../hooks/viewportClicks.testkit';
 import { useViewportSelection, type UseViewportSelectionResult } from '../hooks/useViewportSelection';
 import { useSelection, type SelectionContextValue } from '../contexts/SelectionContext';
 import { TscnSceneProvider } from '../TscnSceneProvider';
@@ -75,11 +76,8 @@ async function pickedByClickUnder(path: string): Promise<(NodeHandle | null)[]> 
       </HostSelection>
     </TscnSceneProvider>
   );
-  const event = { button: 0, clientX: 10, clientY: 10, object: await meshUnder(reach, path) };
-  await ReactThreeTestRenderer.act(async () => {
-    reach.picker!.handlers.onPointerDown({ ...event, stopPropagation: () => {} } as never);
-    reach.picker!.handlers.onPointerUp({ ...event, stopPropagation: () => {} } as never);
-  });
+  const mesh = await meshUnder(reach, path);
+  await ReactThreeTestRenderer.act(async () => clickWith(reach.picker!.handlers, { on: mesh }));
   return onSelect.mock.calls.map(([node]) => node as NodeHandle | null);
 }
 
