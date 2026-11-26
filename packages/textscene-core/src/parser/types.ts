@@ -262,7 +262,7 @@ export interface HeadingFacts {
 }
 
 /** `node` skips a failed `ExtResource`, and each other place ends the load (resource_format_text.cpp:288). */
-export type FileValuePlace = 'section' | 'node' | 'binds';
+export type FileValuePlace = 'header' | 'section' | 'node' | 'binds';
 
 /** One value of a section or heading that the loader parses, as written. */
 export interface FileValue {

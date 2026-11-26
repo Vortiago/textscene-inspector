@@ -20,6 +20,15 @@ describe('StrictTscnParser', () => {
       expect(result.errors.map(({ code, line }) => [code, line])).toEqual([['INVALID_HEADING_FORMAT', 3]]);
     });
 
+    it('reads an array on the line a refused heading stops in as that heading, not as a new one', () => {
+      const result = parser.parse(
+        '[gd_scene format=3]\n\n[node name="Root" type="Node3D" groups=\n[1, x]]\n'
+      );
+
+      expect(result.errors.map(({ code, line }) => [code, line])).toEqual([['INVALID_HEADING_FORMAT', 3]]);
+      expect(result.scene?.nodes).toEqual([]);
+    });
+
     it('should report INVALID_HEADING_FORMAT for a heading missing its closing bracket', () => {
       const content = `[gd_scene load_steps=1 format=3]
 

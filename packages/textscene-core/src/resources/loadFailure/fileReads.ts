@@ -34,6 +34,8 @@ export type FailingReadKind =
 
 export interface FailingFileRead {
   readonly path: string;
+  /** The path as written, which Godot's message prints, where a relative literal loads under `res://`. */
+  readonly written: string;
   readonly kind: FailingReadKind;
   /** The literal's `uid://` argument, empty where it has none. */
   readonly uid: string;
@@ -63,7 +65,7 @@ export type ParseStop = ReadStop | HeadingStop;
 /** A `.tscn`'s files, read from the written nodes, as the live tree reads them. */
 export function sceneFileReads(file: string, scene: SceneSections): FileRead[] {
   const binds = (scene.fileValues ?? []).flatMap(({ text, place }) =>
-    place === 'binds' ? valueReadsIn(text) : []
+    place === 'binds' ? valueReadsIn(text) : place === 'header' ? valueReadsIn(text).map(headerRead) : []
   );
   const sections = scene.internalResources.map((section) => section.data);
   return filesRead(file, scene.externalResources, [
@@ -118,7 +120,7 @@ function filesRead(
     const ext = read.kind === 'ExtResource' ? findExtResource(externalResources, read.id) : null;
     const path = ext ? extResourcePathIn(file, ext.path) : read.kind === 'Resource' && read.path;
     if (!path) continue;
-    const at = ext ? path : simplifyResPath(path);
+    const at = ext ? path : literalPathOf(path);
     // The `[ext_resource]` heading's type wins over a literal's none.
     if (!types.has(at) || types.get(at) === null) types.set(at, ext?.type ?? null);
   }
@@ -189,7 +191,7 @@ function orderedReadsOf(externalResources: readonly TscnExternalResource[], valu
       : externalResources;
   const lineOf = lineCounter(value);
   return valueReadsAt(value.text).map(({ read, printedAt }) => ({
-    read,
+    read: value.place === 'header' ? headerRead(read) : read,
     declared,
     value,
     line: lineOf(printedAt),
@@ -219,7 +221,7 @@ function failingReadOf(
 
 function literalKind(place: FileValue['place'], isOpeningTag: boolean): FailingReadKind {
   if (isOpeningTag) return 'opening Resource';
-  return place === 'section' ? 'section Resource' : 'node Resource';
+  return place === 'section' || place === 'header' ? 'section Resource' : 'node Resource';
 }
 
 /** Where a read sits: its file, the `[ext_resource]` headings before it, and the line Godot prints. */
@@ -243,7 +245,9 @@ function failsParse(
 
 function extFailingRead({ file, externalResources, line }: ReadAt, read: ValueRead): FailingFileRead | null {
   const ext = read.kind === 'ExtResource' ? findExtResource(externalResources, read.id) : undefined;
-  return ext ? { path: extResourcePathIn(file, ext.path), kind: 'section ExtResource', uid: '', line } : null;
+  if (!ext) return null;
+  const path = extResourcePathIn(file, ext.path);
+  return { path, written: path, kind: 'section ExtResource', uid: '', line };
 }
 
 function literalFailingRead(
@@ -251,7 +255,22 @@ function literalFailingRead(
   read: LiteralRead,
   kind: FailingReadKind
 ): FailingFileRead | null {
-  return read.path === null ? null : { path: simplifyResPath(read.path), kind, uid: read.uid, line };
+  if (read.path === null) return null;
+  return { path: literalPathOf(read.path), written: read.path, kind, uid: read.uid, line };
+}
+
+/** Where `ResourceLoader` looks for a literal's path: relative under `res://` (resource_loader.cpp:510). */
+function literalPathOf(path: string): string {
+  return path.includes('://') || isAbsolutePath(path)
+    ? simplifyResPath(path)
+    : simplifyResPath(`res://${path}`);
+}
+
+/** The header has no resource parser, so a reference reads as a path (resource_format_text.cpp:1131). */
+function headerRead(read: ValueRead): ValueRead {
+  if (read.kind !== 'ExtResource' && read.kind !== 'SubResource') return read;
+  const isUid = read.id.startsWith('uid://');
+  return { kind: 'Resource', path: isUid ? null : read.id, uid: isUid ? read.id : '' };
 }
 
 /** A `path=` relative to the file that writes it (resource_format_text.cpp:508-510). */

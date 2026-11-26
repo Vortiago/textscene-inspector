@@ -1,5 +1,5 @@
 import { GodotError, ParseError, type ParseErrorCode } from './parseError.js';
-import { Tokens, ValueReader } from './strToVar.js';
+import { Tokens, ValueReader, type VariantReading } from './strToVar.js';
 
 /** A field value as written: its source span, and the line Godot's counter stands on at its first token. */
 export interface TagField {
@@ -33,15 +33,26 @@ interface TagDraft {
   fields: TagField[];
 }
 
+/** The resource parser of each tag after the header: an id reads as `ext_func` reads it. */
+export const SECTION_READING: VariantReading = { resourceOf: () => null };
+
+/** The header's: it has none (resource_format_text.cpp:1131), so a reference reads as a `Resource()` path. */
+export const HEADER_READING: VariantReading = {};
+
 /** `parse_tag` from `start`, on line `line` (variant_parser.cpp:1874). Null at the end, as `ERR_FILE_EOF`. */
-export function readTag(text: string, start: number, line: number): ReadTag | RefusedTag | null {
+export function readTag(
+  text: string,
+  start: number,
+  line: number,
+  reading: VariantReading
+): ReadTag | RefusedTag | null {
   const tokens = new Tokens(text, start, line);
   const tag: TagDraft = { fields: [] };
   try {
     const open = tokens.next();
     if (open.kind === 'eof') return null;
     if (open.kind !== 'bracketOpen') throw new ParseError("Expected '['");
-    readBody(tokens, tag);
+    readBody(tokens, new ValueReader(tokens, reading), tag);
     return { name: tag.name!, fields: tag.fields, end: tokens.offset, endLine: tokens.line };
   } catch (error) {
     if (!(error instanceof ParseError)) throw error;
@@ -58,9 +69,7 @@ export function readTag(text: string, start: number, line: number): ReadTag | Re
 }
 
 /** `_parse_tag` after its `[`, writing the name and each field into `tag` as it reads them. */
-function readBody(tokens: Tokens, tag: TagDraft): void {
-  // An id reads as `ext_func` reads it, a string or an old-style number: `ExtResource( 1 )` parses.
-  const values = new ValueReader(tokens, { resourceOf: () => null });
+function readBody(tokens: Tokens, values: ValueReader, tag: TagDraft): void {
   const first = tokens.next();
   if (first.kind !== 'identifier') throw new ParseError('Expected identifier (tag name)');
   tag.name = first.text;

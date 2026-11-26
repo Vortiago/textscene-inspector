@@ -42,11 +42,11 @@ function failureThrough(
 }
 
 /** Godot's line for a read whose file fails, measured in 4.6.3 (resource_format_text.cpp:40, :152, :291). */
-function godotFailureLine(scenePath: string, { path, kind, uid, line }: FailingFileRead): string {
+function godotFailureLine(scenePath: string, { written, kind, uid, line }: FailingFileRead): string {
   if (kind === 'section ExtResource')
-    return `${scenePath}:${line} - Parse Error: [ext_resource] referenced non-existent resource at: ${path}.`;
+    return `${scenePath}:${line} - Parse Error: [ext_resource] referenced non-existent resource at: ${written}.`;
   if (kind === 'section Resource')
-    return `${scenePath}:${line} - Parse Error: Can't load resource at path: ${path} with uid: ${uid}.`;
+    return `${scenePath}:${line} - Parse Error: Can't load resource at path: ${written} with uid: ${uid}.`;
   if (kind === 'opening Resource') return unexpectedEndOfFile(`${scenePath}:${line}`);
   return `Parse Error: Parse error. [Resource file ${scenePath}:${line}]`;
 }
@@ -58,7 +58,7 @@ function godotStopLine(scenePath: string, stop: ParseStop): string {
   if ('readBy' in stop) return unparsedLine(at, stop);
   const { read, place, isOpeningTag } = stop;
   if (isOpeningTag) return unexpectedEndOfFile(at);
-  if (place !== 'section') {
+  if (place === 'node' || place === 'binds') {
     const error = read.kind === 'SubResource' ? 'Invalid parameter.' : 'Parse error.';
     return `Parse Error: ${error} [Resource file ${at}]`;
   }

@@ -30,7 +30,7 @@ import {
   splitLines,
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
-import { readTag, type TagField } from '../godot/variant/tagReader.js';
+import { HEADER_READING, readTag, SECTION_READING, type TagField } from '../godot/variant/tagReader.js';
 import { isEscapedNewline } from '../godot/variant/strToVar.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
@@ -248,7 +248,14 @@ export class TscnParserCore {
     // Every field the loader parses in a heading, read before the heading opens its section.
     const addFieldValues = (fields: readonly TagField[], type: string, previous: string | null) => {
       const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
-      const place = type === 'connection' ? 'binds' : previous === 'node' ? 'node' : 'section';
+      const place =
+        previous === null
+          ? 'header'
+          : type === 'connection'
+            ? 'binds'
+            : previous === 'node'
+              ? 'node'
+              : 'section';
       for (const { start, end, line } of fields) {
         // A field is one value, so one that opens with a quote is a string and holds no read.
         if (content[start] !== '"') {
@@ -324,7 +331,8 @@ export class TscnParserCore {
       const indent = godotIndent(line);
       const opensTag = line[indent] === '[';
       if (opensTag) {
-        const tag = readTag(content, lineStarts[i]! + column + indent, godotLine);
+        const reading = headings.previous() === null ? HEADER_READING : SECTION_READING;
+        const tag = readTag(content, lineStarts[i]! + column + indent, godotLine, reading);
         if (tag && !('error' in tag)) {
           const end = lineAndColumnOf(lineStarts, tag.end, i);
           finalizeSection();
@@ -356,8 +364,10 @@ export class TscnParserCore {
         // An unclosed heading draws nothing, and the lines its tag read are no section's body.
         if (tag) {
           const stopLine = lineAndColumnOf(lineStarts, tag.stop, i).line;
-          // The stop line belongs to the refused tag unless it opens the next one.
-          i = Math.max(i, lines[stopLine]![godotIndent(lines[stopLine]!)] === '[' ? stopLine - 1 : stopLine);
+          // The stop line is the refused tag's unless the tag stopped at the `[` that opens the line.
+          const opensNextTag =
+            content[tag.stop] === '[' && tag.stop === lineStarts[stopLine]! + godotIndent(lines[stopLine]!);
+          i = Math.max(i, opensNextTag ? stopLine - 1 : stopLine);
         }
         continue;
       }
