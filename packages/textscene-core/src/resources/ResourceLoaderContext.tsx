@@ -49,7 +49,7 @@ export function useResourceLoader(): ResourceLoader | null {
   return useContext(ResourceLoaderContext);
 }
 
-/** The work the nearest provider's view waits on. */
+/** Null outside a provider, where nothing counts. */
 export function useViewWork(): ViewWork | null {
   return useContext(ViewWorkContext);
 }

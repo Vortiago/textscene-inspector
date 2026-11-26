@@ -21,7 +21,6 @@ export function resetLoaderlessFonts(): void {
   loaderlessFonts = null;
 }
 
-/** The settled fonts of a tree with no loader. */
 function loaderlessSettledFonts(): SettledFonts {
   return (loaderlessFonts ??= createSettledFonts());
 }

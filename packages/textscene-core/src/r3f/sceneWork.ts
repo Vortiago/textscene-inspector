@@ -28,7 +28,7 @@ export function isViewWorking(work: ViewWork | null): boolean {
 }
 
 /**
- * Subscribes `onChange` to each count of `work`. Returns the unsubscribe.
+ * A null view subscribes to nothing.
  *
  * @canonical Subscribing to every work count of a view
  */
