@@ -14,9 +14,13 @@ export const hasClassicMaterial = (materialClass: string): boolean => materialCl
 export const generatedFallbackOf = (materialClass: string): string =>
   hasClassicMaterial(materialClass) ? 'the classic material' : "Godot's default 3D surface";
 
+/** The spatial shader a warning names: the user's own, or the one Godot generates for `generatedFor`. */
+export const spatialShaderName = (generatedFor: string | null): string =>
+  generatedFor ? `the shader Godot generates for this ${generatedFor}` : 'this spatial shader';
+
 /** The message for the shader Godot generates for a `materialClass`, which draws its fallback. */
 export function generatedUnDrawnMessage(compile: ShaderUnDrawn, materialClass: string): string {
-  const shader = `the shader Godot generates for this ${materialClass}`;
+  const shader = spatialShaderName(materialClass);
   const fallback = generatedFallbackOf(materialClass);
   if ('failure' in compile)
     return `The previewer failed to translate ${shader}, and draws ${fallback}: ${String(compile.failure)}`;

@@ -387,9 +387,6 @@ function godotDepthWrite(
   return depthDrawMode !== DepthDrawMode.OPAQUE_ONLY;
 }
 
-/** A value that names no resource is a null texture (`binder_common.h:175`), so its slot is empty. */
-const namesResource = (value: string) => resourceRef(value) !== null || value.startsWith('res://');
-
 /**
  * The authored texture references, minus every slot whose feature flag is off. Gated
  * here, not per arrival path, so a material has the same maps however it is referenced.
@@ -398,7 +395,8 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
   const slots: Partial<Record<TextureSlot, string>> = {};
   for (const slot of TEXTURE_SLOTS) {
     const reference = properties[slot];
-    if (reference === undefined || !namesResource(reference)) continue;
+    // A value that names no resource, a path string too, is a null texture (`binder_common.h:175`).
+    if (reference === undefined || resourceRef(reference) === null) continue;
     const gate = SLOT_GATES[slot];
     if (gate !== null && !boolOr(properties[gate], false, CONTEXT)) continue;
     slots[slot] = reference;

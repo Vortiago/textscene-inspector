@@ -75,12 +75,12 @@ export function useShadedSurfaceMaterial(reference: ScopedReference | undefined)
   const loaded = useShadedMaterial(reference);
   const surface = useSurfaceOf(loaded);
   const namesNoMaterial = reference === undefined;
-  // A texture that never draws keeps the placeholder: the shader would draw its sampler's default.
-  const isMissingTexture = loaded.status === 'ready' && surface.bags === null;
+  // No bags while a map loads or once one never draws: the slot keeps the placeholder, not the shader.
+  const hasNoBags = loaded.status === 'ready' && surface.bags === null;
   const shaded = useMemo(() => {
     if (namesNoMaterial) return defaultSourceOf();
-    return isMissingTexture ? null : shadedSourceOf(loaded);
-  }, [loaded, namesNoMaterial, isMissingTexture]);
+    return hasNoBags ? null : shadedSourceOf(loaded);
+  }, [loaded, namesNoMaterial, hasNoBags]);
   return { ...surface, shaded };
 }
 

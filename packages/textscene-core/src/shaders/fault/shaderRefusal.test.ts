@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generatedUnDrawnMessage, unDrawnMessage } from './shaderRefusal.js';
+import { generatedUnDrawnMessage, spatialShaderName, unDrawnMessage } from './shaderRefusal.js';
 
 describe('unDrawnMessage', () => {
   it("names Godot's refusal of the text", () => {
@@ -33,6 +33,18 @@ describe('generatedUnDrawnMessage', () => {
   it('names a refusal with no owner as a fault of the generated text', () => {
     expect(generatedUnDrawnMessage({ refusal: { message: 'Unknown identifier' } }, 'ORMMaterial3D')).toBe(
       "The previewer wrote the shader Godot generates for this ORMMaterial3D wrongly, and draws Godot's default 3D surface: Unknown identifier"
+    );
+  });
+});
+
+describe('spatialShaderName', () => {
+  it("names the user's own spatial shader", () => {
+    expect(spatialShaderName(null)).toBe('this spatial shader');
+  });
+
+  it('names the shader Godot generates for a material the user never wrote a shader for', () => {
+    expect(spatialShaderName('StandardMaterial3D')).toBe(
+      'the shader Godot generates for this StandardMaterial3D'
     );
   });
 });

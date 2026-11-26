@@ -75,7 +75,7 @@ export function SurfaceMaterialSlot({
     materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), mount, null);
   const placeholder = placeholderAt(attach);
   const standard = bags ? <StandardMaterialSlot bags={bags} attach={attach} draws={draws} /> : placeholder;
-  // No bags means a texture that never draws, so the placeholder stands before any shader.
+  // No bags while a map loads or once one never draws, so the placeholder stands before any shader.
   if (!drawsShader || !bags) return standard;
   if (!drawsClassicVariants(shaded)) {
     return (

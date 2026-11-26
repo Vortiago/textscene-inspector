@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
   generatedUnDrawnMessage,
+  spatialShaderName,
   unDrawnMessage,
   type ShaderUnDrawn,
 } from '../../shaders/fault/shaderRefusal.js';
@@ -80,7 +81,7 @@ export function spatialSurfaceOf(
     warnOnce(
       shader,
       'translator fault',
-      `[material] The previewer failed to draw this spatial shader: ${fault.message}`
+      `[material] The previewer failed to draw ${spatialShaderName(shader.generatedFor)}: ${fault.message}`
     );
   return compile;
 }
