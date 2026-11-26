@@ -1,7 +1,6 @@
 import type * as THREE from 'three';
 import type { AccumulationList, PassMesh } from './lightAccumulationPass.js';
 import { listWindow } from './lightListWindow.js';
-import { visibleInTree } from '../visibleInTree.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 
 /** What the pass draws from besides its targets. */
@@ -73,10 +72,9 @@ function readWindow(window: Rect2 | null, out: number[]): void {
 
 function readPassMesh({ mesh, ordinal, role }: PassMesh, out: number[]): boolean {
   mesh.updateWorldMatrix(true, false);
-  // The pass sets the mesh's own flag each draw, so only its ancestors' count.
-  const isShown = mesh.parent === null || visibleInTree(mesh.parent);
-  out.push(mesh.id, ordinal, role === 'lit' ? 1 : 0, isShown ? 1 : 0, mesh.renderOrder, mesh.layers.mask);
+  out.push(mesh.id, ordinal, role === 'lit' ? 1 : 0, mesh.renderOrder, mesh.layers.mask);
   out.push(mesh.frustumCulled ? 1 : 0);
+  readAncestors(mesh, out);
   pushAll(out, mesh.matrixWorld.elements);
   const { geometry, material } = mesh as THREE.Object3D & {
     geometry?: THREE.BufferGeometry;
@@ -87,10 +85,28 @@ function readPassMesh({ mesh, ordinal, role }: PassMesh, out: number[]): boolean
   return material ? readMaterial(material, out) : true;
 }
 
+/** Whether every ancestor is shown, and the nearest group's `renderOrder`, which three sorts by first. */
+function readAncestors(mesh: THREE.Object3D, out: number[]): void {
+  let isShown = true;
+  let groupOrder = 0;
+  let hasGroup = false;
+  for (let parent = mesh.parent; parent; parent = parent.parent) {
+    if (!parent.visible) isShown = false;
+    if (!hasGroup && (parent as THREE.Group).isGroup) {
+      groupOrder = parent.renderOrder;
+      hasGroup = true;
+    }
+  }
+  out.push(isShown ? 1 : 0, groupOrder);
+}
+
 /** An attribute swapped in starts at version 0 again, so each one reads as its id and version. */
 function readGeometry(geometry: THREE.BufferGeometry, out: number[]): boolean {
-  const { drawRange, index } = geometry;
-  out.push(geometry.id, drawRange.start, drawRange.count);
+  // Morph targets weigh in through the mesh's influences, which no version follows.
+  if (Object.keys(geometry.morphAttributes).length > 0) return false;
+  const { drawRange, index, groups } = geometry;
+  out.push(geometry.id, drawRange.start, drawRange.count, groups.length);
+  for (const group of groups) out.push(group.start, group.count, group.materialIndex ?? -1);
   if (index) out.push(index.id, index.version);
   else out.push(NaN);
   for (const name in geometry.attributes) {
@@ -108,6 +124,15 @@ function readMaterial(material: THREE.Material, out: number[]): boolean {
   out.push(material.blendDstAlpha ?? -1, material.blendAlpha, material.visible ? 1 : 0, material.side);
   out.push(material.transparent ? 1 : 0, material.premultipliedAlpha ? 1 : 0, material.colorWrite ? 1 : 0);
   out.push(material.depthTest ? 1 : 0, material.depthWrite ? 1 : 0);
+  out.push(material.depthFunc, material.alphaTest, material.alphaToCoverage ? 1 : 0);
+  out.push(material.polygonOffset ? 1 : 0, material.polygonOffsetFactor, material.polygonOffsetUnits);
+  out.push(
+    material.stencilWrite ? 1 : 0,
+    material.stencilFunc,
+    material.stencilRef,
+    material.stencilFuncMask
+  );
+  out.push(material.stencilWriteMask, material.stencilFail, material.stencilZFail, material.stencilZPass);
   material.blendColor.toArray(out, out.length);
   const { uniforms } = material as THREE.Material & { uniforms?: Record<string, THREE.IUniform> };
   if (!uniforms) return true;

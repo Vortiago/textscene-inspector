@@ -93,6 +93,28 @@ describe('LightPassInputs.drawIfChanged', () => {
     expect(drawsAfter(frameOf(mesh), () => (mesh.frustumCulled = false))).toBe(true);
   });
 
+  it("draws again when the nearest group's render order changes", () => {
+    const mesh = lightMesh();
+    const group = new THREE.Group().add(mesh);
+    expect(drawsAfter(frameOf(mesh), () => (group.renderOrder = 3))).toBe(true);
+  });
+
+  it("draws again when a material's stencil test changes", () => {
+    const mesh = lightMesh();
+    expect(drawsAfter(frameOf(mesh), () => (mesh.material.stencilWrite = true))).toBe(true);
+  });
+
+  it("draws again when a mesh's geometry groups change", () => {
+    const mesh = lightMesh();
+    expect(drawsAfter(frameOf(mesh), () => mesh.geometry.addGroup(0, 3, 0))).toBe(true);
+  });
+
+  it('draws every frame for a mesh with morph targets', () => {
+    const mesh = lightMesh();
+    mesh.geometry.morphAttributes.position = [mesh.geometry.getAttribute('position').clone()];
+    expect(drawsAfter(frameOf(mesh), () => {})).toBe(true);
+  });
+
   it('draws again when a mesh leaves the light pass layer', () => {
     const mesh = lightMesh();
     expect(drawsAfter(frameOf(mesh), () => mesh.layers.set(2))).toBe(true);

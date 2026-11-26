@@ -59,7 +59,7 @@ export async function recordFrameDraws(renderer: Rendered, deltaSeconds = 0): Pr
   return draws;
 }
 
-/** Runs one frame and answers the draws that fill the accumulation buffers after it. */
+/** Runs one frame and answers the draws that fill the buffers after it, in a scene of one light pass host. */
 export async function recordLightPass(renderer: Rendered): Promise<RecordedDraw[]> {
   const draws = await recordFrameDraws(renderer);
   return draws.length > 0 ? draws : (lastDraws.get(rendererOf(renderer)) ?? draws);
