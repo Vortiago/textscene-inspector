@@ -56,6 +56,19 @@ export const CANVAS_2D_SCENES = [
   // The one variable: a user's canvas_item shader on a Sprite2D. Godot 4.6.3: 0 px over 2/255.
   { name: 'sprite2d-canvas-shader', file: 'unit-sprite2d-canvas-shader.tscn' },
   { name: 'canvas-shader-items', file: 'unit-canvas-shader-items.tscn' },
+  { name: 'canvas-shader-clip', file: 'unit-canvas-shader-clip.tscn' },
+  { name: 'canvas-shader-builtins', file: 'unit-canvas-shader-builtins.tscn' },
+  // The stage counts the design size under a stretched window, as Godot's 2D reference does: 0 px over 2/255.
+  {
+    name: 'canvas-shader-stretch-stage',
+    file: 'in-game-stretch-shader-canvas-items/unit-in-game-stretch-shader-canvas-items.tscn',
+  },
+  { name: 'canvas-shader-tile-runtime-atlas', file: 'unit-canvas-shader-tile-runtime-atlas.tscn' },
+  { name: 'canvas-shader-bottom-up-textures', file: 'unit-canvas-shader-bottom-up-textures.tscn' },
+  { name: 'canvas-shader-sprites', file: 'unit-canvas-shader-sprites.tscn' },
+  { name: 'canvas-shader-polygons', file: 'unit-canvas-shader-polygons.tscn' },
+  { name: 'canvas-shader-lines-meshes', file: 'unit-canvas-shader-lines-meshes.tscn' },
+  { name: 'canvas-shader-tiles', file: 'unit-canvas-shader-tiles.tscn' },
   // The one variable: `texture_filter` on the Node2D parent. A Nearest parent keeps a magnified
   // Sprite2D's edge a hard step, and the project's Linear default blends it over one texel.
   {

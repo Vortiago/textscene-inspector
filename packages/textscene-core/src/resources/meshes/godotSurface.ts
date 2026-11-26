@@ -6,8 +6,9 @@
 
 import * as THREE from 'three';
 import { bottomUpV } from '../../godot/math/uv.js';
-import { ARRAY_CUSTOM_COUNT } from '../../godot/rendering/meshArrayFormat.js';
+import { ARRAY_CUSTOM_COUNT, CUSTOM_ARRAY_LANES } from '../../godot/rendering/meshArrayFormat.js';
 import { UV2_ATTRIBUTE } from './uv2.js';
+import { customArrayAttribute } from '../../shaders/template/surfaceAttributes.js';
 import {
   VERTEX_STAGE_BONES_ATTRIBUTE,
   VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
@@ -223,7 +224,11 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     );
   }
   customs.forEach((values, custom) => {
-    if (values) geometry.setAttribute(`custom${custom}`, new THREE.BufferAttribute(values, 4));
+    if (values)
+      geometry.setAttribute(
+        customArrayAttribute(custom),
+        new THREE.BufferAttribute(values, CUSTOM_ARRAY_LANES)
+      );
   });
   if (isListed) geometry.userData[DRAWN_PRIMITIVE] = primitive;
   if (isSkinned) geometry.userData[SURFACE_BONE_COUNTS] = surfaces.map((s) => boneCountOf(s.bones));

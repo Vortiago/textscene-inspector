@@ -27,7 +27,7 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 2,330,813 B, 1,867 B over the measured 2,328,946 B. It replaces ADR-0055's 1,150,000 B, which
+is 2,335,624 B, 2,626 B over the measured 2,332,998 B. It replaces ADR-0055's 1,150,000 B, which
 held only the canvas-paint closure of the split build. The bake of a sky's layers through Godot's
 octmap compute stages (`shaders/template/compute`, `resources/sky/octmapPasses.ts`) adds 5,479 B of
 the measure. The other 4,818 B over the measure before it are the shader branch's growth that no
@@ -38,11 +38,13 @@ the project's roughness limiter and a glTF light's Godot energy, adds 4,429 B. T
 surface (`shaders/spatial/sceneSky.ts`, `r3f/surfaceLight/sceneSkyLight.ts`) adds 16 B. A Sprite2D with a
 user's `canvas_item` shader and its CanvasTexture's maps (`r3f/canvasShader`, `shaders/canvas/compileCanvas.ts`)
 adds 5,843 B. The same shader on tiles, Polygon2D, Line2D, MeshInstance2D and AnimatedSprite2D, with the padded
-tile atlas (`r3f/canvasShader`, `resources/tileset/paddedAtlas.ts`), adds 4,032 B. A sun's hard shadow
-on a lit surface adds 1,341 B. A StandardMaterial3D or ORMMaterial3D drawn through the shader Godot writes for
-it (`shaders/material`, `r3f/spatialShader/surfaceShader.ts`) adds 10,065 B. The texture states that end its wait and
-draw the missing-texture placeholder for a shader's map (`r3f/shaderTextures`) add 2,069 B. The canvas template's
-point size, custom arrays and clip (`shaders/canvas`) add 1,431 B.
+tile atlas (`r3f/canvasShader`, `resources/tileset/paddedAtlas.ts`), adds 4,032 B. A sun's hard shadow on a lit
+surface adds 1,341 B. A `canvas_item` shader's screen
+built-ins over Godot's viewport and the runtime tile atlas built in a worker (`r3f/canvasShader`, `workers/jobs.ts`)
+add 4,489 B. A StandardMaterial3D or ORMMaterial3D drawn through the shader Godot writes for it
+(`shaders/material`, `r3f/spatialShader/surfaceShader.ts`) adds 10,065 B. The texture states that end its wait and draw
+the missing-texture placeholder for a shader's map (`r3f/shaderTextures`) add 2,069 B. The setter casts, the program
+key's texture formats and the shared-program refusal (`shaders/material`, `shaders/uniforms`) add 2,335 B.
 
 The shader translator adds about 464,000 B to the script. The groups below gzip alone, so they are shares
 of that growth, not exact bytes:

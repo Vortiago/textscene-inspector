@@ -14,6 +14,7 @@ import { useRecordWriter } from '../components/Canvas2DStage/canvasFrameSequence
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
 import { sameCommandLayout, type CanvasShaderCommand } from './canvasCommands';
+import { topDownTexture } from '../../resources/textures/topDownTexture';
 import { useCanvasShaderMaps } from './useCanvasShaderMaps';
 import type { CanvasItemTexture } from '../canvasItemTexture';
 
@@ -97,10 +98,11 @@ export function CanvasShaderSlot({
     draw?.setFirstOrder(firstOrder);
     invalidate();
   }, [draw, firstOrder, invalidate]);
+  const drawnTexture = texture && topDownTexture(texture);
   useLayoutEffect(() => {
-    draw?.setSource(texture, commands);
+    draw?.setSource(drawnTexture, commands);
     invalidate();
-  }, [draw, texture, commands, invalidate]);
+  }, [draw, drawnTexture, commands, invalidate]);
   useLayoutEffect(() => {
     draw?.setColors({ finalModulate, canvasModulate });
     invalidate();

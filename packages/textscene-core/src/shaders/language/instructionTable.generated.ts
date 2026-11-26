@@ -1671,7 +1671,7 @@ canvas_item.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:
 canvas_item.vertex.VERTEX	built-in	servers/rendering/shader_types.cpp:269	#686	canvas.glsl		vec2		native	native
 canvas_item.vertex.UV	built-in	servers/rendering/shader_types.cpp:270	#686	canvas.glsl		vec2		native	native
 canvas_item.vertex.COLOR	built-in	servers/rendering/shader_types.cpp:271	#686	canvas.glsl		vec4		native	native
-canvas_item.vertex.POINT_SIZE	built-in	servers/rendering/shader_types.cpp:272	#686	canvas.glsl		float			
+canvas_item.vertex.POINT_SIZE	built-in	servers/rendering/shader_types.cpp:272	#686	canvas.glsl		float		native	native
 canvas_item.vertex.MODEL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:274	#686	canvas.glsl		mat4		native	native
 canvas_item.vertex.CANVAS_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:275	#686	canvas.glsl		mat4		native	native
 canvas_item.vertex.SCREEN_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:276	#686	canvas.glsl		mat4		native	native
@@ -1699,7 +1699,7 @@ canvas_item.fragment.SPECULAR_SHININESS	built-in (read only)	servers/rendering/s
 canvas_item.fragment.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:301	#686	canvas.glsl		vec2		native	native
 canvas_item.fragment.REGION_RECT	built-in (read only)	servers/rendering/shader_types.cpp:302	#686	canvas.glsl		vec4		native	native
 canvas_item.fragment.SCREEN_PIXEL_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:303	#686	canvas.glsl		vec2		native	native
-canvas_item.fragment.POINT_COORD	built-in (read only)	servers/rendering/shader_types.cpp:304	#686	canvas.glsl		vec2			
+canvas_item.fragment.POINT_COORD	built-in (read only)	servers/rendering/shader_types.cpp:304	#686	canvas.glsl		vec2		native	native
 canvas_item.fragment.AT_LIGHT_PASS	built-in (read only)	servers/rendering/shader_types.cpp:305	#686	canvas.glsl		bool		native	native
 canvas_item.light.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:332	#686	canvas.glsl		vec4			
 canvas_item.light.NORMAL	built-in (read only)	servers/rendering/shader_types.cpp:333	#686	canvas.glsl		vec3			

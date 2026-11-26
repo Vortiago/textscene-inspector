@@ -579,6 +579,10 @@ _Avoid_: "valid cell".
 A cell that names a tile of a `TileSetScenesCollectionSource`. Its layer instantiates the tile's scene as a child at the cell (`tile_map_layer.cpp:1569-1659`).
 _Avoid_: "scene cell", "instance tile".
 
+**Runtime atlas** (`useRuntimeAtlasTexture` in `r3f/canvasShader/paddedAtlasTexture.ts`):
+The texture a tile draw of an atlas source samples: with `use_texture_padding`, the padded copy Godot builds once from the source texture's image, each tile with a one-texel border (`tile_set.cpp:5622-5671`); without it, the source texture itself. A tile run under a user's canvas_item shader samples it. The default tile mesh still samples the source texture, so two tile paths exist until it moves onto the runtime atlas.
+_Avoid_: "padded texture" for the hook's result, which can be the unpadded texture or the placeholder.
+
 **Unowned node** (`LiveNode.isUnowned`):
 A node that a layer adds to the live tree and the edited scene does not own. The Scene dock lists no row for it, and a click on it selects its owner (`scene_tree_editor.cpp:278-290`).
 _Avoid_: "internal node" for this, "hidden node".

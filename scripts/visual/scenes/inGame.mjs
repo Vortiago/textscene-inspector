@@ -19,6 +19,19 @@ export const IN_GAME_SCENES = [
     mode: 'in-game',
     canvas: { width: 240, height: 240 },
   },
+  // A shader's screen built-ins count the window's target: the window, or the base under viewport.
+  {
+    name: 'in-game-stretch-shader-canvas-items',
+    file: 'in-game-stretch-shader-canvas-items/unit-in-game-stretch-shader-canvas-items.tscn',
+    mode: 'in-game',
+    canvas: GAME_WINDOW,
+  },
+  {
+    name: 'in-game-stretch-shader-viewport',
+    file: 'in-game-stretch-shader-viewport/unit-in-game-stretch-shader-viewport.tscn',
+    mode: 'in-game',
+    canvas: GAME_WINDOW,
+  },
   // A transparent background: the window's clear stays transparent, and its bars are opaque black.
   {
     name: 'in-game-transparent',

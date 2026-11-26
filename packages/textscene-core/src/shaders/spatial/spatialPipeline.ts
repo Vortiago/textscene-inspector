@@ -31,6 +31,7 @@ import {
   type MaterialBlendState,
 } from '../pipeline/blendState.js';
 import { CULL_SIDES } from '../pipeline/cullSide.js';
+import { sizesPoints } from '../template/devicePoints.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
 import { applyGodotStencil, type StencilTest } from '../pipeline/stencilState.js';
 
@@ -177,7 +178,7 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     ...pipeline,
     depthFlags: depthFlags(tree, modes, { ...pipeline, usesPointSize, usesStencil: stencil !== null }),
     stencil,
-    pointDraw: reads('POINT_SIZE') ? 'emulated' : usesPointSize ? 'native' : null,
+    pointDraw: sizesPoints(names) ? 'emulated' : usesPointSize ? 'native' : null,
     usesWireframe: modes.includes('wireframe'),
   };
 }

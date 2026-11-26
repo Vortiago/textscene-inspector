@@ -1,16 +1,18 @@
 import * as THREE from 'three';
 import { ARRAY_CUSTOM_COUNT } from '../../godot/rendering/meshArrayFormat.js';
 import { encodedNormalTangent } from '../../godot/rendering/meshNormalTangent.js';
-import { storedLanes } from '../storedLanes.js';
+import { FIRST_CORNER_LAST } from '../template/emulatedPoints.js';
+import {
+  customArrayAttribute,
+  customArrayTemplateAttribute,
+  VERTEX_ID_ATTRIBUTE,
+} from '../template/surfaceAttributes.js';
 
 /** The attribute the scene template reads at location 0: the position, which GL widens with w = 1. */
 const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
 
 /** The attribute at location 1: the normal and the tangent as four 16-bit unsigned normalised lanes. */
 const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
-
-/** The `userData` key of turned corners, which `clone` carries. A caller that sets a new index deletes it. */
-const FIRST_CORNER_LAST = 'godotFirstCornerLast';
 
 /** The primitive a surface draws: a line strip is drawn as its list of lines. */
 export type GodotPrimitive = 'triangles' | 'lines' | 'points';
@@ -21,9 +23,6 @@ const LISTS = { triangles: { corners: 3, name: 'triangle' }, lines: { corners: 2
 /** The bone indices and weights the vertex stage reads, where they differ from those three skins with. */
 export const VERTEX_STAGE_BONES_ATTRIBUTE = 'godotBoneIndices';
 export const VERTEX_STAGE_WEIGHTS_ATTRIBUTE = 'godotBoneWeights';
-
-/** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
-export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
 
 /** The `userData` key of the first vertex of each surface of a merged mesh, which `clone` carries. */
 const SURFACE_STARTS = 'godotSurfaceStarts';
@@ -56,8 +55,8 @@ export function withGodotAttributes(
     if (uv) geometry.setAttribute(godot, uv);
   }
   for (let custom = 0; custom < ARRAY_CUSTOM_COUNT; custom++) {
-    const values = geometry.getAttribute(`custom${custom}`);
-    if (values) geometry.setAttribute(`custom${custom}_attrib`, values);
+    const values = geometry.getAttribute(customArrayAttribute(custom));
+    if (values) geometry.setAttribute(customArrayTemplateAttribute(custom), values);
   }
   const bones = vertexStageBones(geometry);
   if (bones) {
@@ -120,10 +119,12 @@ const MISSING_ARRAY_VALUES: Readonly<Record<string, Float32Array | Uint32Array>>
   color_attrib: Float32Array.of(1, 1, 1, 1),
   uv_attrib: Float32Array.of(0, 0, 0, 0),
   uv2_attrib: Float32Array.of(0, 0, 0, 0),
-  custom0_attrib: Float32Array.of(0, 0, 0, 0),
-  custom1_attrib: Float32Array.of(0, 0, 0, 0),
-  custom2_attrib: Float32Array.of(0, 0, 0, 0),
-  custom3_attrib: Float32Array.of(0, 0, 0, 0),
+  ...Object.fromEntries(
+    Array.from({ length: ARRAY_CUSTOM_COUNT }, (_, custom) => [
+      customArrayTemplateAttribute(custom),
+      Float32Array.of(0, 0, 0, 0),
+    ])
+  ),
   bone_attrib: Uint32Array.of(0, 0, 0, 0),
   weight_attrib: Float32Array.of(0, 0, 0, 0),
 };
@@ -201,66 +202,4 @@ function axisTangent(normal: Attribute, tangent: Attribute | undefined): THREE.B
     lanes.set(encodedNormalTangent(normalOf, tangentOf), vertex * 4);
   }
   return new THREE.BufferAttribute(lanes, 4, true);
-}
-
-/** The vertices a point quad draws: `point_coords` of `scene_forward_clustered.glsl:709`. */
-const QUAD_VERTICES = 6;
-
-/** The corners of a surface that one draw reads, as a three.js draw group holds them. */
-export interface DrawRange {
-  readonly start: number;
-  readonly count: number;
-}
-
-/** A point for each index in `range`, as Vulkan's indexed points: `render_forward_clustered.cpp:603`. */
-export function emulatedPointGeometry(
-  surface: THREE.BufferGeometry,
-  range?: DrawRange
-): THREE.InstancedBufferGeometry {
-  const vertices = drawnVertices(surface, range);
-  const geometry = new THREE.InstancedBufferGeometry();
-  geometry.instanceCount = vertices.length;
-  // three counts a draw's vertices by `position`, which the template does not read.
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(QUAD_VERTICES * 3), 3));
-  for (const [name, attribute] of Object.entries(surface.attributes))
-    if (name.endsWith('_attrib')) geometry.setAttribute(name, perPoint(attribute, vertices));
-  // The quads' own positions are all zero, so bounds three computed from them would cull at the origin.
-  if (!surface.boundingSphere && surface.getAttribute('position')) surface.computeBoundingSphere();
-  geometry.boundingSphere = surface.boundingSphere;
-  geometry.boundingBox = surface.boundingBox;
-  return geometry;
-}
-
-/** The vertex of each corner in `range`, in draw order: every vertex once for a surface with no index. */
-function drawnVertices(surface: THREE.BufferGeometry, range: DrawRange | undefined): Float32Array {
-  const index = surface.getIndex();
-  // No corners for a surface with no position yet, as a mesh has before its geometry attaches.
-  const cornerCount = index?.count ?? surface.getAttribute('position')?.count ?? 0;
-  const start = range?.start ?? 0;
-  const end = Math.min(range ? start + range.count : cornerCount, cornerCount);
-  // A float holds every vertex index below 2^24 exactly.
-  const vertices = new Float32Array(Math.max(0, end - start));
-  const corners = surface.userData[FIRST_CORNER_LAST] as number | undefined;
-  for (let corner = start; corner < end; corner++)
-    vertices[corner - start] = index ? index.getX(corners ? godotCorner(corner, corners) : corner) : corner;
-  return vertices;
-}
-
-/** The loader swaps a triangle's last two corners and `withFirstCornerLast` turns it: Godot's in reverse. */
-function godotCorner(corner: number, corners: number): number {
-  return corner - (corner % corners) + corners - 1 - (corner % corners);
-}
-
-/** `attribute` read once a point: every point shares the one item of a constant attribute. */
-function perPoint(attribute: Attribute, vertices: Float32Array): THREE.InstancedBufferAttribute {
-  const isConstant = (attribute as THREE.InstancedBufferAttribute).isInstancedBufferAttribute === true;
-  const values = storedLanes(attribute, isConstant ? [0] : vertices);
-  const perInstance = new THREE.InstancedBufferAttribute(
-    values,
-    attribute.itemSize,
-    attribute.normalized,
-    isConstant ? Math.max(1, vertices.length) : 1
-  );
-  perInstance.gpuType = (attribute as THREE.BufferAttribute).gpuType ?? THREE.FloatType;
-  return perInstance;
 }

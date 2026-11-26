@@ -1,11 +1,10 @@
-/** A held texture's pixels as Godot's image holds them: RGBA8 sRGB bytes, the top row first. */
-
 import * as THREE from 'three';
-import { readImagePixels, type ImagePixels } from '../../resources/formats/image/imagePixels.js';
+import { imageSize, readImagePixels } from '../../resources/formats/image/imagePixels.js';
 import { isLiveTarget, liveTargetPixels } from '../liveTargets.js';
 import { perObject } from '../../utils/perObject.js';
 import { isBottomUp, reverseRowsInPlace, reversedRows } from '../../utils/reversedRows.js';
 
+/** Pixels as Godot's image holds them: RGBA8 sRGB bytes, the top row first. */
 export interface GodotImage {
   width: number;
   height: number;
@@ -19,11 +18,60 @@ export interface GodotImage {
  */
 const godotImage = perObject(readGodotImage, { stamp: ({ version }) => version });
 
+/** A fresh read of `texture`'s pixels, which `godotImage` caches by version. */
 function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
   if (!readsAsBytes(texture)) return undefined;
   const pixels = readImagePixels(texture.image);
   if (!pixels) return undefined;
   return isBottomUp(texture) ? topRowFirst(pixels) : pixels;
+}
+
+/** An image as Godot pads it, in its own format (`tile_set.cpp:5637`): half floats stay half floats. */
+export interface OwnFormatImage {
+  width: number;
+  height: number;
+  data: GodotImage['data'] | Uint16Array;
+}
+
+/** A fresh read of `texture`'s pixels in their own format, top row first. Undefined: unreadable. */
+function readOwnFormatImage(texture: THREE.Texture): OwnFormatImage | undefined {
+  if (!readsAsBytes(texture)) return undefined;
+  const { data } = (texture.image ?? {}) as { data?: unknown };
+  if (texture.type !== THREE.HalfFloatType || !(data instanceof Uint16Array)) return readGodotImage(texture);
+  const size = imageSize(texture.image);
+  if (!size) return undefined;
+  return isBottomUp(texture) ? topRowFirst({ ...size, data }) : { ...size, data };
+}
+
+interface HeldRead {
+  holds: number;
+  version: number;
+  image: OwnFormatImage | undefined;
+}
+
+/** Written only by `holdOwnFormatImage`: a texture's read while a hold of it lasts, dropped with the last. */
+const heldReads = perObject((_texture: THREE.Texture): HeldRead => ({
+  holds: 0,
+  version: -1,
+  image: undefined,
+}));
+
+/** `texture`'s pixels in their own format, read once for overlapping holds. The caller calls `release`. */
+export function holdOwnFormatImage(texture: THREE.Texture): {
+  image: OwnFormatImage | undefined;
+  release: () => void;
+} {
+  const read = heldReads(texture);
+  if (read.holds === 0 || read.version !== texture.version) {
+    read.image = readOwnFormatImage(texture);
+    read.version = texture.version;
+  }
+  read.holds += 1;
+  const release = () => {
+    read.holds -= 1;
+    if (read.holds === 0) read.image = undefined;
+  };
+  return { image: read.image, release };
 }
 
 /**
@@ -39,8 +87,8 @@ function readLiveTargetImage(texture: THREE.Texture): GodotImage | undefined {
   return pixels;
 }
 
-function topRowFirst({ width, height, data }: ImagePixels): GodotImage {
-  return { width, height, data: reversedRows(data, width, height) };
+function topRowFirst<Image extends OwnFormatImage>(image: Image): Image {
+  return { ...image, data: reversedRows(image.data, image.width, image.height) };
 }
 
 /**

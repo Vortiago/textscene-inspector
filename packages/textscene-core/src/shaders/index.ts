@@ -50,7 +50,12 @@ export {
   type CanvasVariant,
   type TranspiledCanvasItem,
 } from './canvas/transpileCanvas.js';
-export { CANVAS_BINDINGS, writeCanvasBindings, type CanvasFrame } from './canvas/canvasBindings.js';
+export {
+  CANVAS_BINDINGS,
+  writeCanvasBindings,
+  type CanvasFrame,
+  type TargetViewport,
+} from './canvas/canvasBindings.js';
 export type { CanvasItemDraw } from './canvas/canvasInstance.js';
 export {
   NINE_PATCH_AXIS_MODES,
@@ -64,6 +69,7 @@ export {
 } from './canvas/canvasRect.js';
 export {
   primitiveBatchGeometry,
+  primitiveBatchObject,
   primitiveCommand,
   primitiveDraw,
   primitiveInstanceData,
@@ -94,12 +100,8 @@ export {
 export type { PointDraw } from './spatial/spatialPipeline.js';
 export type { DirectionalLight } from './spatial/directionalLights.js';
 export type { SceneSky } from './spatial/sceneSky.js';
-export {
-  emulatedPointGeometry,
-  withGodotAttributes,
-  withSurfaceStarts,
-  type GodotPrimitive,
-} from './spatial/meshAttributes.js';
+export { withGodotAttributes, withSurfaceStarts, type GodotPrimitive } from './spatial/meshAttributes.js';
+export { emulatedPointGeometry } from './template/emulatedPoints.js';
 export { createDepthPrepass, type DepthPrepass, type DepthPrepassOptions } from './pipeline/depthPrepass.js';
 export {
   SCENE_BINDINGS,

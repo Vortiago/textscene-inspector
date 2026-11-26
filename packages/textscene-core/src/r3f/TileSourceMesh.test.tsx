@@ -238,10 +238,10 @@ describe('TileSourceMesh padding a texture with no image at load', () => {
     expect(distinctTexels(mapTexels(renderer))).toEqual(['0,0,0,0']);
   });
 
-  it('stands one texel in for the padded atlas, since every texel of it holds the same value', async () => {
+  it("sizes the stand-in as Godot's padded atlas of the 32x32 window: two 18 px cells each way", async () => {
     const renderer = await renderBesideViewport(viewportWindowSource(true, 'true'), false);
     const map = (drawnMeshOf(renderer).material as THREE.MeshBasicMaterial).map!;
-    expect(imageSize(map.image)).toEqual({ width: 1, height: 1 });
+    expect(imageSize(map.image)).toEqual({ width: 36, height: 36 });
   });
 
   it('draws the live target of a source that does not pad', async () => {

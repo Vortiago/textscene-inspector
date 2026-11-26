@@ -5,7 +5,13 @@
  */
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
-import { boxlessUserData, computeWorldBoundingBox, godotAabbUserData } from './bounds.js';
+import {
+  boxlessUserData,
+  computeWorldBoundingBox,
+  drawsInstances,
+  setGeometryBoxBound,
+  godotAabbUserData,
+} from './bounds.js';
 import { editorHelperUserData, nodeIconUserData } from './editorHelpers.js';
 import { placeSkinnedMeshInSkeletonSpace } from '../resources/formats/glb/skinnedMeshSpace.js';
 
@@ -26,6 +32,23 @@ describe('computeWorldBoundingBox', () => {
     expect(center.x).toBeCloseTo(10, 5);
     expect(center.y).toBeCloseTo(-3, 5);
     expect(center.z).toBeCloseTo(4, 5);
+  });
+
+  const instancedMesh = () => {
+    const geometry = new THREE.InstancedBufferGeometry();
+    geometry.boundingBox = new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, 0, 0));
+    return new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+  };
+
+  it('bounds a mesh marked by setGeometryBoxBound over an instanced geometry by its geometry box', () => {
+    const mesh = instancedMesh();
+    setGeometryBoxBound(mesh, true);
+
+    expect(computeWorldBoundingBox(mesh)).toEqual(mesh.geometry.boundingBox);
+  });
+
+  it('gives an unmarked plain mesh over an instanced geometry no box, as one instance is not the draw', () => {
+    expect(computeWorldBoundingBox(instancedMesh()).isEmpty()).toBe(true);
   });
 
   it('uses the geometry (bind) box for a SkinnedMesh, ignoring a corrupt cached SkinnedMesh.boundingBox', () => {
@@ -183,5 +206,19 @@ describe('computeWorldBoundingBox: an explicit Godot AABB', () => {
     aabb.userData = godotAabbUserData({ position: { x: 0, y: 0, z: 0 }, size: { x: 0, y: 0, z: 0 } });
 
     expect(computeWorldBoundingBox(new THREE.Group().add(aabb)).isEmpty()).toBe(true);
+  });
+});
+
+describe('drawsInstances', () => {
+  const instancedGeometry = () => new THREE.InstancedBufferGeometry();
+  it.each<[string, () => THREE.Object3D, boolean]>([
+    ['a mesh', () => new THREE.Mesh(new THREE.BoxGeometry()), false],
+    ['an instanced mesh', () => new THREE.InstancedMesh(new THREE.BoxGeometry(), undefined, 2), true],
+    ['a batched mesh', () => new THREE.BatchedMesh(1, 8), true],
+    ['a mesh over instanced geometry', () => new THREE.Mesh(instancedGeometry()), true],
+    ['points over instanced geometry', () => new THREE.Points(instancedGeometry()), true],
+    ['an object with no geometry', () => new THREE.Group(), false],
+  ])('%s', (_, object, expected) => {
+    expect(drawsInstances(object())).toBe(expected);
   });
 });

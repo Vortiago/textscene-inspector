@@ -1,0 +1,132 @@
+[gd_scene format=3]
+
+; One variable: the Polygon2D properties that change the vertices, the UV or the colour a canvas_item
+; ShaderMaterial reads: the uv array, texture_offset, texture_scale, texture_rotation, color,
+; vertex_colors, several polygons, invert_enabled, and a vertex() that moves the corners. The shader
+; mixes TEXTURE with UV and the vertex colour, so a wrong UV, vertex or colour shows. The one other
+; shaded Polygon2D golden draws a single quad with no UV transform, so none shows a regression in
+; them. Each case sits at its own cell of a 4 by 3 grid, so a diff names the property that moved.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="Shader" id="Shader_mix"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), vec4(UV, 0.5, 1.0), 0.5) * COLOR;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mix"]
+shader = SubResource("Shader_mix")
+
+[sub_resource type="Shader" id="Shader_shift"]
+code = "shader_type canvas_item;
+
+void vertex() {
+	VERTEX += vec2(sin(VERTEX.y * 0.1) * 14.0, -10.0);
+}
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), vec4(UV, 0.5, 1.0), 0.5) * COLOR;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_shift"]
+shader = SubResource("Shader_shift")
+
+[node name="World" type="Node2D"]
+
+[node name="UvArray" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(80, 44)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(16, 16, 80, 16, 80, 80, 16, 80)
+
+[node name="UvArrayShifted" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_shift")
+position = Vector2(368, 44)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(16, 16, 80, 16, 80, 80, 16, 80)
+
+[node name="TextureOffset" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(656, 44)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(0, 0, 96, 0, 96, 96, 0, 96)
+texture_offset = Vector2(24, 12)
+
+[node name="TextureScale" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(944, 44)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(0, 0, 96, 0, 96, 96, 0, 96)
+texture_scale = Vector2(2, 1.5)
+
+[node name="TextureRotation" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(80, 260)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(0, 0, 96, 0, 96, 96, 0, 96)
+texture_rotation = 0.5
+
+[node name="Color" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(368, 260)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(0, 0, 96, 0, 96, 96, 0, 96)
+color = Color(1, 0.6, 0.4, 0.8)
+
+[node name="VertexColors" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(656, 260)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(0, 0, 96, 0, 96, 96, 0, 96)
+vertex_colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1)
+
+[node name="VertexColorsUntextured" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(944, 260)
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+vertex_colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1)
+
+[node name="Polygons" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(80, 476)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 56, 0, 0, 56, 72, 72, 128, 72, 128, 128)
+uv = PackedVector2Array(0, 0, 48, 0, 0, 48, 48, 48, 96, 48, 96, 96)
+polygons = [PackedInt32Array(0, 1, 2), PackedInt32Array(3, 4, 5)]
+
+[node name="Invert" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(368, 476)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(32, 32, 96, 32, 96, 96, 32, 96)
+uv = PackedVector2Array(0, 0, 96, 0, 96, 96, 0, 96)
+invert_enabled = true
+invert_border = 24.0
+
+[node name="InvertShifted" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_shift")
+position = Vector2(656, 476)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(32, 32, 96, 32, 96, 96, 32, 96)
+uv = PackedVector2Array(0, 0, 96, 0, 96, 96, 0, 96)
+invert_enabled = true
+invert_border = 24.0
+
+[node name="Triangle" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(944, 476)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(64, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(48, 0, 96, 96, 0, 96)
+color = Color(0.8, 1, 0.8, 1)

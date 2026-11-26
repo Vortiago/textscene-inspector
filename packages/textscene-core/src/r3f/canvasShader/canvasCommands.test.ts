@@ -1,9 +1,13 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { withGodotAttributes } from '../../shaders/spatial/meshAttributes';
+import { emulatedPointGeometry } from '../../shaders/template/emulatedPoints';
 import { canvasSurfaceGeometry } from '../canvasMesh/canvasSurface';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import {
   atlasRectRegion,
+  boundByItem,
+  itemBox,
   meshCommands,
   sameCommandLayout,
   surfaceCommands,
@@ -135,6 +139,21 @@ describe('meshCommands', () => {
 
     expect(meshCommands([mesh])).toEqual(surfaceCommands([{ geometry: canvasMeshGeometry(mesh) }]));
   });
+
+  it("reads the mesh's CUSTOM0 and CUSTOM1 arrays, which the canvas template reads", () => {
+    const geometry = canvasSurfaceGeometry(TRIANGLE);
+    const custom1 = new Float32Array(12).fill(0.25);
+    geometry.setAttribute('custom1', new THREE.BufferAttribute(custom1, 4));
+    const [command] = meshCommands([geometry]);
+
+    expect(command?.kind === 'mesh' && command.arrays.customs).toEqual([undefined, custom1]);
+  });
+
+  it('gives a mesh with no custom array no customs', () => {
+    const [command] = meshCommands([canvasSurfaceGeometry(TRIANGLE)]);
+
+    expect(command?.kind === 'mesh' && 'customs' in command.arrays).toBe(false);
+  });
 });
 
 describe('sameCommandLayout', () => {
@@ -156,5 +175,64 @@ describe('sameCommandLayout', () => {
 
   it('tells a mesh of other arrays apart', () => {
     expect(sameCommandLayout([mesh()], [mesh()])).toBe(false);
+  });
+});
+
+describe('boundByItem', () => {
+  /** A surface with a box of its own, and the emulated points that share it. */
+  function pointsOverSurface() {
+    const source = withGodotAttributes(new THREE.BoxGeometry(2, 2, 2));
+    source.computeBoundingBox();
+    return { source, emulated: emulatedPointGeometry(source) };
+  }
+
+  it("bounds emulated points by the item rect and leaves their source's box as it was", () => {
+    const { source, emulated } = pointsOverSurface();
+    boundByItem(new THREE.Mesh(emulated), [meshCommands([canvasSurfaceGeometry(TRIANGLE)])[0]!]);
+
+    expect([emulated.boundingBox!.max.x, source.boundingBox!.max.x]).toEqual([8, 1]);
+  });
+});
+
+describe('itemBox of one command', () => {
+  const boxOf = (command: CanvasShaderCommand) => itemBox(new THREE.Box3(), [command]);
+  const corners = (min: [number, number], max: [number, number]) =>
+    new THREE.Box3(new THREE.Vector3(...min, 0), new THREE.Vector3(...max, 0));
+
+  it("takes a rect's corners with y negated, a flipped rect as the same area", () => {
+    const flipped: CanvasShaderCommand = {
+      kind: 'rect',
+      region: { rect: { x: 8, y: 6, w: -16, h: -4 }, source: { x: 0, y: 0, w: 4, h: 4 }, clipUv: false },
+      modulate: { r: 1, g: 1, b: 1, a: 1 },
+    };
+
+    expect(boxOf(flipped)).toEqual(corners([-8, -6], [8, -2]));
+  });
+
+  it("takes a mesh's points, which Godot bounds as the surface's AABB", () => {
+    const mesh: CanvasShaderCommand = {
+      kind: 'mesh',
+      arrays: {
+        primitive: 'triangles',
+        points: [
+          { x: -3, y: 2 },
+          { x: 5, y: -7 },
+          { x: 1, y: 4 },
+        ],
+        colors: [],
+        uvs: [],
+      },
+    };
+
+    expect(boxOf(mesh)).toEqual(corners([-3, -4], [5, 7]));
+  });
+
+  it('leaves the box empty for a mesh of no points', () => {
+    const empty: CanvasShaderCommand = {
+      kind: 'mesh',
+      arrays: { primitive: 'triangles', points: [], colors: [], uvs: [] },
+    };
+
+    expect(boxOf(empty).isEmpty()).toBe(true);
   });
 });

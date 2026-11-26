@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { inThreadJobRunner } from '../workers/WorkerJobRunner.js';
 import { usePendingWhile } from './usePendingWhile.js';
-import { textureWork } from './textures/textureWork.js';
+import { useTextureWorkWhile } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import { withKey } from '../utils/keySet.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
@@ -102,15 +102,6 @@ function shownTexture(
   if (lookup === null || hasFailed) return null;
   if (lookup.status === 'ready') return { texture: lookup.texture, key: lookup.key };
   return landedTexture ? { texture: landedTexture, key: lookup.key } : lastShown;
-}
-
-/**
- * Counts texture work while `isWorking`. A landed build stops being worked on in the commit that
- * shows its texture, where a draw site's upload starts, so the two effects run in one flush
- * and the count never reads zero between them.
- */
-function useTextureWorkWhile(isWorking: boolean): void {
-  useEffect(() => (isWorking ? textureWork.begin() : undefined), [isWorking]);
 }
 
 interface Landed {

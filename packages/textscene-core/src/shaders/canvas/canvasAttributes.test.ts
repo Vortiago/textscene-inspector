@@ -27,6 +27,11 @@ const SQUARE = [
 
 const arrayOf = (geometry: THREE.BufferGeometry, name: string) => [...geometry.getAttribute(name).array];
 
+/** What a draw of a shader that names no CUSTOM0, CUSTOM1 or POINT_SIZE reads. */
+const PLAIN_DRAW = { customsRead: [], emulatesPoints: false } as const;
+
+const SIZED_POINTS = 'shader_type canvas_item;\nvoid vertex() { POINT_SIZE = 4.0; }\n';
+
 describe('polygonCommand', () => {
   it('cuts the outline into triangles', () => {
     expect(polygonCommand(SQUARE, [], []).indices).toHaveLength(6);
@@ -49,7 +54,10 @@ describe('triangleArrayCommand', () => {
 
 describe('attributesGeometry', () => {
   it('writes each point in vertex_attrib and the indices', () => {
-    const geometry = attributesGeometry(triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []));
+    const geometry = attributesGeometry(
+      triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
+      PLAIN_DRAW
+    );
 
     expect([arrayOf(geometry, 'vertex_attrib'), [...geometry.index!.array]]).toEqual([
       [0, 0, 4, 0, 4, 4],
@@ -58,13 +66,19 @@ describe('attributesGeometry', () => {
   });
 
   it('repeats one colour on every point', () => {
-    const geometry = attributesGeometry(triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [RED], []));
+    const geometry = attributesGeometry(
+      triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [RED], []),
+      PLAIN_DRAW
+    );
 
     expect(arrayOf(geometry, 'color_attrib')).toEqual([1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1]);
   });
 
   it("reads white and a UV of zero for missing arrays, as Godot's default buffers hold", () => {
-    const geometry = attributesGeometry(triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []));
+    const geometry = attributesGeometry(
+      triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
+      PLAIN_DRAW
+    );
 
     expect([
       arrayOf(geometry, 'color_attrib').slice(0, 4),
@@ -76,7 +90,10 @@ describe('attributesGeometry', () => {
   });
 
   it('reads bones as unsigned integers and weights as floats, all zero', () => {
-    const geometry = attributesGeometry(triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []));
+    const geometry = attributesGeometry(
+      triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
+      PLAIN_DRAW
+    );
 
     expect(
       ['bone_attrib', 'weight_attrib'].map((name) => geometry.getAttribute(name).array.constructor.name)
@@ -84,13 +101,19 @@ describe('attributesGeometry', () => {
   });
 
   it('cuts a strip into its triangles, every second one turned', () => {
-    const geometry = attributesGeometry({ primitive: 'triangle_strip', points: SQUARE, colors: [], uvs: [] });
+    const geometry = attributesGeometry(
+      { primitive: 'triangle_strip', points: SQUARE, colors: [], uvs: [] },
+      PLAIN_DRAW
+    );
 
     expect([...geometry.index!.array]).toEqual([0, 1, 2, 1, 3, 2]);
   });
 
   it('is never culled, as it has no position to bound', () => {
-    const geometry = attributesGeometry(triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []));
+    const geometry = attributesGeometry(
+      triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
+      PLAIN_DRAW
+    );
 
     expect(new THREE.Frustum().intersectsSphere(geometry.boundingSphere!)).toBe(true);
   });
@@ -98,7 +121,7 @@ describe('attributesGeometry', () => {
   it('refuses a surface with a colour count that is not 0, 1 or one for each point', () => {
     const surface = { primitive: 'triangles' as const, points: SQUARE, colors: [RED, RED], uvs: [] };
 
-    expect(() => attributesGeometry(surface)).toThrow(
+    expect(() => attributesGeometry(surface, PLAIN_DRAW)).toThrow(
       'expected 0, 1 or 4 colours and 0 or 4 UVs, got 2 and 0'
     );
   });
@@ -135,7 +158,7 @@ describe('meshConstants', () => {
 });
 
 describe('primitiveObject', () => {
-  const geometry = () => attributesGeometry(triangleArrayCommand([0, 1, 2, 3], SQUARE, [], []));
+  const geometry = () => attributesGeometry(triangleArrayCommand([0, 1, 2, 3], SQUARE, [], []), PLAIN_DRAW);
   const material = new THREE.MeshBasicMaterial();
 
   it.each([
@@ -155,7 +178,7 @@ describe('primitiveObject', () => {
 describe('attributesObject', () => {
   it('writes the push constants of the object before it draws', () => {
     const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes');
-    const geometry = attributesGeometry(polygonCommand(SQUARE, [], []));
+    const geometry = attributesGeometry(polygonCommand(SQUARE, [], []), PLAIN_DRAW);
     const object = attributesObject(draw, geometry, 'triangles', polygonConstants(ITEM));
     const hook = draw.uniforms.get('params.world_x') as UniformNode<unknown> & {
       update(frame: { object: THREE.Object3D }): void;
@@ -170,7 +193,7 @@ describe('attributesObject', () => {
 
   it('writes the push constants of a clone, which shares the material', () => {
     const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes');
-    const geometry = attributesGeometry(polygonCommand(SQUARE, [], []));
+    const geometry = attributesGeometry(polygonCommand(SQUARE, [], []), PLAIN_DRAW);
     const clone = attributesObject(draw, geometry, 'triangles', polygonConstants(ITEM)).clone();
     const hook = draw.uniforms.get('params.world_x') as UniformNode<unknown> & {
       update(frame: { object: THREE.Object3D }): void;
@@ -181,5 +204,54 @@ describe('attributesObject', () => {
     expect((draw.uniforms.get('params.world_ofs') as UniformNode<unknown>).value).toEqual(
       new THREE.Vector2(5, 7)
     );
+  });
+
+  it('throws for a draw that emulates points over arrays of another primitive', () => {
+    const draw = transpileCanvasItem(SIZED_POINTS).draw('attributes_points');
+    const geometry = attributesGeometry(polygonCommand(SQUARE, [], []), PLAIN_DRAW);
+
+    expect(() => attributesObject(draw, geometry, 'triangles', polygonConstants(ITEM))).toThrow(
+      'expected points for a draw that emulates points, got triangles'
+    );
+  });
+
+  it('draws each point of a shader that names POINT_SIZE as an instance of two triangles, with its vertex index', () => {
+    const draw = transpileCanvasItem(SIZED_POINTS).draw('attributes_points');
+    const points = {
+      primitive: 'points' as const,
+      indices: [2, 0],
+      points: SQUARE.slice(0, 3),
+      colors: [],
+      uvs: [],
+    };
+    const object = attributesObject(
+      draw,
+      attributesGeometry(points, draw),
+      'points',
+      polygonConstants(ITEM)
+    ) as THREE.Mesh;
+    const geometry = object.geometry as THREE.InstancedBufferGeometry;
+
+    expect([object.isMesh, geometry.instanceCount, arrayOf(geometry, 'vertex_id_attrib')]).toEqual([
+      true,
+      2,
+      [2, 0],
+    ]);
+  });
+
+  it("draws three's points for a shader that leaves POINT_SIZE", () => {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes_points');
+    const points = { primitive: 'points' as const, points: SQUARE.slice(0, 3), colors: [], uvs: [] };
+
+    expect(
+      attributesObject(draw, attributesGeometry(points, draw), 'points', polygonConstants(ITEM))
+    ).toBeInstanceOf(THREE.Points);
+  });
+
+  it("writes no vertex index for three's points, which read their own", () => {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes_points');
+    const points = { primitive: 'points' as const, points: SQUARE.slice(0, 3), colors: [], uvs: [] };
+
+    expect(attributesGeometry(points, draw).hasAttribute('vertex_id_attrib')).toBe(false);
   });
 });

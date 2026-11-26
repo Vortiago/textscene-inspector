@@ -97,4 +97,56 @@ describe('transpileCanvasItem', () => {
 
     expect(generatedMaterialProgram(material).fragment).toContain('texture(');
   });
+
+  it('names the custom arrays a shader reads, which its draws bind', () => {
+    const readsCustom1 = 'shader_type canvas_item;\nvoid vertex() { COLOR = CUSTOM1; }\n';
+
+    expect([
+      transpileCanvasItem(readsCustom1).draw('attributes').customsRead,
+      transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes').customsRead,
+    ]).toEqual([[1], []]);
+  });
+
+  describe("points at the shader's POINT_SIZE", () => {
+    const SIZED = 'shader_type canvas_item;\nvoid vertex() { POINT_SIZE = 6.0; }\n';
+
+    it('emulates the points of a points variant when the shader names POINT_SIZE', () => {
+      const item = transpileCanvasItem(SIZED);
+
+      expect(
+        [item.draw('attributes_points'), item.draw('primitive_points')].map((d) => d.emulatesPoints)
+      ).toEqual([true, true]);
+    });
+
+    it("draws three's points for a shader that leaves POINT_SIZE, and no quads for a variant of no points", () => {
+      expect([
+        transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes_points').emulatesPoints,
+        transpileCanvasItem(SIZED).draw('attributes').emulatesPoints,
+      ]).toEqual([false, false]);
+    });
+
+    it('builds every variant of triangles for a shader that writes POINT_SIZE', () => {
+      const item = transpileCanvasItem(SIZED);
+
+      expect(
+        (['quad', 'ninepatch', 'primitive', 'attributes'] as const).map(
+          (variant) => generatedMaterialProgram(item.draw(variant).material).vertex.length > 0
+        )
+      ).toEqual([true, true, true, true]);
+    });
+
+    it("sizes the emulated points from the shader's POINT_SIZE, where three's points take none", () => {
+      const emulated = generatedMaterialProgram(
+        transpileCanvasItem(SIZED).draw('attributes_points').material
+      );
+      const native = generatedMaterialProgram(
+        transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes_points').material
+      );
+
+      expect([
+        emulated.vertex.includes('godot_point_size'),
+        native.vertex.includes('godot_point_size'),
+      ]).toEqual([true, false]);
+    });
+  });
 });

@@ -4,7 +4,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ImagePixels } from '../formats/image/imagePixels';
-import { atlasGridSize, paddedAtlasPixels, paddedTileRegion } from './paddedAtlas';
+import {
+  atlasGridSize,
+  paddedAtlasLayout,
+  paddedAtlasPixels,
+  paddedAtlasSize,
+  paddedTileRegion,
+  type AtlasPixels,
+} from './paddedAtlas';
 import type { AtlasSourceModel } from './types';
 
 const source = {
@@ -51,6 +58,26 @@ describe('atlasGridSize', () => {
   });
 });
 
+describe('paddedAtlasSize', () => {
+  const textureSize = { width: 20, height: 14 };
+
+  it('gives each cell of the grid its region and one texel on each side', () => {
+    const size = paddedAtlasSize(
+      { margins: { x: 2, y: 1 }, separation: { x: 1, y: 1 }, textureRegionSize: { x: 4, y: 4 } },
+      textureSize
+    );
+    expect(size).toEqual({ width: 18, height: 12 });
+  });
+
+  it('is empty for a texture smaller than one region', () => {
+    const size = paddedAtlasSize(
+      { margins: { x: 0, y: 0 }, separation: { x: 0, y: 0 }, textureRegionSize: { x: 32, y: 4 } },
+      textureSize
+    );
+    expect(size).toEqual({ width: 0, height: 0 });
+  });
+});
+
 /** An image whose red channel holds `values` row by row, with full alpha. */
 function redImage(width: number, values: number[]): ImagePixels {
   const data = new Uint8Array(values.length * 4);
@@ -58,7 +85,7 @@ function redImage(width: number, values: number[]): ImagePixels {
   return { width, height: values.length / width, data };
 }
 
-function redRows(image: ImagePixels): number[][] {
+function redRows(image: AtlasPixels): number[][] {
   const rows: number[][] = [];
   for (let y = 0; y < image.height; y++) {
     rows.push(Array.from({ length: image.width }, (_, x) => image.data[(y * image.width + x) * 4]!));
@@ -120,6 +147,26 @@ describe('paddedAtlasPixels', () => {
     expect(padded.data.every((byte) => byte === 0)).toBe(true);
   });
 
+  it('keeps half-float bits in their own type, as Godot pads an image in its own format', () => {
+    const halfFloats = {
+      width: 2,
+      height: 1,
+      data: new Uint16Array([0x4000, 0, 0, 0x3c00, 0x4200, 0, 0, 0x3c00]),
+    };
+    const tiles = atlasOf(
+      [
+        ['0:0', { x: 1, y: 1 }],
+        ['1:0', { x: 1, y: 1 }],
+      ],
+      1
+    );
+    const padded = paddedAtlasPixels(halfFloats, tiles);
+    expect([padded.data instanceof Uint16Array, redRows(padded)[1]]).toEqual([
+      true,
+      [0x4000, 0x4000, 0x4000, 0x4200, 0x4200, 0x4200],
+    ]);
+  });
+
   it('clips a region that runs past the source image as blit_rect does', () => {
     const narrow = redImage(3, [1, 2, 3, 4, 5, 6]);
     const padded = paddedAtlasPixels(narrow, atlasOf([['0:0', { x: 2, y: 1 }]], 2));
@@ -129,5 +176,24 @@ describe('paddedAtlasPixels', () => {
       [4, 4, 5, 6],
       [4, 4, 5, 6],
     ]);
+  });
+});
+
+describe('paddedAtlasLayout', () => {
+  it("keeps the grid and each tile's size in the atlas", () => {
+    const layout = paddedAtlasLayout(atlasOf([['1:0', { x: 2, y: 1 }]], 8));
+
+    expect(layout).toEqual({
+      margins: { x: 0, y: 0 },
+      separation: { x: 0, y: 0 },
+      textureRegionSize: { x: 8, y: 8 },
+      tiles: new Map([['1:0', { sizeInAtlas: { x: 2, y: 1 } }]]),
+    });
+  });
+
+  it("leaves out the tiles' alternatives, which the worker job does not read", () => {
+    const layout = paddedAtlasLayout(atlasOf([['0:0', { x: 1, y: 1 }]], 8));
+
+    expect(layout.tiles.get('0:0')).not.toHaveProperty('alternatives');
   });
 });

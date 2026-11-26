@@ -41,7 +41,7 @@ import type { NodeFrame } from 'three/webgpu';
 import { perObject } from '../../utils/perObject';
 import { warnOnce } from '../../utils/warnOnce';
 import { canvasTransformInto } from '../node2dTransform';
-import type { CanvasShaderCommand } from './canvasCommands';
+import { boundByItem, itemBox, type CanvasShaderCommand } from './canvasCommands';
 import { canvasDataOf, type CanvasColors } from './canvasFrameBlocks';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
@@ -158,9 +158,7 @@ export function canvasShaderDraw(
     return made;
   };
   const batches = commandRuns(layout).map((run) =>
-    run.kind === 'rect'
-      ? rectBatch(variantOf('quad'), run.commands.length)
-      : meshBatch(variantOf, run.command)
+    run.kind === 'rect' ? rectBatch(variantOf('quad'), run.commands) : meshBatch(variantOf, run.command)
   );
   for (const batch of batches) object.add(batch.object);
   const world = mutableTransform2D();
@@ -219,15 +217,21 @@ function commandRuns(commands: readonly CanvasShaderCommand[]): CommandRun[] {
   return runs;
 }
 
-function rectBatch(variant: BoundVariant, count: number): Batch {
+function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch {
+  const count = layout.length;
   const geometry = quadBatchGeometry(Array.from({ length: count }, () => new ArrayBuffer(INSTANCE_BYTES)));
   const object = new THREE.Mesh(geometry, variant.draw.material);
   object.frustumCulled = false;
+  // Bounded by the layout until the first source, so a clip group reads the rects at once.
+  const box = boundByItem(object, layout);
   let regions: readonly CanvasRectCommand[] = [];
   return {
     object,
     setRun: (run) => {
-      if (run.kind === 'rect') regions = run.commands.map(rectRegionOf);
+      if (run.kind !== 'rect') return;
+      regions = run.commands.map(rectRegionOf);
+      // The batch owns its quads, so each source writes the one box: AnimatedSprite2D sets one a frame.
+      itemBox(box, run.commands);
     },
     writeColors: (item) =>
       writeBatchRecords(geometry, item, regions.length, (record, index) =>
@@ -249,13 +253,15 @@ function rectRegionOf({
 
 function meshBatch(
   variantOf: (variant: CanvasVariant) => BoundVariant,
-  { arrays }: Extract<CanvasShaderCommand, { kind: 'mesh' }>
+  command: Extract<CanvasShaderCommand, { kind: 'mesh' }>
 ): Batch {
+  const { arrays } = command;
   const { draw } = variantOf(attributesVariant(arrays.primitive));
-  const geometry = attributesGeometry(arrays);
+  const geometry = attributesGeometry(arrays, draw);
   // Written in place by this batch, and read by the attributes draw before each draw.
   const constants = { world: mutableTransform2D(), modulation: WHITE };
   const object = attributesObject(draw, geometry, arrays.primitive, constants);
+  boundByItem(object, [command]);
   return {
     object,
     // The layout holds the mesh's arrays, so a command of the same layout gives the same ones.
@@ -263,7 +269,11 @@ function meshBatch(
     // `canvas_item_add_mesh`'s white modulate times the item's (`renderer_canvas_render_rd.cpp:2764-2855`).
     writeColors: (item) => (constants.modulation = modulated(WHITE, item)),
     writeWorld: (world) => Object.assign(constants.world, world),
-    dispose: () => geometry.dispose(),
+    dispose: () => {
+      geometry.dispose();
+      // An emulated points draw holds quads of its own beside the arrays.
+      if (object.geometry !== geometry) object.geometry.dispose();
+    },
   };
 }
 

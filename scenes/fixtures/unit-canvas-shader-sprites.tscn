@@ -1,0 +1,197 @@
+[gd_scene format=3]
+
+; One variable: the Sprite2D and AnimatedSprite2D properties that change the rect, the UV or the
+; colour a canvas_item ShaderMaterial reads: region, flip, centered, offset, hframes and vframes,
+; modulate, texture_filter, texture_repeat, and an AnimatedSprite2D frame, flip and AtlasTexture.
+; The shader mixes TEXTURE with UV, so a wrong UV, rect or colour shows. The one other sprite shader
+; golden moves the shader, not these properties, so none shows a regression in them. Each case sits
+; at its own cell of a 6 by 3 grid, so a diff names the property that moved.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+[ext_resource type="Texture2D" path="res://textures/mip-checker.png" id="2_checker"]
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="3_quadrants"]
+
+[sub_resource type="Shader" id="Shader_mix"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), vec4(UV, 0.5, 1.0), 0.5) * COLOR;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mix"]
+shader = SubResource("Shader_mix")
+
+[sub_resource type="Shader" id="Shader_shift"]
+code = "shader_type canvas_item;
+
+void vertex() {
+	VERTEX += vec2(10.0, -14.0);
+}
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), vec4(UV, 0.5, 1.0), 0.5) * COLOR;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_shift"]
+shader = SubResource("Shader_shift")
+
+[sub_resource type="Shader" id="Shader_double"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = texture(TEXTURE, UV * 2.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_double"]
+shader = SubResource("Shader_double")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_marker_tr"]
+atlas = ExtResource("1_marker")
+region = Rect2(48, 0, 48, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_quadrants_bl"]
+atlas = ExtResource("3_quadrants")
+region = Rect2(0, 64, 64, 64)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_three"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_marker")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_quadrants")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_quadrants_bl")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_marker_tr")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="World" type="Node2D"]
+
+[node name="Region" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(96, 108)
+texture = ExtResource("1_marker")
+region_enabled = true
+region_rect = Rect2(16, 8, 64, 56)
+
+[node name="RegionShifted" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_shift")
+position = Vector2(288, 108)
+texture = ExtResource("1_marker")
+flip_v = true
+region_enabled = true
+region_rect = Rect2(16, 8, 64, 56)
+
+[node name="FlipH" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(480, 108)
+texture = ExtResource("1_marker")
+flip_h = true
+
+[node name="FlipV" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(672, 108)
+texture = ExtResource("1_marker")
+flip_v = true
+
+[node name="NotCentered" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(816, 60)
+texture = ExtResource("1_marker")
+centered = false
+
+[node name="Offset" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(1056, 108)
+texture = ExtResource("1_marker")
+offset = Vector2(20, -15)
+
+[node name="Frames" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(96, 324)
+texture = ExtResource("1_marker")
+hframes = 2
+vframes = 2
+frame = 1
+
+[node name="FramesShifted" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_shift")
+position = Vector2(288, 324)
+texture = ExtResource("3_quadrants")
+hframes = 2
+vframes = 2
+frame = 2
+
+[node name="Modulate" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+modulate = Color(1, 0.5, 0.4, 0.8)
+position = Vector2(480, 324)
+texture = ExtResource("1_marker")
+
+[node name="SelfModulate" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+self_modulate = Color(0.4, 1, 0.5, 0.8)
+position = Vector2(672, 324)
+texture = ExtResource("1_marker")
+
+[node name="FilterNearest" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+texture_filter = 1
+position = Vector2(864, 324)
+scale = Vector2(10, 10)
+texture = ExtResource("2_checker")
+
+[node name="FilterLinear" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+texture_filter = 2
+position = Vector2(1056, 324)
+scale = Vector2(10, 10)
+texture = ExtResource("2_checker")
+
+[node name="RepeatEnabled" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_double")
+texture_repeat = 2
+position = Vector2(96, 540)
+texture = ExtResource("1_marker")
+
+[node name="RepeatDefault" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_double")
+position = Vector2(288, 540)
+texture = ExtResource("1_marker")
+
+[node name="AnimatedFrame" type="AnimatedSprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(480, 540)
+scale = Vector2(0.75, 0.75)
+sprite_frames = SubResource("SpriteFrames_three")
+frame = 1
+
+[node name="AnimatedFlipH" type="AnimatedSprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(672, 540)
+sprite_frames = SubResource("SpriteFrames_three")
+flip_h = true
+
+[node name="AnimatedAtlas" type="AnimatedSprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(864, 540)
+sprite_frames = SubResource("SpriteFrames_three")
+frame = 3
+
+[node name="AnimatedAtlasShifted" type="AnimatedSprite2D" parent="."]
+material = SubResource("ShaderMaterial_shift")
+position = Vector2(1056, 540)
+sprite_frames = SubResource("SpriteFrames_three")
+frame = 2
+flip_h = true

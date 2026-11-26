@@ -4,6 +4,8 @@ import {
   VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
   withGodotAttributes,
 } from '../../shaders/spatial/meshAttributes.js';
+import { ARRAY_CUSTOM_COUNT } from '../../godot/rendering/meshArrayFormat.js';
+import { customArrayAttribute } from '../../shaders/template/surfaceAttributes.js';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface.js';
 import { perObject } from '../../utils/perObject.js';
 
@@ -26,10 +28,7 @@ const SOURCE_ATTRIBUTES = [
   'color',
   'uv',
   'uv1',
-  'custom0',
-  'custom1',
-  'custom2',
-  'custom3',
+  ...Array.from({ length: ARRAY_CUSTOM_COUNT }, (_, custom) => customArrayAttribute(custom)),
   'skinIndex',
   'skinWeight',
   VERTEX_STAGE_BONES_ATTRIBUTE,
