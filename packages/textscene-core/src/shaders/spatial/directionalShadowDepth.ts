@@ -23,12 +23,10 @@ export function unboundDirectionalShadowColour(): THREE.Texture {
 const colours = new WeakMap<TextureNode, TextureNode>();
 
 function storedDepthAt(colour: TextureNode, texel: Node): Float {
-  const bytes = TSL.floor(
-    colour
-      .load(texel as never)
-      .rg.mul(255)
-      .add(0.5)
-  );
+  const load = colour.load(texel as never);
+  // A texel needs no uv transform, which three's load would apply as a matrix product to each texel.
+  load.updateMatrix = false;
+  const bytes = TSL.floor(load.rg.mul(255).add(0.5));
   return TSL.dot(bytes, DEPTH_BYTES).div(DEPTH_STEPS) as unknown as Float;
 }
 
