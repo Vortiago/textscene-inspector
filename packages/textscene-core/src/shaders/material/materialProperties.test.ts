@@ -57,30 +57,4 @@ describe('materialStateOf', () => {
 
     expect(key.roughnessTextureChannel).toBe(TextureChannel.TEXTURE_CHANNEL_RED);
   });
-
-  it.each([Number.NaN, Infinity, -Infinity])(
-    'turns a feature, a flag and a bool on for %s, which is not zero',
-    (value) => {
-      const { key } = materialStateOf('StandardMaterial3D', {
-        rim_enabled: value,
-        uv1_triplanar: value,
-        grow: value,
-      });
-
-      expect([
-        key.features.has(MaterialFeature.RIM),
-        key.flags.has(MaterialFlag.UV1_USE_TRIPLANAR),
-        key.grow,
-      ]).toEqual([true, true, true]);
-    }
-  );
-
-  it.each([Number.NaN, Infinity, -Infinity])(
-    'casts an enum of %s to the lowest int32, as the Variant does',
-    (value) => {
-      const { key } = materialStateOf('StandardMaterial3D', { blend_mode: value, stencil_reference: value });
-
-      expect([key.blendMode, key.stencilReference]).toEqual([-2147483648, -2147483648]);
-    }
-  );
 });

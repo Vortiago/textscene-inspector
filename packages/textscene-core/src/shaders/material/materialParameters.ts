@@ -14,13 +14,7 @@ import {
   vector3,
   type Variant,
 } from '../../godot/variant/value/variant.js';
-import {
-  isTextureChannel,
-  setterBool,
-  setterInt,
-  type MaterialState,
-  type MaterialValue,
-} from './materialProperties.js';
+import { isTextureChannel, type MaterialState, type MaterialValue } from './materialProperties.js';
 
 /** The value of each property the constructor sets (`material.cpp:3936`), under the property's name. */
 const DEFAULTS: Readonly<Record<string, MaterialValue>> = {
@@ -172,9 +166,8 @@ const INT_PARAMETERS: ReadonlySet<string> = new Set([
 
 /** The Variant a setter passes for parameter `name`: a lane list is a vector, or a colour. */
 function parameterVariant(name: string, value: MaterialValue): Variant {
-  if (INT_PARAMETERS.has(name)) return int(setterInt(value));
   if (typeof value === 'boolean') return bool(value);
-  if (typeof value === 'number') return real(value);
+  if (typeof value === 'number') return INT_PARAMETERS.has(name) ? int(value) : real(value);
   const [x = 0, y = 0, z = 0, w = 0] = value;
   if (value.length === 2) return vector2({ x, y });
   if (value.length === 3) return vector3({ x, y, z });
@@ -184,24 +177,12 @@ function parameterVariant(name: string, value: MaterialValue): Variant {
 
 /** The channel mask of the enum property `name`, as `_get_texture_mask` (`material.cpp:2950`) gives it. */
 function maskOf(state: MaterialState, name: string) {
-  const channel = setterInt(valueOf(state, name));
+  const channel = Number(valueOf(state, name));
+  // `ERR_FAIL_INDEX(p_channel, 5)` keeps the channel the constructor set (`material.cpp:2964`).
   return textureChannelMask(isTextureChannel(channel) ? channel : TextureChannel.TEXTURE_CHANNEL_RED);
 }
 
-/** The value property `name`'s typed setter takes, or the default for a value of a type it cannot take. */
-function valueOf(state: MaterialState, name: string): MaterialValue {
-  const fallback = DEFAULTS[name]!;
-  const value = state.values[name];
-  return value === undefined ? fallback : (settingLike(value, fallback) ?? fallback);
-}
-
-/** `value` as a setter of `like`'s type takes it, or nothing for a type `Variant::can_convert` refuses. */
-function settingLike(value: MaterialValue, like: MaterialValue): MaterialValue | undefined {
-  if (typeof like === 'object')
-    return typeof value === 'object' && value.length === like.length ? value : undefined;
-  if (typeof value === 'object') return undefined;
-  return typeof like === 'boolean' ? setterBool(value) : Number(value);
-}
+const valueOf = (state: MaterialState, name: string): MaterialValue => state.values[name] ?? DEFAULTS[name]!;
 
 /**
  * The Variant Godot's setters give each parameter but the textures, which `textureParameterOf` names.
@@ -230,6 +211,9 @@ function clampedParameters(state: MaterialState): Record<string, number> {
   return {
     uv1_blend_sharpness: clamp(number('uv1_triplanar_sharpness'), min, max),
     uv2_blend_sharpness: clamp(number('uv2_triplanar_sharpness'), min, max),
-    proximity_fade_distance: cMax(number('proximity_fade_distance'), PROXIMITY_FADE_DISTANCE_MIN),
+    // The member is a `float`, so the bound it keeps is 0.01 in float32.
+    proximity_fade_distance: Math.fround(
+      cMax(number('proximity_fade_distance'), PROXIMITY_FADE_DISTANCE_MIN)
+    ),
   };
 }

@@ -1,0 +1,2165 @@
+{
+  "godot": "4.6.3-stable (official)",
+  "rows": [
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "0.25",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "nan",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "inf",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "inf_neg",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "-1",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "7",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "1e10",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "true",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "false",
+      "input": "null",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "\"0.5\"",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "\"x\"",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector2(1, 2)",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector3(1, 2, 3)",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "grow"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "0.25",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "nan",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "inf",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "inf_neg",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "-1",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "7",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "1e10",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "true",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "false",
+      "input": "null",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "\"0.5\"",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "\"x\"",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector2(1, 2)",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector3(1, 2, 3)",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "heightmap_deep_parallax"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "0.25",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "nan",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "inf",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "inf_neg",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "-1",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "7",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "1e10",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "true",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "false",
+      "input": "null",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "\"0.5\"",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "\"x\"",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector2(1, 2)",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector3(1, 2, 3)",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "bool",
+      "godot": "true",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "particles_anim_loop"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "0.25",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "nan",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "inf",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "inf_neg",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "-1",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "7",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "1e10",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "true",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "false",
+      "input": "null",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "\"0.5\"",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "\"x\"",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "Vector2(1, 2)",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "Vector3(1, 2, 3)",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "feature",
+      "godot": "true",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "rim_enabled"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "0.25",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "nan",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "inf",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "inf_neg",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "-1",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "7",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "1e10",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "true",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "false",
+      "input": "null",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "\"0.5\"",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "\"x\"",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "Vector2(1, 2)",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "Vector3(1, 2, 3)",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "flag",
+      "godot": "true",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "uv1_triplanar"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "0.25",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "nan",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "inf",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "inf_neg",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "-1",
+      "input": "-1",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "7",
+      "input": "7",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "1e10",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "1",
+      "input": "true",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "null",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "heightmap_min_layers"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "0.25",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "nan",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "inf",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "inf_neg",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "-1",
+      "input": "-1",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "7",
+      "input": "7",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "1e10",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "1",
+      "input": "true",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "null",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "particles_anim_h_frames"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "0.25",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "nan",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "inf",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "inf_neg",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "-1",
+      "input": "-1",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "7",
+      "input": "7",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "-2147483648",
+      "input": "1e10",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "1",
+      "input": "true",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "null",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "int",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "stencil_reference"
+    },
+    {
+      "kind": "flags",
+      "godot": "0",
+      "input": "0.25",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "-2147483648",
+      "input": "nan",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "-2147483648",
+      "input": "inf",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "-2147483648",
+      "input": "inf_neg",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "1",
+      "input": "-1",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "1",
+      "input": "7",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "-2147483648",
+      "input": "1e10",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "1",
+      "input": "true",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "0",
+      "input": "null",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "flags",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "stencil_flags"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "0.25",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "nan",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "inf",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "inf_neg",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "4294967295",
+      "input": "-1",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "7",
+      "input": "7",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "1410065408",
+      "input": "1e10",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "1",
+      "input": "true",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "null",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "blend_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "0.25",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "nan",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "inf",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "inf_neg",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "4294967295",
+      "input": "-1",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "7",
+      "input": "7",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "1410065408",
+      "input": "1e10",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "1",
+      "input": "true",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "null",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "transparency"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "0.25",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "nan",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "inf",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "inf_neg",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "4294967295",
+      "input": "-1",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "7",
+      "input": "7",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "1410065408",
+      "input": "1e10",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "1",
+      "input": "true",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "null",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "cull_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "0.25",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "nan",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "inf",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "inf_neg",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "4294967295",
+      "input": "-1",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "7",
+      "input": "7",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "1410065408",
+      "input": "1e10",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "1",
+      "input": "true",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "null",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "enum",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "stencil_mode"
+    },
+    {
+      "kind": "float",
+      "godot": "0.25",
+      "input": "0.25",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "nan",
+      "input": "nan",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "inf",
+      "input": "inf",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "inf_neg",
+      "input": "inf_neg",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "-1.0",
+      "input": "-1",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "7.0",
+      "input": "7",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "10000000000.0",
+      "input": "1e10",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "1.0",
+      "input": "true",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "null",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "0.5",
+      "input": "\"0.5\"",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "\"x\"",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "Vector2(1, 2)",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "roughness"
+    },
+    {
+      "kind": "float",
+      "godot": "0.25",
+      "input": "0.25",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "nan",
+      "input": "nan",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "inf",
+      "input": "inf",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "inf_neg",
+      "input": "inf_neg",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "-1.0",
+      "input": "-1",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "7.0",
+      "input": "7",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "10000000000.0",
+      "input": "1e10",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "1.0",
+      "input": "true",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "null",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "0.5",
+      "input": "\"0.5\"",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "\"x\"",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "Vector2(1, 2)",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "metallic"
+    },
+    {
+      "kind": "float",
+      "godot": "0.0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "metallic"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.25",
+      "input": "0.25",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "nan",
+      "input": "nan",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "150.0",
+      "input": "inf",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.0",
+      "input": "inf_neg",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.0",
+      "input": "-1",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "7.0",
+      "input": "7",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "150.0",
+      "input": "1e10",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "1.0",
+      "input": "true",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.0",
+      "input": "null",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.5",
+      "input": "\"0.5\"",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.0",
+      "input": "\"x\"",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.0",
+      "input": "Vector2(1, 2)",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "uv1_triplanar_sharpness"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.25",
+      "input": "0.25",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "nan",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "inf",
+      "input": "inf",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "inf_neg",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "-1",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "7.0",
+      "input": "7",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "10000000000.0",
+      "input": "1e10",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "1.0",
+      "input": "true",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "null",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.5",
+      "input": "\"0.5\"",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "\"x\"",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "Vector2(1, 2)",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "Vector3(1, 2, 3)",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "clampedFloat",
+      "godot": "0.01",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "proximity_fade_distance"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "0.25",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "nan",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "inf",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "inf_neg",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "-1",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "7",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "1e10",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "true",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "null",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "\"0.5\"",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "\"x\"",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(1, 2, 0)",
+      "input": "Vector2(1, 2)",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(1, 2, 3)",
+      "input": "Vector3(1, 2, 3)",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(2, 3, 4)",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "vector",
+      "godot": "Vector3(0, 0, 0)",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "uv1_scale"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "0.25",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "nan",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "inf",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "inf_neg",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(1, 1, 1, 1)",
+      "input": "-1",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 0.02745098)",
+      "input": "7",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "1e10",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "true",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "null",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "\"0.5\"",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "\"x\"",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "Vector2(1, 2)",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "Vector3(1, 2, 3)",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(1, 0.5, 0, 1)",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "albedo_color"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "0.25",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "nan",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "inf",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "inf_neg",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(1, 1, 1, 1)",
+      "input": "-1",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 0.02745098)",
+      "input": "7",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "1e10",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "true",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "null",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "\"0.5\"",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "\"x\"",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "Vector2(1, 2)",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "Vector3(1, 2, 3)",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(0, 0, 0, 1)",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "emission"
+    },
+    {
+      "kind": "colour",
+      "godot": "Color(1, 0.5, 0, 1)",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "emission"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "0.25",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "nan",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "inf",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "inf_neg",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "-1",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "7",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "1e10",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "1",
+      "input": "true",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "null",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "metallic_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "0.25",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "nan",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "inf",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "inf_neg",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "-1",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "7",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "1e10",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "1",
+      "input": "true",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "null",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "ao_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "0.25",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "nan",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "inf",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "inf_neg",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "-1",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "7",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "1e10",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "1",
+      "input": "true",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "null",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "\"0.5\"",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "\"x\"",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector2(1, 2)",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector3(1, 2, 3)",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "textureChannel",
+      "godot": "0",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "roughness_texture_channel"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "0.25",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "nan",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "inf",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "inf_neg",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "-1",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "7",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "1e10",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "true",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "null",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "\"0.5\"",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "\"x\"",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "Vector2(1, 2)",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "Vector3(1, 2, 3)",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "Vector3i(2, 3, 4)",
+      "property": "albedo_texture"
+    },
+    {
+      "kind": "texture",
+      "godot": "null",
+      "input": "Color(1, 0.5, 0, 1)",
+      "property": "albedo_texture"
+    }
+  ]
+}

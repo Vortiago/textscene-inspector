@@ -126,6 +126,15 @@ const OUTCOMES: readonly Outcome[] = [
     godot: 'its RID names no texture, so the sampler reads the default (`material_storage.cpp:1094-1096`)',
   },
   {
+    name: 'is a float, not a texture',
+    map: '3.0',
+    resources: [],
+    settle: () => {},
+    waiting: 'node path',
+    after: 'node path',
+    godot: 'the setter takes the float as a null texture, so the sampler reads the default',
+  },
+  {
     name: 'is an AtlasTexture whose atlas file is missing',
     map: 'SubResource("Atlas")',
     resources: [{ id: 'Atlas', type: 'AtlasTexture', data: { atlas: 'ExtResource("1_map")' } }],

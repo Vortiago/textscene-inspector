@@ -14,7 +14,7 @@ import type { ScopedReference } from '../../resources/reading';
 import { useShadedSurfaceMaterial } from './useSurfaceMaterial';
 import { SpatialShaderSlot } from '../spatialShader/SpatialShaderSlot';
 import type { SurfaceShaderSource } from '../spatialShader/surfaceShader';
-import type { ShaderText } from '../../resources/materials/shadermaterial/types';
+import { hasClassicMaterial } from '../../shaders/fault/shaderRefusal';
 import { warnUndrawnShader, type UndrawnShaderSurface } from './useMaterial';
 import type { MaterialAttach } from './swappedMaterials';
 
@@ -77,7 +77,7 @@ export function SurfaceMaterialSlot({
   const standard = bags ? <StandardMaterialSlot bags={bags} attach={attach} draws={draws} /> : placeholder;
   // No bags means a texture that never draws, so the placeholder stands before any shader.
   if (!drawsShader || !bags) return standard;
-  if (!drawsClassicVariants(shaded, shader)) {
+  if (!drawsClassicVariants(shaded)) {
     return (
       <SpatialShaderSlot source={shaded} attach={attach} fallback={standard} placeholder={placeholder} />
     );
@@ -89,10 +89,10 @@ export function SurfaceMaterialSlot({
   return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} unfaded={unfaded} />;
 }
 
-/** True for a StandardMaterial3D or Godot's default: the classic path declines an ORMMaterial3D. */
-function drawsClassicVariants(shaded: SurfaceShaderSource, shader: ShaderText | null): boolean {
-  if (shader) return false;
-  return !('baseMaterial' in shaded) || shaded.baseMaterial.materialClass === 'StandardMaterial3D';
+/** True for a StandardMaterial3D or Godot's default, which the classic path draws too. */
+function drawsClassicVariants(shaded: SurfaceShaderSource): boolean {
+  if ('shader' in shaded) return false;
+  return !('baseMaterial' in shaded) || hasClassicMaterial(shaded.baseMaterial.materialClass);
 }
 
 /** The surface a spatial shader falls back on, or null for a mesh's own surface, which draws it. */

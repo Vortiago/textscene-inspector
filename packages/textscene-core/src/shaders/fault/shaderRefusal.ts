@@ -7,9 +7,12 @@ export interface ShaderRefusal {
 /** Why a shader draws Godot's default instead: a refusal of its text, or a defect, which is no refusal. */
 export type ShaderUnDrawn = { readonly refusal: ShaderRefusal } | { readonly failure: unknown };
 
-/** What a `materialClass` draws without its generated shader: the classic path declines an ORMMaterial3D. */
+/** Whether the classic path draws a `materialClass`: it declines an ORMMaterial3D. */
+export const hasClassicMaterial = (materialClass: string): boolean => materialClass !== 'ORMMaterial3D';
+
+/** What a `materialClass` draws without its generated shader. */
 export const generatedFallbackOf = (materialClass: string): string =>
-  materialClass === 'ORMMaterial3D' ? "Godot's default 3D surface" : 'the classic material';
+  hasClassicMaterial(materialClass) ? 'the classic material' : "Godot's default 3D surface";
 
 /** The message for the shader Godot generates for a `materialClass`, which draws its fallback. */
 export function generatedUnDrawnMessage(compile: ShaderUnDrawn, materialClass: string): string {

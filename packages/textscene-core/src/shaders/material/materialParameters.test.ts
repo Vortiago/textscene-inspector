@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  bool,
-  int,
-  real,
-  variant,
-  vector2,
-  vector3,
-  type Variant,
-} from '../../godot/variant/value/variant.js';
+import { bool, int, real, variant, vector2, vector3 } from '../../godot/variant/value/variant.js';
 import { materialParameters, textureParameterOf } from './materialParameters.js';
 import { materialStateOf, type MaterialSettings } from './materialProperties.js';
 
@@ -37,33 +29,6 @@ describe('materialParameters', () => {
       particles_anim_v_frames: int(1),
     });
   });
-
-  const INT32_MIN = int(-2147483648);
-  const NON_FINITE_ROWS: readonly (readonly [string, number, string, Variant])[] = [
-    ['roughness', Number.NaN, 'roughness', real(Number.NaN)],
-    ['roughness', Infinity, 'roughness', real(Infinity)],
-    ['roughness', -Infinity, 'roughness', real(-Infinity)],
-    ['heightmap_min_layers', Number.NaN, 'heightmap_min_layers', INT32_MIN],
-    ['heightmap_min_layers', Infinity, 'heightmap_min_layers', INT32_MIN],
-    ['heightmap_min_layers', -Infinity, 'heightmap_min_layers', INT32_MIN],
-    ['particles_anim_loop', Number.NaN, 'particles_anim_loop', bool(true)],
-    ['particles_anim_loop', Infinity, 'particles_anim_loop', bool(true)],
-    ['particles_anim_loop', -Infinity, 'particles_anim_loop', bool(true)],
-    ['uv1_triplanar_sharpness', Number.NaN, 'uv1_blend_sharpness', real(Number.NaN)],
-    ['uv1_triplanar_sharpness', Infinity, 'uv1_blend_sharpness', real(150)],
-    ['uv1_triplanar_sharpness', -Infinity, 'uv1_blend_sharpness', real(0)],
-    ['proximity_fade_distance', Number.NaN, 'proximity_fade_distance', real(0.01)],
-    ['proximity_fade_distance', Infinity, 'proximity_fade_distance', real(Infinity)],
-    ['proximity_fade_distance', -Infinity, 'proximity_fade_distance', real(0.01)],
-    ['heightmap_flip_tangent', Number.NaN, 'heightmap_flip', vector2({ x: -1, y: 1 })],
-  ];
-
-  it.each(NON_FINITE_ROWS)(
-    "gives %s = %s the %s Godot's setter casts it to",
-    (property, value, parameter, expected) => {
-      expect(parametersOf({ [property]: value })[parameter]).toEqual(expected);
-    }
-  );
 
   it('keeps each non-finite lane of a vector and a colour, as the setters store them', () => {
     const lanes = [Number.NaN, Infinity, -Infinity];
@@ -117,23 +82,7 @@ describe('materialParameters', () => {
     }
   );
 
-  it('keeps the default for a value of a type the setter cannot take', () => {
-    const parameters = parametersOf({
-      uv1_scale: [2, 3, 4, 1],
-      albedo_color: [0.5, 0.5, 0.5],
-      roughness: [1, 2],
-    });
-
-    expect(parameters.uv1_scale).toEqual(vector3({ x: 1, y: 1, z: 1 }));
-    expect(parameters.albedo).toEqual(variant('COLOR', { r: 1, g: 1, b: 1, a: 1 }));
-    expect(parameters.roughness).toEqual(real(1));
-  });
-
-  it('casts a bool to the float a float setter takes', () => {
-    expect(parametersOf({ roughness: true }).roughness).toEqual(real(1));
-  });
-
-  it('clamps a triplanar sharpness to 0 to 150 and a proximity fade distance to at least 0.01', () => {
+  it('clamps a triplanar sharpness to 0 to 150 and a proximity fade distance to at least 0.01 in float32', () => {
     const parameters = parametersOf({
       uv1_triplanar_sharpness: 200,
       uv2_triplanar_sharpness: -1,
@@ -142,7 +91,7 @@ describe('materialParameters', () => {
 
     expect(parameters.uv1_blend_sharpness).toEqual(real(150));
     expect(parameters.uv2_blend_sharpness).toEqual(real(0));
-    expect(parameters.proximity_fade_distance).toEqual(real(0.01));
+    expect(parameters.proximity_fade_distance).toEqual(real(Math.fround(0.01)));
   });
 
   it('negates each flipped lane of the heightmap', () => {
