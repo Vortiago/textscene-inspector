@@ -15,6 +15,8 @@ export interface ViewportPointerHandlers {
   onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
   /** Bind to the window for `pointerup` and `pointercancel`, which it hears after R3F's release. */
   onWindowPointerEnd: (e: PointerEvent) => void;
+  /** Bind to the window, so a move off the canvas still ends the click. */
+  onWindowPointerMove: (e: PointerEvent) => void;
 }
 
 export interface UseViewportSelectionResult {
@@ -32,10 +34,17 @@ interface Point {
 /** A left press on the canvas. Once released, only the click that follows may still read it. */
 interface Press extends Point {
   isReleased: boolean;
+  /** Set by the first move past the click travel: Godot turns the press into a drag for good there. */
+  isDrag: boolean;
 }
 
-const isClick = (press: Point, release: Point) =>
-  Math.hypot(release.clientX - press.clientX, release.clientY - press.clientY) <= CLICK_TRAVEL_PX;
+const isWithinTravel = (press: Point, at: Point) =>
+  Math.hypot(at.clientX - press.clientX, at.clientY - press.clientY) <= CLICK_TRAVEL_PX;
+
+const isClick = (press: Press, release: Point) => !press.isDrag && isWithinTravel(press, release);
+
+// A left press with Alt orbits or pans, as the editor view's map holds (`node_3d_editor_plugin.cpp:1986`).
+const isPickPress = (e: PointerEvent) => e.button === 0 && !e.altKey;
 
 export function useViewportSelection(): UseViewportSelectionResult {
   const { setSelectedNodePath, objectPathMap } = useSelection();
@@ -56,9 +65,9 @@ export function useViewportSelection(): UseViewportSelectionResult {
   const handlers = useMemo<ViewportPointerHandlers>(
     () => ({
       onCanvasPointerDown(e) {
-        // Only the left button selects (`node_3d_editor_plugin.cpp:1978`): the others orbit and look.
-        pressRef.current =
-          e.button === 0 ? { clientX: e.clientX, clientY: e.clientY, isReleased: false } : null;
+        pressRef.current = isPickPress(e)
+          ? { clientX: e.clientX, clientY: e.clientY, isReleased: false, isDrag: false }
+          : null;
       },
       onPointerUp(e) {
         const press = pressRef.current;
@@ -74,6 +83,10 @@ export function useViewportSelection(): UseViewportSelectionResult {
         const press = pressRef.current;
         pressRef.current = null;
         if (press && isClick(press, e) && clearsOnNothing) pick(null);
+      },
+      onWindowPointerMove(e) {
+        const press = pressRef.current;
+        if (press && !press.isReleased && !isWithinTravel(press, e)) press.isDrag = true;
       },
       onWindowPointerEnd(e) {
         if (e.type === 'pointercancel') pressRef.current = null;

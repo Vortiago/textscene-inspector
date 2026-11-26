@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { isPublicSiteBuild } from './scripts/siteEdition.mjs';
+import { DEV_SITE_EDITION, PUBLIC_SITE_EDITION, isPublicSiteBuild } from './scripts/siteEdition.mjs';
 import { chunkGraph } from './scripts/chunkGraph.mjs';
 import { textureWorkerSource } from '../../packages/textscene-core/src/workers/bundler/vitePlugin.mjs';
 import { WORKSPACE_RENDERER_ALIAS } from '../../scripts/workspaceRenderer.mjs';
@@ -9,7 +9,11 @@ const isPublicSite = isPublicSiteBuild();
 
 export default defineConfig({
   // The job worker as a blob URL script (ADR-0042), and the chunk graph `check:bundle-size:web` reads.
-  plugins: [react(), textureWorkerSource(), ...(isPublicSite ? [] : [chunkGraph()])],
+  plugins: [
+    react(),
+    textureWorkerSource(),
+    chunkGraph(isPublicSite ? PUBLIC_SITE_EDITION : DEV_SITE_EDITION),
+  ],
   resolve: { alias: WORKSPACE_RENDERER_ALIAS },
   // Relative asset URLs: GitHub Pages serves the public edition under /<repo>/, not at
   // the root. The dev edition keeps `/`, as its `/fixtures/` fetches are root-absolute too.

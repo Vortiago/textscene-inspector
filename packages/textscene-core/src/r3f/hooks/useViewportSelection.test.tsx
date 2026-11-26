@@ -63,6 +63,40 @@ describe('useViewportSelection', () => {
     expect(view.result.current.selected).toBeNull();
   });
 
+  it('selects nothing for a press that moves past the click travel and back, which is a drag', () => {
+    const view = setup();
+
+    click(view, { on: registerObjectAt(view, 'Root/Mesh'), wander: 30 });
+
+    expect(view.result.current.selected).toBeNull();
+  });
+
+  it('keeps the selection through a drag from nothing that moves back to its press', () => {
+    const view = setup();
+    click(view, { on: registerObjectAt(view, 'Root/Mesh') });
+
+    click(view, { on: null, wander: 30 });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
+  });
+
+  it('selects nothing for an Alt+left click, which navigates', () => {
+    const view = setup();
+
+    click(view, { on: registerObjectAt(view, 'Root/Mesh'), altKey: true });
+
+    expect(view.result.current.selected).toBeNull();
+  });
+
+  it('keeps the selection through an Alt+left click on nothing', () => {
+    const view = setup();
+    click(view, { on: registerObjectAt(view, 'Root/Mesh') });
+
+    click(view, { on: null, altKey: true });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
+  });
+
   it('clears the selection on a click on nothing that moves up to the click travel', () => {
     const view = setup();
     click(view, { on: registerObjectAt(view, 'Root/Mesh') });

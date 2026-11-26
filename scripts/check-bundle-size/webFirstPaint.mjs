@@ -1,18 +1,17 @@
 import { gzipSync } from 'node:zlib';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { REPO_ROOT, formatKb } from './paths.mjs';
+import { REPO_ROOT } from './paths.mjs';
+import { reportGzipBudget } from './gzipBudget.mjs';
 import { CHUNK_GRAPH_FILE } from '../../apps/textscene-web/scripts/chunkGraph.mjs';
 
-const WEB_DIST = join(REPO_ROOT, 'apps/textscene-web/dist');
+export const WEB_DIST = join(REPO_ROOT, 'apps/textscene-web/dist');
 
-// Growth inside the ceiling is invisible in a PASS line, so the report reads it against the last measure.
-const MEASURED_GZ = 1_325_394;
-// A change that outgrows it, with no shrink found, raises it by its measured growth (ADR-0090).
-const BUDGET_GZ = 1_325_394;
-
-// The LTC tables and `fastnoise-lite` load on demand, though no dynamic import() names them.
-const LAZY_LEAF_RE = /\/ltcTable\.generated\.js$|\/node_modules\/fastnoise-lite\//;
+// A change that outgrows an edition's ceiling, with no shrink found, raises it by its growth (ADR-0090).
+const CEILINGS = {
+  dev: { measured: 1_325_475, budget: 1_325_475 },
+  public: { measured: 1_299_025, budget: 1_299_025 },
+};
 
 /** The chunks a first paint loads: each entry and its static imports. */
 export function firstPaintChunks({ chunks }) {
@@ -22,23 +21,43 @@ export function firstPaintChunks({ chunks }) {
   return [...loaded].map((fileName) => byName.get(fileName));
 }
 
-/** The modules of `paintChunks` that load only on demand: each dynamic import() target and each lazy leaf. */
-export function findEagerLazyOnlyModules(graph, paintChunks) {
-  const targets = new Set(graph.dynamicTargets);
-  return paintChunks.flatMap(({ modules }) =>
-    modules.filter((id) => targets.has(id) || LAZY_LEAF_RE.test(id))
-  );
+/** Every module the entry modules reach through static imports alone. */
+export function staticClosure({ entryModules, staticImports }) {
+  const reached = new Set(entryModules);
+  for (const id of reached) for (const imported of staticImports[id] ?? []) reached.add(imported);
+  return reached;
 }
 
-/** @returns {'ok' | 'over-budget' | 'missing-build' | 'eager-lazy-only'} */
-export function checkWebFirstPaint() {
-  const graphPath = join(WEB_DIST, CHUNK_GRAPH_FILE);
+// A virtual module that no import names, such as `\0rolldown/runtime.js`, is the bundler's own runtime.
+const isBundlerRuntime = (id) => id.startsWith('\0');
+
+/** The modules of `paintChunks` that load only on demand: an import() target, or one no import reaches. */
+export function findEagerLazyOnlyModules(graph, paintChunks) {
+  const targets = new Set(graph.dynamicTargets);
+  const reached = staticClosure(graph);
+  const isLazyOnly = (id) => targets.has(id) || !(reached.has(id) || isBundlerRuntime(id));
+  return paintChunks.flatMap(({ modules }) => modules.filter(isLazyOnly));
+}
+
+/**
+ * @param {string} dist the web previewer's build output
+ * @returns {'ok' | 'over-budget' | 'missing-build' | 'unknown-edition' | 'eager-lazy-only'}
+ */
+export function checkWebFirstPaint(dist = WEB_DIST) {
+  const graphPath = join(dist, CHUNK_GRAPH_FILE);
   if (!existsSync(graphPath)) {
     console.error(`\n[bundle-size] chunk graph not found: ${graphPath}`);
     console.error('[bundle-size] run `pnpm --filter @textscene/web-previewer build` first');
     return 'missing-build';
   }
   const graph = JSON.parse(readFileSync(graphPath, 'utf8'));
+  const ceiling = CEILINGS[graph.edition];
+  if (!ceiling) {
+    console.error(
+      `[bundle-size] FAIL: expected a site edition of ${Object.keys(CEILINGS)}, got ${graph.edition}`
+    );
+    return 'unknown-edition';
+  }
   const paintChunks = firstPaintChunks(graph);
 
   const eager = findEagerLazyOnlyModules(graph, paintChunks);
@@ -50,22 +69,10 @@ export function checkWebFirstPaint() {
     return 'eager-lazy-only';
   }
 
-  const totalGz = paintChunks.reduce(
-    (sum, { fileName }) => sum + gzipSync(readFileSync(join(WEB_DIST, fileName))).length,
+  const gz = paintChunks.reduce(
+    (sum, { fileName }) => sum + gzipSync(readFileSync(join(dist, fileName))).length,
     0
   );
-  const sinceMeasured = totalGz - MEASURED_GZ;
-  console.log(`\n=== Web previewer first paint (${paintChunks.length} scripts) ===`);
-  console.log(`Gzipped:          ${formatKb(totalGz)}  (${totalGz} B)`);
-  console.log(`Last measured:    ${formatKb(MEASURED_GZ)}  (${MEASURED_GZ} B)`);
-  console.log(
-    `Growth since:     ${sinceMeasured >= 0 ? '+' : ''}${formatKb(sinceMeasured)}  (${sinceMeasured} B)`
-  );
-  console.log(`Budget absolute:  ${formatKb(BUDGET_GZ)}  (${BUDGET_GZ} B)`);
-  if (totalGz > BUDGET_GZ) {
-    console.error(`[bundle-size] FAIL: the first paint is ${formatKb(totalGz - BUDGET_GZ)} OVER the budget.`);
-    return 'over-budget';
-  }
-  console.log(`[bundle-size] PASS: ${formatKb(BUDGET_GZ - totalGz)} headroom under budget.`);
-  return 'ok';
+  const title = `Web previewer first paint, ${graph.edition} edition (${paintChunks.length} scripts)`;
+  return reportGzipBudget(title, { gz }, ceiling, true) ? 'over-budget' : 'ok';
 }

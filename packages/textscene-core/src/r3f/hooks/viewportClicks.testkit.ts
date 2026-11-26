@@ -9,14 +9,22 @@ export interface Click {
   readonly on: THREE.Object3D | null;
   /** Pixels between the press and the release. */
   readonly travel?: number;
+  /** Pixels a move between the press and the release goes out to, or none for no move. */
+  readonly wander?: number;
   readonly button?: number;
+  readonly altKey?: boolean;
 }
 
 /** A press, a release and the browser's click after it. A right press sends no click. */
-export function clickWith(handlers: ViewportPointerHandlers, { on, travel = 0, button = LEFT }: Click): void {
-  const press = { button, clientX: 10, clientY: 10 };
+export function clickWith(
+  handlers: ViewportPointerHandlers,
+  { on, travel = 0, wander, button = LEFT, altKey = false }: Click
+): void {
+  const press = { button, altKey, shiftKey: false, ctrlKey: false, clientX: 10, clientY: 10 };
   const release = { ...press, clientX: press.clientX + travel };
   handlers.onCanvasPointerDown(press as PointerEvent);
+  if (wander !== undefined)
+    handlers.onWindowPointerMove({ ...press, clientX: press.clientX + wander } as PointerEvent);
   if (on) handlers.onPointerUp({ ...release, object: on, stopPropagation: () => {} } as never);
   handlers.onWindowPointerEnd({ ...release, type: 'pointerup' } as PointerEvent);
   if (button === LEFT) handlers.onCanvasClick(release as MouseEvent);

@@ -1,12 +1,13 @@
 import { gzipSync } from 'node:zlib';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
+import { ENTRY, WEBVIEW_DIR } from './paths.mjs';
+import { reportGzipBudget } from './gzipBudget.mjs';
 
 // Growth inside the ceiling is invisible in a PASS line, so the report reads it against the last measure.
-const MEASURED_GZ = 1_797_358;
+const MEASURED_GZ = 1_797_440;
 // A change that outgrows it, with no shrink found, raises it by its measured growth (ADR-0090).
-const BUDGET_GZ = 1_797_358;
+const BUDGET_GZ = 1_797_440;
 
 /** The scripts of `files` beside the entry, each one more request a closed load holds (ADR-0090). */
 export function findExtraScripts(files) {
@@ -37,27 +38,8 @@ export function checkWebviewBudget(enforce) {
 
   const script = readFileSync(entryPath);
 
-  const totalGz = gzipSync(script).length;
-  const sinceMeasured = totalGz - MEASURED_GZ;
-  console.log('\n=== VS Code webview script ===');
-  console.log(`Raw:              ${formatKb(script.length)}  (${script.length} B)`);
-  console.log(`Gzipped:          ${formatKb(totalGz)}  (${totalGz} B)`);
-  console.log(`Last measured:    ${formatKb(MEASURED_GZ)}  (${MEASURED_GZ} B)`);
-  console.log(
-    `Growth since:     ${sinceMeasured >= 0 ? '+' : ''}${formatKb(sinceMeasured)}  (${sinceMeasured} B)`
-  );
-  console.log(`Budget absolute:  ${formatKb(BUDGET_GZ)}  (${BUDGET_GZ} B)`);
-
-  const overBudget = totalGz - BUDGET_GZ;
-  if (overBudget > 0) {
-    const msg = `[bundle-size] FAIL: the script is ${formatKb(overBudget)} OVER the budget (gzipped ${totalGz} > ${BUDGET_GZ}).`;
-    if (enforce) {
-      console.error(msg);
-    } else {
-      console.warn(`[bundle-size] WARN: ${msg} (informational; pass --enforce to fail)`);
-    }
-    return 'over-budget';
-  }
-  console.log(`[bundle-size] PASS: ${formatKb(-overBudget)} headroom under budget.`);
+  const size = { gz: gzipSync(script).length, raw: script.length };
+  const ceiling = { measured: MEASURED_GZ, budget: BUDGET_GZ };
+  if (reportGzipBudget('VS Code webview script', size, ceiling, enforce)) return 'over-budget';
   return 'ok';
 }

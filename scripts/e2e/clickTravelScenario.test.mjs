@@ -9,6 +9,8 @@ const PASSING = {
   onNothing: [],
   onOtherBox: [LOCKED_PICK],
   dragOnNothing: [LOCKED_PICK],
+  dragBackOnBox: [LOCKED_PICK],
+  altClickOnBox: [LOCKED_PICK],
 };
 
 function failuresOf(run) {
@@ -37,6 +39,18 @@ describe('checkClickTravel', () => {
   it('fails a drag that clears the selection', () => {
     expect(failuresOf({ dragOnNothing: [] })).toEqual([
       `[click travel] a drag of 20 px from nothing selects [], expected [${LOCKED_PICK}]`,
+    ]);
+  });
+
+  it('fails a drag from a box that returns to its press and picks the box', () => {
+    expect(failuresOf({ dragBackOnBox: [OPEN_PICK] })).toEqual([
+      `[click travel] a drag of 20 px from a box and back selects [${OPEN_PICK}], expected [${LOCKED_PICK}]`,
+    ]);
+  });
+
+  it('fails an Alt click that picks the box', () => {
+    expect(failuresOf({ altClickOnBox: [OPEN_PICK] })).toEqual([
+      `[click travel] an Alt click on a box selects [${OPEN_PICK}], expected [${LOCKED_PICK}]`,
     ]);
   });
 
