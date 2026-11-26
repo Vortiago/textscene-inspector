@@ -22,7 +22,7 @@ export function resetLoaderlessFonts(): void {
 }
 
 /** The settled fonts of a tree with no loader. */
-export function loaderlessSettledFonts(): SettledFonts {
+function loaderlessSettledFonts(): SettledFonts {
   return (loaderlessFonts ??= createSettledFonts());
 }
 
