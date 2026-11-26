@@ -59,6 +59,6 @@ added 131 B.
   fails when they hold a module loaded only on demand, that is a dynamic `import()` target or a
   module no static import from the entry reaches. It also fails when they are over the gzipped
   ceiling of their site edition: 1,325,511 B for the dev edition, which the web previewer job
-  checks, and 1,299,025 B for the public edition, which `pnpm build:pages` checks. A change raises
+  checks, and 1,299,054 B for the public edition, which `pnpm build:pages` checks. A change raises
   a ceiling by its measured growth as above. The three.js chunk holds only the three.js build, so
   the addons a dynamic `import()` reaches stay out of it.
