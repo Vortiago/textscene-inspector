@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import {
+  DIRECTIONAL_SHADOW_CASTER_CULL_REACH,
   DIRECTIONAL_SHADOW_MAX_SPLITS,
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   directionalShadowSplitAtlasRect,
@@ -26,9 +27,6 @@ export const SPLIT_SLOTS = DIRECTIONAL_SHADOW_MAX_SPLITS;
 
 /** The `up` of every split camera, which three's `lookAt` rolls the split boxes by. */
 export const SPLIT_CAMERA_UP: Readonly<THREE.Vector3> = new THREE.Vector3(0, 1, 0);
-
-/** How far past a split box's light side Godot culls casters (`renderer_scene_cull.cpp:2322`). */
-const CASTER_CULL_REACH = 1e6;
 
 /** Index of the near plane in a frustum three builds (r187 `Frustum.js:112-124`). */
 const NEAR_PLANE = 5;
@@ -271,5 +269,5 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
 
 /** Moves the near plane of a split's frustum towards the light, so the cull keeps far casters. */
 function reachTowardsLight(frustum: THREE.Frustum): void {
-  frustum.planes[NEAR_PLANE]!.constant += CASTER_CULL_REACH;
+  frustum.planes[NEAR_PLANE]!.constant += DIRECTIONAL_SHADOW_CASTER_CULL_REACH;
 }

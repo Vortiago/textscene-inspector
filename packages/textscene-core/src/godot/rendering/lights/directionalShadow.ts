@@ -24,6 +24,9 @@ export const DIRECTIONAL_SHADOW_SIZE_DEFAULT = 4096;
 /** `directional_shadow/16_bits` defaults to true (`rendering_server.cpp:3708`, `light_storage.cpp:2544`). */
 export const DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS = 16;
 
+/** How far past a split box's light side Godot culls casters (`renderer_scene_cull.cpp:2322`). */
+export const DIRECTIONAL_SHADOW_CASTER_CULL_REACH = 1e6;
+
 /** The camera depths, from the eye, that one orthogonal shadow map covers. */
 export interface DirectionalShadowSlice {
   near: number;

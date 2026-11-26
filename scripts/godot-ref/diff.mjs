@@ -35,7 +35,7 @@ const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `$
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--lit-surface nodes] [--canvas-item translated] [--stored-depth-read sampled|fetched] [--table <file.md>]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--lit-surface nodes] [--canvas-item translated] [--stored-depth-read sampled|float|fetched] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
@@ -48,7 +48,7 @@ function usage() {
       '  --set p:prop=v   on both sides, get_node(p).set(prop, str_to_var(v)) before the capture\n' +
       '  --lit-surface nodes  open our side with the node lit surface (?litSurface=nodes)\n' +
       "  --canvas-item translated  open our side with canvas items through Godot's template (?canvasItem=translated)\n" +
-      "  --stored-depth-read sampled|fetched  force our side's read of the sun's stored depth\n" +
+      "  --stored-depth-read sampled|float|fetched  force our side's read of the sun's stored depth\n" +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
