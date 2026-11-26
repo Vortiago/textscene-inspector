@@ -141,7 +141,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'vrs_texture',
       'sdf_oversize',
       'sdf_scale',
-      'snap_2d_transforms_to_pixel',
       'snap_2d_vertices_to_pixel',
       'gui_snap_controls_to_pixels',
       'canvas_cull_mask',

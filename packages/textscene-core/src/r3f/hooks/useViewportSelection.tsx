@@ -5,29 +5,64 @@ import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
 import { useHostPick } from '../hostSelection/HostSelection.js';
 import { resolvePathFromObject } from './resolvePathFromObject.js';
 
-/** The pointer handlers for the viewport's single delegated root group. */
-export interface DelegatedPointerHandlers {
+/** The pointer handlers of the viewport's click picking. Its tests hold Godot's outcome per gesture. */
+export interface ViewportPointerHandlers {
+  /** Bind to the canvas element, since R3F reports no press on nothing. */
+  onCanvasPointerDown: (e: PointerEvent) => void;
+  /** Bind to the one root group wrapping the dispatched scene tree: it hears what the press hits. */
   onPointerDown: (e: ThreeEvent<PointerEvent>) => void;
-  onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
-  /** A miss, which on a click clears the selection in 3D (`node_3d_editor_plugin.cpp:998-1003`). */
-  onPointerMissed?: (e: MouseEvent) => void;
+  /** Bind to the window for `pointerup` and `pointercancel`: a release anywhere ends the click. */
+  onWindowPointerEnd: (e: PointerEvent) => void;
+  /** Bind to the window, so a move off the canvas still turns the press into a drag. */
+  onWindowPointerMove: (e: PointerEvent) => void;
 }
 
 export interface UseViewportSelectionResult {
-  /** Bind these to the one root group wrapping the dispatched scene tree. */
-  handlers: DelegatedPointerHandlers;
+  handlers: ViewportPointerHandlers;
 }
 
-/** Pixels of pointer travel past which a click is a drag, which selects nothing. */
-const DRAG_THRESHOLD_PX = 5;
+/** Pixels of pointer travel up to which a press and release is a click (`node_3d_editor_plugin.cpp:2342`). */
+const CLICK_TRAVEL_PX = 8;
+
+interface Point {
+  readonly clientX: number;
+  readonly clientY: number;
+}
+
+/** A left press on the canvas, held until its own pointer lifts or the browser cancels it. */
+interface Press {
+  /** The canvas's pointerdown, which R3F's report of the press hit carries as its native event. */
+  readonly event: PointerEvent;
+  /** Set by the first move past the click travel: Godot turns the press into a drag for good there. */
+  isDrag: boolean;
+}
+
+/** The node R3F hits under a press: Godot casts its ray on the press (node_3d_editor_plugin.cpp:2107). */
+interface PressHit {
+  readonly event: PointerEvent;
+  readonly path: string;
+}
+
+const isWithinTravel = (press: Point, at: Point) =>
+  Math.hypot(at.clientX - press.clientX, at.clientY - press.clientY) <= CLICK_TRAVEL_PX;
+
+/** The press `e` belongs to, or null for none or another pointer's. */
+const pressOf = (press: Press | null, e: PointerEvent) =>
+  press?.event.pointerId === e.pointerId ? press : null;
+
+// Alt+left orbits or pans (node_3d_editor_plugin.cpp:1986). Godot's mouse is the first touch (input.cpp:849).
+const isPickPress = (e: PointerEvent) => e.isPrimary && e.button === 0 && !e.altKey;
 
 export function useViewportSelection(): UseViewportSelectionResult {
   const { setSelectedNodePath, objectPathMap } = useSelection();
   const host = useHostPick();
   // The 2D workspace picks no node yet, so a click on a sprite there would read as a click on nothing.
-  const takesMiss = useCanvasWorkspace() === '3d';
+  const clearsOnNothing = useCanvasWorkspace() === '3d';
 
-  const downPosRef = useRef<{ x: number; y: number } | null>(null);
+  /** Written by a primary press on the canvas, and cleared by the release or the cancel of its pointer. */
+  const pressRef = useRef<Press | null>(null);
+  /** Written by R3F's report of a press on a node. Read only for the press whose event it carries. */
+  const hitRef = useRef<PressHit | null>(null);
   const pick = useCallback(
     (nodePath: string | null) => {
       host.picked(nodePath);
@@ -36,32 +71,45 @@ export function useViewportSelection(): UseViewportSelectionResult {
     [host, setSelectedNodePath]
   );
 
-  const handlers = useMemo<DelegatedPointerHandlers>(
+  /** A click on nothing is a region select of no size: it clears, unless Shift appends (`:998-1003`). */
+  const release = useCallback(
+    (press: Press, hit: PressHit | null) => {
+      const path = hit?.event === press.event ? hit.path : null;
+      if (path) pick(path);
+      else if (clearsOnNothing && !press.event.shiftKey) pick(null);
+    },
+    [pick, clearsOnNothing]
+  );
+
+  const handlers = useMemo<ViewportPointerHandlers>(
     () => ({
-      onPointerDown(e) {
-        // Only the left button selects (`node_3d_editor_plugin.cpp:1978`): the others orbit and look.
-        downPosRef.current = e.button === 0 ? { x: e.clientX, y: e.clientY } : null;
+      onCanvasPointerDown(e) {
+        if (!e.isPrimary) return;
+        pressRef.current = isPickPress(e) ? { event: e, isDrag: false } : null;
       },
-      onPointerUp(e) {
-        const down = downPosRef.current;
-        downPosRef.current = null;
-        if (!down) return;
-        const dx = e.clientX - down.x;
-        const dy = e.clientY - down.y;
-        if (Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) return;
+      // R3F reports each hit nearest first, and the first with a node is the one picked.
+      onPointerDown(e) {
+        const native = e.nativeEvent;
+        if (!native.isPrimary || hitRef.current?.event === native) return;
         const path = resolvePathFromObject(e.object, objectPathMap);
         if (!path) return;
         e.stopPropagation();
-        pick(path);
+        hitRef.current = { event: native, path };
       },
-      // R3F also reports a miss for a right click, and for the release of a drag that starts on nothing.
-      onPointerMissed: takesMiss
-        ? (e) => {
-            if (e.type === 'click') pick(null);
-          }
-        : undefined,
+      onWindowPointerMove(e) {
+        const press = pressOf(pressRef.current, e);
+        if (press && !isWithinTravel(press.event, e)) press.isDrag = true;
+      },
+      onWindowPointerEnd(e) {
+        const press = pressOf(pressRef.current, e);
+        if (!press) return;
+        const hit = hitRef.current;
+        pressRef.current = null;
+        hitRef.current = null;
+        if (e.type === 'pointerup' && !press.isDrag && isWithinTravel(press.event, e)) release(press, hit);
+      },
     }),
-    [pick, objectPathMap, takesMiss]
+    [objectPathMap, release]
   );
 
   return useMemo<UseViewportSelectionResult>(() => ({ handlers }), [handlers]);

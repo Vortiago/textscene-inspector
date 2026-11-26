@@ -16,6 +16,7 @@ const ROOT_PROPERTY_SETTINGS: Readonly<Record<string, string>> = {
   use_debanding: 'rendering/anti_aliasing/quality/use_debanding',
   canvas_item_default_texture_filter: 'rendering/textures/canvas_textures/default_texture_filter',
   canvas_item_default_texture_repeat: 'rendering/textures/canvas_textures/default_texture_repeat',
+  snap_2d_transforms_to_pixel: 'rendering/2d/snap/snap_2d_transforms_to_pixel',
 };
 
 /** The root viewport over `sceneRoots`, sized as `window` stretches it and set as `settings` give it. */

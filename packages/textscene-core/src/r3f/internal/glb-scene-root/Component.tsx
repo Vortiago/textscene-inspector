@@ -51,8 +51,7 @@ import { GlbMaterialOverlay, GlbSurfaceMaterialOverride } from './GlbSurfaceMate
 import { heldResource } from '../../../godot/scene/resourceLiteral';
 import { parseSurfaceMaterialOverrides } from '../../../nodes/3d/meshinstance3d/parser';
 import { GlbAttachedChildren } from './GlbAttachedChildren';
-import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
-import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
+import { importMaterialPath, importMaterialPaths } from '../../../resources/formats/glb/glbProcessing';
 
 /** One empty list for a GLB still loading, so each hook keyed on `entries` keeps its memo. */
 const NO_ENTRIES: readonly GlbObjectEntry[] = [];
@@ -233,16 +232,12 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
 function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
   return useMemo(() => {
     if (!object) return null;
-    const paths = new Set<string>();
-    forEachSurfaceMaterial(object, (material) => {
-      const path = importMaterialPath(material);
-      if (path) paths.add(path);
-    });
-    if (paths.size === 0) return null;
+    const paths = importMaterialPaths(object);
+    if (paths.length === 0) return null;
     return (
       <>
         {/* The importer sets the remap on the imported node, which holds it as its own property. */}
-        {[...paths].map((path) => (
+        {paths.map((path) => (
           <GlbSurfaceMaterialOverride
             key={`import:${path}`}
             target={object}

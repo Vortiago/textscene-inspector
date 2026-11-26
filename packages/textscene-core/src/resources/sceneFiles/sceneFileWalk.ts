@@ -1,4 +1,6 @@
 import { isGodotTextResourcePath } from '../../godot/project/resourceFormats.js';
+import { isGltfPath } from '../../godot/import/gltf.js';
+import { importMaterialPaths } from '../formats/glb/glbProcessing.js';
 import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
 import { resourceFileReads, sceneFileReads, type FileRead } from '../loadFailure/fileReads.js';
 import type { LoadOutcome } from '../loadFailure/loadOutcome.js';
@@ -52,7 +54,7 @@ interface Entry {
   readonly addresses: string[];
 }
 
-const WATCHED: ResourceType[] = ['scene', 'resource', 'loadoutcome'];
+const WATCHED: ResourceType[] = ['scene', 'resource', 'glb', 'loadoutcome'];
 
 const NO_FILES: WalkedFiles = { files: [], failure: null };
 
@@ -62,6 +64,10 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
   const textFiles = new Map<string, TextFile | null>();
   /** Written only by `textFile` and `releaseOutside`: held in the cache until the walk keeps the reads. */
   const pinnedParses = new Set<string>();
+  /** Written only by `remapsOf`, `releaseOutside` and the change listener: a glTF's remapped materials. */
+  const modelRemaps = new Map<string, readonly string[]>();
+  /** Written only by `remapsOf` and `releaseOutside`: held in the cache until the walk keeps the remaps. */
+  const pinnedModels = new Set<string>();
   /** Written only by `outcome` and `releaseOutside`: held in the loader's cache. */
   const pinnedOutcomes = new Set<string>();
   /** Written by `files` and cleared by the change listener: the input of the last walk. */
@@ -88,6 +94,30 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
     const text = parsed && textFileOf(file, parsed);
     textFiles.set(file, text);
     return text;
+  }
+
+  /** The `.tres` files an import sidecar remaps the model's materials to, none until the model loads. */
+  function remapsOf(file: string): readonly string[] {
+    const known = modelRemaps.get(file);
+    if (known) return known;
+    const model = loader.glbMeshes.getCached(file);
+    if (model === undefined) {
+      if (!pinnedModels.has(file)) {
+        pinnedModels.add(file);
+        loader.glbMeshes.pin(file);
+        loader.glbMeshes.request(file);
+      }
+      return [];
+    }
+    if (pinnedModels.delete(file)) loader.glbMeshes.unpin(file);
+    const remaps = model ? importMaterialPaths(model) : [];
+    modelRemaps.set(file, remaps);
+    return remaps;
+  }
+
+  /** Godot drops a remapped material that fails to load (resource_importer_scene.cpp:1622-1636). */
+  function isFailedLoad(file: string): boolean {
+    return outcome(file)?.isFailed === true;
   }
 
   function outcome(file: string): LoadOutcome | null | undefined {
@@ -132,7 +162,12 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
       for (const read of reads) visit(owner, read, isReading, !isJudgedOnly);
     for (let next = 0; next < queue.length; next++) {
       const file = queue[next]!;
-      if (!isGodotTextResourcePath(file) || !entries.get(file)!.isListed) continue;
+      if (!entries.get(file)!.isListed) continue;
+      if (isGltfPath(file)) {
+        for (const path of remapsOf(file))
+          visit(file, { path, type: 'Material' }, false, !isFailedLoad(path));
+      }
+      if (!isGodotTextResourcePath(file)) continue;
       for (const read of textFile(file)?.reads ?? []) visit(file, read);
     }
     return entries;
@@ -172,13 +207,27 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
       pinnedParses.delete(file);
       processorOf(file).unpin(file);
     }
+    for (const file of pinnedModels) {
+      if (files.has(file)) continue;
+      pinnedModels.delete(file);
+      loader.glbMeshes.unpin(file);
+    }
     for (const file of textFiles.keys()) if (!files.has(file)) textFiles.delete(file);
+    for (const file of modelRemaps.keys()) if (!files.has(file)) modelRemaps.delete(file);
+  }
+
+  // An invalidation drops the load in flight, and a pinned key asks for no other.
+  function requestPinnedAgain(busType: ResourceType, key: string): void {
+    if (busType === 'loadoutcome' && pinnedOutcomes.has(key)) loader.loadOutcomes.request(key);
+    else if (busType === 'glb' && pinnedModels.has(key)) loader.glbMeshes.request(key);
+    else if (busType !== 'loadoutcome' && busType !== 'glb' && pinnedParses.has(key))
+      processorOf(key).request(key);
   }
 
   const stopWatching = loader.eventBus.onChange(WATCHED, ({ busType, event, key }) => {
-    if (busType !== 'loadoutcome' && event === 'invalidated') textFiles.delete(key);
-    if (busType === 'loadoutcome' && event === 'invalidated' && pinnedOutcomes.has(key))
-      loader.loadOutcomes.request(key);
+    if (busType === 'glb' && event === 'invalidated') modelRemaps.delete(key);
+    else if (busType !== 'loadoutcome' && event === 'invalidated') textFiles.delete(key);
+    if (event === 'invalidated') requestPinnedAgain(busType, key);
     if (!walkedPaths.has(key) && !textFiles.has(key)) return;
     walkedInput = null;
     onChange();

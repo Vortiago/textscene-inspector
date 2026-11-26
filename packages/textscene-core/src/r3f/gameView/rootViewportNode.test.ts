@@ -81,6 +81,13 @@ describe('rootViewportNode', () => {
     });
   });
 
+  it('snaps 2D transforms to pixels where the project does (`scene_tree.cpp:2106-2107`)', () => {
+    const settings = parseProjectSettings(
+      ['[rendering]', '2d/snap/snap_2d_transforms_to_pixel=true'].join('\n')
+    );
+    expect(propertiesOf(nodeFor(settings, [])).snap_2d_transforms_to_pixel).toBe(true);
+  });
+
   it("takes the project's transparent background", () => {
     const settings = parseProjectSettings(['[rendering]', 'viewport/transparent_background=true'].join('\n'));
     expect(propertiesOf(nodeFor(settings, [])).transparent_bg).toBe(true);

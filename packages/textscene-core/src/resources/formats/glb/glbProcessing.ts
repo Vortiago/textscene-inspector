@@ -63,6 +63,16 @@ export function importMaterialPath(material: THREE.Material): string | undefined
   return typeof path === 'string' ? path : undefined;
 }
 
+/** Each `.tres` the sidecar remaps a surface of `object` to, once, in surface order. */
+export function importMaterialPaths(object: THREE.Object3D): string[] {
+  const paths = new Set<string>();
+  forEachSurfaceMaterial(object, (material) => {
+    const path = importMaterialPath(material);
+    if (path !== undefined) paths.add(path);
+  });
+  return [...paths];
+}
+
 /**
  * Dispose the per-consumer materials `cloneWithMaterials` created, and not the geometry,
  * which the clone shares with the cached template and every sibling consumer. It is

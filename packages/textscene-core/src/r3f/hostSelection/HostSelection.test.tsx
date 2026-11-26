@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { HostSelection, type HostSelectionProps } from './HostSelection';
 import { useViewportSelection } from '../hooks/useViewportSelection';
+import { clickWith, LEFT, RIGHT } from '../hooks/viewportClicks.testkit';
 import { useSelectedNodePath, useSelection } from '../contexts/SelectionContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { TscnSceneProvider } from '../TscnSceneProvider';
@@ -53,22 +54,16 @@ function registeredAt({ result }: Setup, path: string): THREE.Object3D {
   return object;
 }
 
-const LEFT = 0;
-const RIGHT = 2;
+// One past the 8 px a press and release may travel and stay a click (node_3d_editor_plugin.cpp:2342).
+const PAST_CLICK_TRAVEL_PX = 9;
 
-function click({ result }: Setup, object: THREE.Object3D, button = LEFT) {
-  const event = { button, clientX: 10, clientY: 10, object, stopPropagation: () => {} };
-  act(() => {
-    result.current.picker.handlers.onPointerDown(event as never);
-    result.current.picker.handlers.onPointerUp(event as never);
-  });
+function click({ result }: Setup, on: THREE.Object3D, button = LEFT) {
+  act(() => clickWith(result.current.picker.handlers, { on, button }));
 }
 
-function missOf({ result }: Setup, type: 'click' | 'contextmenu' | 'pointerup') {
-  act(() => result.current.picker.handlers.onPointerMissed?.(new MouseEvent(type)));
+function clickOnNothing({ result }: Setup, button = LEFT) {
+  act(() => clickWith(result.current.picker.handlers, { on: null, button }));
 }
-
-const clickOnNothing = (view: Setup) => missOf(view, 'click');
 
 describe('the host’s click picking', () => {
   it('calls onSelect with the handle of the node a click picks', () => {
@@ -123,7 +118,7 @@ describe('the host’s click picking', () => {
     const view = setup(openTestScene(), {});
     click(view, registeredAt(view, 'Root/Cube'));
 
-    missOf(view, 'contextmenu');
+    clickOnNothing(view, RIGHT);
 
     expect(view.result.current.selected).toBe('Root/Cube');
   });
@@ -132,7 +127,12 @@ describe('the host’s click picking', () => {
     const onSelect = vi.fn();
     const view = setup(openTestScene(), { onSelect });
 
-    missOf(view, 'pointerup');
+    act(() =>
+      clickWith(view.result.current.picker.handlers, {
+        on: registeredAt(view, 'Root/Cube'),
+        travel: PAST_CLICK_TRAVEL_PX,
+      })
+    );
 
     expect(onSelect).not.toHaveBeenCalled();
   });

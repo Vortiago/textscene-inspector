@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { PositionalShadowAtlas } from '../godot/rendering/lights/positionalShadowAtlas';
 import { ContentScaleAspect, ContentScaleMode, ContentScaleStretch } from '../godot/scene/window';
 import {
+  projectSnaps2DTransformsToPixel,
   projectPrimitiveMeshTexelSize,
   projectShadowAtlasSize,
   DEFAULT_THEME_SCALE,
@@ -1027,5 +1028,17 @@ describe('projectContentScale', () => {
     expect(stretch('scale', '0').factor).toBe(1);
     expect(stretch('scale', '-2').factor).toBe(1);
     expect(stretch('scale', 'big').factor).toBe(1);
+  });
+});
+
+describe('projectSnaps2DTransformsToPixel', () => {
+  it('reads the setting', () => {
+    expect(projectSnaps2DTransformsToPixel({ 'rendering/2d/snap/snap_2d_transforms_to_pixel': 'true' })).toBe(
+      true
+    );
+  });
+
+  it('is off when the project omits it', () => {
+    expect(projectSnaps2DTransformsToPixel({})).toBe(false);
   });
 });

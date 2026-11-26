@@ -237,6 +237,9 @@ jobs:
       # The prebuild hook builds @textscene/core.
       - run: pnpm --filter @textscene/web-previewer build
 
+      # Reads the chunk graph the build writes beside its scripts.
+      - run: pnpm check:bundle-size:web
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-previewer

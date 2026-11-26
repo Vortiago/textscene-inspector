@@ -47,10 +47,14 @@ export function redBoxCentres(buffer) {
   const { red, minX, maxX } = redPixels(buffer);
   if (red.length === 0) return null;
   const middle = (minX + maxX) / 2;
-  return {
-    left: centreOf(red.filter(([x]) => x < middle)),
-    right: centreOf(red.filter(([x]) => x >= middle)),
-  };
+  const right = centreOf(red.filter(([x]) => x >= middle));
+  return { left: centreOf(red.filter(([x]) => x < middle)), right, rightEdge: rightEdgeOf(red, right) };
+}
+
+/** The last red pixel right of `centre` on its row, so a move right from it leaves the box. */
+function rightEdgeOf(red, centre) {
+  const row = red.filter(([x, y]) => y === centre.y && x >= centre.x).map(([x]) => x);
+  return { x: Math.max(centre.x, ...row), y: centre.y };
 }
 
 function centreOf(points) {

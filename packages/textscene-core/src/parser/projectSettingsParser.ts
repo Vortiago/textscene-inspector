@@ -389,6 +389,11 @@ export function projectDefaultFontGeneratesMipmaps(settings: ProjectSettings | n
   return boolSlotValue(settings?.['gui/theme/default_font_generate_mipmaps']) ?? false;
 }
 
+/** `rendering/2d/snap/snap_2d_transforms_to_pixel`, the root viewport's (scene_tree.cpp:2106-2107). */
+export function projectSnaps2DTransformsToPixel(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/2d/snap/snap_2d_transforms_to_pixel']) ?? false;
+}
+
 /** `gui/theme/default_font_hinting`, which the default font takes (`theme_db.cpp:56`). Light by default (`text_server.cpp:2383`). */
 export function projectDefaultFontHinting(settings: ProjectSettings | null): FontHinting {
   return fontHintingOf(parseOptionalInt(settings?.['gui/theme/default_font_hinting']));

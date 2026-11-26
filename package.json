@@ -35,6 +35,7 @@
     "pr:state": "node scripts/pr-state/run.mjs",
     "scope:issues": "node scripts/scope-cuts/issues.mjs",
     "check:bundle-size": "node scripts/check-bundle-size.mjs --enforce",
+    "check:bundle-size:web": "node scripts/check-web-bundle-size.mjs",
     "check:dep-scripts": "node scripts/ci/checkDepScripts.mjs",
     "fonts:bake": "node scripts/fonts/bake-metrics.mjs",
     "fonts:combining-classes": "python3 scripts/fonts/generate-combining-classes.py",

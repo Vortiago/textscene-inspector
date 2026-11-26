@@ -24,6 +24,7 @@ import {
 } from './canvasItemPass/nodePaint.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
+import { useCanvasPickListeners } from './hooks/useCanvasPickListeners.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
@@ -103,7 +104,8 @@ function hidesSubtree(node: TscnNode, animatedVisible: boolean | null): boolean 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   const { handlers } = useViewportSelection();
   // The running game picks no node.
-  const pointerHandlers = useIsEditorHint() ? handlers : undefined;
+  const pointerHandlers = useIsEditorHint() ? handlers : null;
+  useCanvasPickListeners(pointerHandlers);
 
   // Early, as FrameOnOpen frames a CSG result only after the loader settles. CsgPrimitive evaluates it.
   useEffect(() => {
@@ -118,11 +120,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
 
   return (
     // paint-order-safe: one pointer root, as R3F raycasts once per handler (one per node would cost depth).
-    <group
-      onPointerDown={pointerHandlers?.onPointerDown}
-      onPointerUp={pointerHandlers?.onPointerUp}
-      onPointerMissed={pointerHandlers?.onPointerMissed}
-    >
+    <group onPointerDown={pointerHandlers?.onPointerDown}>
       {/* A CanvasModulate tints the canvas, not its subtree, so it has its own
           context: each item multiplies it into its own pixels once, and an
           Unshaded item skips it, as Godot's base pass does. */}
