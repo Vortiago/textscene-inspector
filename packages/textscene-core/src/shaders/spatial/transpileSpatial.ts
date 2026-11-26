@@ -108,6 +108,8 @@ export interface SpatialOptions extends ShaderOptions {
   readonly sampling?: ProjectSampling;
   /** The render layers a light's cull mask tests, the first layer when left out. */
   readonly instanceLayers?: (object: THREE.Object3D) => number;
+  /** A raw read of the directional atlas takes one filtered sample, not four texels filtered by hand. */
+  readonly samplesStoredDepth?: boolean;
 }
 
 /** The material of `source`, a shader of `shader_type spatial`, preprocessed with `options`. */
@@ -121,7 +123,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
   );
   resources.textures.set('dfg', dfgTextureNode());
   resources.textures.set('radiance_octmap', radianceOctmapNode());
-  readDirectionalShadowAtlas(resources.textures);
+  readDirectionalShadowAtlas(resources.textures, options.samplesStoredDepth ?? false);
   const pipeline = spatialPipeline(parsed.tree);
   const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
   const shader = {
@@ -165,13 +167,13 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
 /** The colour pass's code key: the text, each option that changes the code, and the textures it samples. */
 function codeKeyOf(
   { code }: ParsedShader,
-  { renderingMethod, glVaryings, sampling }: SpatialOptions,
+  { renderingMethod, glVaryings, sampling, samplesStoredDepth }: SpatialOptions,
   templateTextures: ReadonlyMap<string, TextureNode>,
   parameters: ReadonlyMap<string, TranspiledUniform>
 ): CodeKey {
   return {
     // No `file`: it names a fault's position only, so two files of one text share a program.
-    source: `colour|${textHash(JSON.stringify([code, renderingMethod, glVaryings, sampling]))}`,
+    source: `colour|${textHash(JSON.stringify([code, renderingMethod, glVaryings, sampling, samplesStoredDepth]))}`,
     textures: function* () {
       yield* templateTextures.values();
       for (const parameter of parameters.values())

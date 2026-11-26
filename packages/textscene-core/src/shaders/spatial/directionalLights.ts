@@ -277,16 +277,17 @@ export function hasDirectionalSoftShadowAngle(lights: readonly DirectionalLight[
 const DIRECTIONAL_SHADOW_ATLAS = 'directional_shadow_atlas';
 
 /** Makes the template's reads of its directional atlas take Godot's depth. Call it before the emit. */
-export function readDirectionalShadowAtlas(textures: Map<string, TextureNode>): void {
-  textures.set(DIRECTIONAL_SHADOW_ATLAS, directionalShadowAtlasNode());
+export function readDirectionalShadowAtlas(
+  textures: Map<string, TextureNode>,
+  samplesStoredDepth: boolean
+): void {
+  textures.set(DIRECTIONAL_SHADOW_ATLAS, directionalShadowAtlasNode(samplesStoredDepth));
 }
 
 /** Where a draw's directional atlas reads go: the depth it compares and the colour it reads raw. */
 export interface DirectionalShadowAtlasTextures {
   readonly depth: THREE.DepthTexture;
   readonly colour: THREE.Texture;
-  /** The GPU filters the colour's two bytes exactly, so a raw read takes one filtered sample. */
-  readonly isColourFilteredExactly: boolean;
 }
 
 /** Binds the atlas to the template's reads. With none, a compare reads one texel. */
@@ -297,5 +298,5 @@ export function bindDirectionalShadowAtlas(
   const node = textures.get(DIRECTIONAL_SHADOW_ATLAS);
   if (!node) return;
   comparedTextureOf(node).value = atlas?.depth ?? UNBOUND_DEPTH;
-  bindDirectionalShadowColour(node, atlas?.colour, atlas?.isColourFilteredExactly ?? false);
+  bindDirectionalShadowColour(node, atlas?.colour);
 }

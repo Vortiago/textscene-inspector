@@ -40,7 +40,7 @@ function withFailedRequests(reason, { failedRequests }) {
 
 /** The query parameters a scene opens the previewer with, beside its fixture. */
 export function sceneQuery(scene) {
-  return { camera: scene.camera, litSurface: scene.litSurface };
+  return { camera: scene.camera, litSurface: scene.litSurface, storedDepthRead: scene.storedDepthRead };
 }
 
 /**

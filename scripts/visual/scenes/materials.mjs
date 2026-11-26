@@ -51,6 +51,13 @@ export const MATERIAL_SCENES = [
   {
     name: 'material-spatial-shader-lit-sun-soft-shadow',
     file: 'sun-soft-shadow/unit-spatial-shader-lit-sun-soft-shadow.tscn',
+    storedDepthRead: 'sampled',
+  },
+  // The same scene through the hand filter of four texels, the read of a GPU that filters bytes at 8 bits.
+  {
+    name: 'material-spatial-shader-lit-sun-soft-shadow-fetched',
+    file: 'sun-soft-shadow/unit-spatial-shader-lit-sun-soft-shadow.tscn',
+    storedDepthRead: 'fetched',
   },
   // A StandardMaterial3D through Godot's generated shader. Godot 4.6.3: 10 px over 2/255, max 9.
   {

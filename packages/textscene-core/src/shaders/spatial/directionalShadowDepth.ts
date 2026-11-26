@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as TSL from 'three/tsl';
-import type { Node, TextureNode, UniformNode } from 'three/webgpu';
+import type { Node, TextureNode } from 'three/webgpu';
 import { readAsStored } from '../language/readAsStored.js';
 import { readStoredDepth } from '../language/storedDepthReads.js';
 import type { Float, Vec2 } from '../tslTypes.js';
@@ -18,15 +18,9 @@ export function unboundDirectionalShadowColour(): THREE.Texture {
   return NO_COLOUR;
 }
 
-/** The colour of one program's atlas node, and whether its raw reads take the GPU's filter. */
-interface ColourRead {
-  readonly colour: TextureNode;
-  readonly isFiltered: UniformNode<boolean>;
-}
-
-/** Written only by `directionalShadowAtlasNode`, once for each program's atlas node. */
+/** Written only by `directionalShadowAtlasNode`: the colour each program's atlas node reads raw. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
-const colourReads = new WeakMap<TextureNode, ColourRead>();
+const colourReads = new WeakMap<TextureNode, TextureNode>();
 
 function storedDepthAt(colour: TextureNode, texel: Node): Float {
   const load = colour.load(texel as never);
@@ -60,37 +54,23 @@ function filteredStoredDepth(colour: TextureNode, uv: Vec2): Float {
   return TSL.mix(bottom, top, weight.y) as unknown as Float;
 }
 
-/** A node for the template's directional atlas, whose reads take Godot's depth. */
-export function directionalShadowAtlasNode(): TextureNode {
+/** The template's directional atlas, whose reads take Godot's depth through the one raw read picked. */
+export function directionalShadowAtlasNode(samplesStoredDepth: boolean): TextureNode {
   // Every read goes through the stored depth, so the node's own texture is never sampled.
   const atlas = TSL.texture(NO_COLOUR) as unknown as TextureNode;
   const colour = TSL.texture(NO_COLOUR) as unknown as TextureNode;
   readAsStored(colour);
-  const isFiltered = TSL.uniform(false) as unknown as UniformNode<boolean>;
-  colourReads.set(atlas, { colour, isFiltered });
+  colourReads.set(atlas, colour);
+  const storedDepth = samplesStoredDepth ? sampledStoredDepth : filteredStoredDepth;
   readStoredDepth(atlas, {
-    read: (uv) => {
-      const at = uv as unknown as Vec2;
-      const stored = TSL.select(
-        isFiltered as never,
-        sampledStoredDepth(colour, at),
-        filteredStoredDepth(colour, at)
-      );
-      return TSL.float(1).sub(stored as never) as unknown as Node;
-    },
+    read: (uv) => TSL.float(1).sub(storedDepth(colour, uv as unknown as Vec2) as never) as unknown as Node,
     storedReference: (_uv, reference) => TSL.float(1).sub(reference as never) as unknown as Node,
   });
   return atlas;
 }
 
-/** Binds the colour of `atlas`'s raw reads; `isFiltered` sends each read to one filtered sample. */
-export function bindDirectionalShadowColour(
-  atlas: TextureNode,
-  colour: THREE.Texture | undefined,
-  isFiltered: boolean
-): void {
+/** Binds the colour of `atlas`'s raw reads. */
+export function bindDirectionalShadowColour(atlas: TextureNode, colour: THREE.Texture | undefined): void {
   const read = colourReads.get(atlas);
-  if (!read) return;
-  read.colour.value = colour ?? NO_COLOUR;
-  read.isFiltered.value = colour !== undefined && isFiltered;
+  if (read) read.value = colour ?? NO_COLOUR;
 }

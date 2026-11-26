@@ -107,6 +107,7 @@ export function captureOurs({
   sceneCamera = null,
   showCollisions = false,
   litSurface = null,
+  storedDepthRead = null,
   inGameFrame = null,
   hostCalls = [],
 }) {
@@ -128,6 +129,7 @@ export function captureOurs({
         canvas2D,
         camera: cameraPath,
         litSurface: litSurface ?? undefined,
+        storedDepthRead: storedDepthRead ?? undefined,
         onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
       });
       if (!target) throw new Error(targetReason);
