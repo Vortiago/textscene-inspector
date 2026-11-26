@@ -33,6 +33,8 @@ interface Point {
 
 /** A left press on the canvas. Once released, only the click that follows may still read it. */
 interface Press extends Point {
+  /** A second touch moves and lifts with its own id, and ends nothing of this press. */
+  readonly pointerId: number;
   isReleased: boolean;
   /** Set by the first move past the click travel: Godot turns the press into a drag for good there. */
   isDrag: boolean;
@@ -42,6 +44,10 @@ const isWithinTravel = (press: Point, at: Point) =>
   Math.hypot(at.clientX - press.clientX, at.clientY - press.clientY) <= CLICK_TRAVEL_PX;
 
 const isClick = (press: Press, release: Point) => !press.isDrag && isWithinTravel(press, release);
+
+/** The press `e` belongs to, or null for none or another pointer's. */
+const pressOf = (press: Press | null, e: Pick<PointerEvent, 'pointerId'>) =>
+  press?.pointerId === e.pointerId ? press : null;
 
 // A left press with Alt orbits or pans, as the editor view's map holds (`node_3d_editor_plugin.cpp:1986`).
 const isPickPress = (e: PointerEvent) => e.button === 0 && !e.altKey;
@@ -66,11 +72,17 @@ export function useViewportSelection(): UseViewportSelectionResult {
     () => ({
       onCanvasPointerDown(e) {
         pressRef.current = isPickPress(e)
-          ? { clientX: e.clientX, clientY: e.clientY, isReleased: false, isDrag: false }
+          ? {
+              pointerId: e.pointerId,
+              clientX: e.clientX,
+              clientY: e.clientY,
+              isReleased: false,
+              isDrag: false,
+            }
           : null;
       },
       onPointerUp(e) {
-        const press = pressRef.current;
+        const press = pressOf(pressRef.current, e);
         if (!press || press.isReleased || !isClick(press, e)) return;
         const path = resolvePathFromObject(e.object, objectPathMap);
         if (!path) return;
@@ -85,12 +97,14 @@ export function useViewportSelection(): UseViewportSelectionResult {
         if (press && isClick(press, e) && clearsOnNothing) pick(null);
       },
       onWindowPointerMove(e) {
-        const press = pressRef.current;
+        const press = pressOf(pressRef.current, e);
         if (press && !press.isReleased && !isWithinTravel(press, e)) press.isDrag = true;
       },
       onWindowPointerEnd(e) {
+        const press = pressOf(pressRef.current, e);
+        if (!press) return;
         if (e.type === 'pointercancel') pressRef.current = null;
-        else if (pressRef.current) pressRef.current.isReleased = true;
+        else press.isReleased = true;
       },
     }),
     [pick, objectPathMap, clearsOnNothing]

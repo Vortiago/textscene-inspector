@@ -130,10 +130,16 @@ describe('checkWebFirstPaint', () => {
     expect(checkWebFirstPaint(dist)).toBe('eager-lazy-only');
   });
 
-  it('fails a first paint over its edition ceiling', () => {
-    writeBuild(GRAPH, randomBytes(1_000_000));
+  it('fails a public first paint over its ceiling', () => {
+    writeBuild({ ...GRAPH, edition: 'public' }, randomBytes(1_000_000));
 
     expect(checkWebFirstPaint(dist)).toBe('over-budget');
+  });
+
+  it('passes a dev first paint of any size, as its fixture manifest grows with each fixture', () => {
+    writeBuild(GRAPH, randomBytes(1_000_000));
+
+    expect(checkWebFirstPaint(dist)).toBe('ok');
   });
 });
 

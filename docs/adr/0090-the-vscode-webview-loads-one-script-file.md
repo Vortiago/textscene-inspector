@@ -27,7 +27,7 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 1,797,489 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
+is 1,797,579 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
 split build. A change that outgrows the ceiling, with no shrink found, raises it by its measured growth:
 the editor camera node (ADR-0091) added 1,820 B, the panels that read the scene through node
 handles added 1,413 B, the Scene tree on node handles added 409 B, its review fixes added 685 B,
@@ -36,9 +36,9 @@ the scene failure field with its review fixes added 257 B, the reads of each pla
 scene names a resource, as Godot 4.6.3 fails them, added 847 B, the scene failure on the
 scene with Godot's line number and a per-view count of loads added 337 B, the order in
 which Godot takes a file's headings with its review fixes added 170 B, the walk
-of a file only the text reads with its review fixes added 142 B, and one click travel, the
+of a file only the text reads with its review fixes added 142 B, one click travel, the
 snapped Sprite2D edit rect and the remapped glTF materials added 487 B, and their review fixes
-added 131 B.
+added 221 B.
 
 ## Consequences
 
@@ -57,8 +57,8 @@ added 131 B.
 - The web previewer keeps its chunks, so `pnpm check:bundle-size:web` guards its first paint
   (`scripts/check-bundle-size/webFirstPaint.mjs`): the entry scripts and their static imports. It
   fails when they hold a module loaded only on demand, that is a dynamic `import()` target or a
-  module no static import from the entry reaches. It also fails when they are over the gzipped
-  ceiling of their site edition: 1,325,511 B for the dev edition, which the web previewer job
-  checks, and 1,299,054 B for the public edition, which `pnpm build:pages` checks. A change raises
-  a ceiling by its measured growth as above. The three.js chunk holds only the three.js build, so
+  module no static import from the entry reaches. The web previewer job checks this for the dev
+  edition, and `pnpm build:pages` checks it for the public edition. Only the public edition also
+  fails over a gzipped ceiling, 1,299,071 B, which a change raises by its measured growth as above.
+  The dev first paint holds the generated fixture manifest, which grows with each fixture. The three.js chunk holds only the three.js build, so
   the addons a dynamic `import()` reaches stay out of it.

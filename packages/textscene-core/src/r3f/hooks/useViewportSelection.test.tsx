@@ -80,6 +80,22 @@ describe('useViewportSelection', () => {
     expect(view.result.current.selected).toBe('Root/Mesh');
   });
 
+  it('selects the node of a click while a second touch moves past the click travel', () => {
+    const view = setup();
+
+    click(view, { on: registerObjectAt(view, 'Root/Mesh'), otherPointer: { wander: 30, lifts: false } });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
+  });
+
+  it('selects the node of a click while a second touch lifts', () => {
+    const view = setup();
+
+    click(view, { on: registerObjectAt(view, 'Root/Mesh'), otherPointer: { wander: 0, lifts: true } });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
+  });
+
   it('selects nothing for an Alt+left click, which navigates', () => {
     const view = setup();
 

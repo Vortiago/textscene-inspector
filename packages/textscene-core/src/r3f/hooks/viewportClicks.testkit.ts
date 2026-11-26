@@ -13,19 +13,37 @@ export interface Click {
   readonly wander?: number;
   readonly button?: number;
   readonly altKey?: boolean;
+  /** A second touch between the press and the release: how far it moves, and whether it lifts. */
+  readonly otherPointer?: { readonly wander: number; readonly lifts: boolean };
 }
+
+const PRESS_POINTER_ID = 1;
+const OTHER_POINTER_ID = 2;
 
 /** A press, a release and the browser's click after it. A right press sends no click. */
 export function clickWith(
   handlers: ViewportPointerHandlers,
-  { on, travel = 0, wander, button = LEFT, altKey = false }: Click
+  { on, travel = 0, wander, button = LEFT, altKey = false, otherPointer }: Click
 ): void {
-  const press = { button, altKey, shiftKey: false, ctrlKey: false, clientX: 10, clientY: 10 };
+  const press = {
+    pointerId: PRESS_POINTER_ID,
+    ...{ button, altKey, shiftKey: false, ctrlKey: false, clientX: 10, clientY: 10 },
+  };
   const release = { ...press, clientX: press.clientX + travel };
   handlers.onCanvasPointerDown(press as PointerEvent);
   if (wander !== undefined)
     handlers.onWindowPointerMove({ ...press, clientX: press.clientX + wander } as PointerEvent);
+  if (otherPointer) moveOtherPointer(handlers, { ...press, pointerId: OTHER_POINTER_ID }, otherPointer);
   if (on) handlers.onPointerUp({ ...release, object: on, stopPropagation: () => {} } as never);
   handlers.onWindowPointerEnd({ ...release, type: 'pointerup' } as PointerEvent);
   if (button === LEFT) handlers.onCanvasClick(release as MouseEvent);
+}
+
+function moveOtherPointer(
+  handlers: ViewportPointerHandlers,
+  at: PointerEventInit,
+  { wander, lifts }: NonNullable<Click['otherPointer']>
+): void {
+  handlers.onWindowPointerMove({ ...at, clientX: at.clientX! + wander } as PointerEvent);
+  if (lifts) handlers.onWindowPointerEnd({ ...at, type: 'pointerup' } as PointerEvent);
 }
