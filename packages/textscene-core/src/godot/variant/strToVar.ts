@@ -166,6 +166,7 @@ export class Tokens {
     while (this.at < this.text.length && isHexDigit(this.text[this.at]!)) html += this.char();
     // A colour that runs to the end of the text reads as the end: `variant_parser.cpp:246-248`.
     if (this.at >= this.text.length) return { kind: 'eof' };
+    if (this.text[this.at] === '\0') this.at++;
     const { r, g, b, a } = htmlColor(`#${html}`) ?? DEFAULT_COLOR;
     return { kind: 'color', value: [r, g, b, a].map(Math.fround) };
   }
@@ -277,8 +278,9 @@ export class Tokens {
     return { kind: 'number', value: isFloat ? Number.parseFloat(text) : int64Of(text), isFloat };
   }
 
+  // `saved` holds no NUL (variant_parser.cpp:166), so a NUL that ends a word or a number is dropped.
   private unread(c: string): void {
-    if (c !== '') this.at--;
+    if (c !== '' && c !== '\0') this.at--;
   }
 }
 

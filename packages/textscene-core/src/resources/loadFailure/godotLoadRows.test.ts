@@ -2638,6 +2638,32 @@ Vector2(5, 5)
     failing: [],
     stop: 'Parse Error: Parse error. [Resource file res://row208.tscn:5]',
   },
+  {
+    row: 209,
+    reads: 'a NUL that ends a colour in a heading field is dropped',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="A" type="Node2D" parent="." index=#fff\u0000]\nposition = Vector2(5, 5)\n',
+    failing: [],
+    stop: null,
+    tree: 'Root[A(5.0, 5.0)]',
+  },
+  {
+    row: 210,
+    reads: 'a NUL that ends a number in a heading field is dropped',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="A" type="Node2D" parent="." index=0\u0000]\nposition = Vector2(5, 5)\n',
+    failing: [],
+    stop: null,
+    tree: 'Root[A(5.0, 5.0)]',
+  },
+  {
+    row: 211,
+    reads: 'a NUL after a string in a heading ends the token stream',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="A" type="Node2D" parent="."\u0000]\nposition = Vector2(5, 5)\n',
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row211.tscn:5]',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */

@@ -115,6 +115,18 @@ describe('Tokens', () => {
     expect(new Tokens('"a\\\0b"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
   });
 
+  it('drops the NUL that ends a word, a number or a colour, as `saved` holds none', () => {
+    const second = (text: string) => {
+      const tokens = new Tokens(text);
+      tokens.next();
+      return tokens.next();
+    };
+    expect(second('a\0b')).toEqual({ kind: 'identifier', text: 'b' });
+    expect(second('1\0b')).toEqual({ kind: 'identifier', text: 'b' });
+    expect(second('#fff\0b')).toEqual({ kind: 'identifier', text: 'b' });
+    expect(second('"a"\0b')).toEqual({ kind: 'eof' });
+  });
+
   it('refuses a hex escape a NUL cuts as an unterminated string (variant_parser.cpp:321)', () => {
     expect(new Tokens('"\\u00\0a"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
   });
