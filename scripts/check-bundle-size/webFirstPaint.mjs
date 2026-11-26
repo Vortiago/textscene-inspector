@@ -9,7 +9,7 @@ export const WEB_DIST = join(REPO_ROOT, 'apps/textscene-web/dist');
 
 // A change that outgrows an edition's ceiling, with no shrink found, raises it by its growth (ADR-0090).
 const CEILINGS = {
-  dev: { measured: 1_325_475, budget: 1_325_475 },
+  dev: { measured: 1_325_482, budget: 1_325_482 },
   public: { measured: 1_299_025, budget: 1_299_025 },
 };
 
