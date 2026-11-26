@@ -93,8 +93,9 @@ async function withVerdicts(record) {
 }
 
 async function main() {
-  const record = await withVerdicts(parseCanvasItemMaterialOutput(await runGodotScript(SCRIPT, {})));
-  requireGodotVersion(record.godot);
+  const parsed = parseCanvasItemMaterialOutput(await runGodotScript(SCRIPT, {}));
+  requireGodotVersion(parsed.godot);
+  const record = await withVerdicts(parsed);
   const outputs = [[CANVAS_ITEM_MATERIALS_FILE, `${JSON.stringify(record, null, 1)}\n`]];
   const summary = `${record.texts.length} texts, ${record.parameters.length} parameter sets`;
   const tool = { tool: 'godot:canvas-item-materials', summary };

@@ -65,7 +65,7 @@ Canvas items have a switch of their own, `canvasItemForm()` in `r3f/canvasShader
 golden rule. `?canvasItem=translated` draws each item without a shader of its own through the canvas
 template, with the text Godot writes for its CanvasItemMaterial or the default canvas shader. Until
 the template draws 2D lights and clip masks, an item a light reaches and a `clip_children` owner keep
-the classic materials. `pnpm test:visual:canvas-item` captures the 2D goldens with the switch on.
+the classic materials. `pnpm test:visual:canvas-item` captures the 2D and in-game goldens with the switch on.
 
 ## Considered options
 

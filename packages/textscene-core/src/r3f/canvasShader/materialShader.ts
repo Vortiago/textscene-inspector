@@ -13,7 +13,7 @@ const DEFAULT_SHADER: ShaderText = Object.freeze({
   textures: Object.freeze({}),
 });
 
-/** Written only by `generatedShader`, one shader per text as Godot's `shader_map`. It never clears. */
+/** Written only by `generatedShader`, one shader per text. Unlike Godot's `shader_map`, it never clears. */
 const generatedByKey = new Map<string, ShaderText>();
 
 /** The translated form's shader for an item with no shader of its own (`canvas_item.cpp:1204`). */
