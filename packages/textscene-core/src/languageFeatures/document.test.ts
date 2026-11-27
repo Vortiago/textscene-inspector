@@ -104,4 +104,9 @@ describe('LanguageDocument', () => {
     const document = new LanguageDocument('[node name="Root" type="Node2D"]\nvisible = false\n');
     expect(document.isInHeading(2, 0)).toBe(false);
   });
+
+  it('reads a heading line without the comment after its `]`', () => {
+    const document = new LanguageDocument('[node name="Root" type="Node2D"] ; a note\n');
+    expect(document.headingText(document.sections[0]!)).toBe('[node name="Root" type="Node2D"]');
+  });
 });

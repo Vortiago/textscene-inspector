@@ -4,7 +4,8 @@ func _init() -> void:
 	var loaded := load(OS.get_cmdline_user_args()[0])
 	if loaded is PackedScene:
 		var root: Node = loaded.instantiate()
-		print("LOADED:", _tree(root))
+		# A scene that loads but does not instantiate has no tree to print.
+		print("LOADED:", "no instance" if root == null else _tree(root))
 	else:
 		print("LOADED:", loaded != null)
 	quit()

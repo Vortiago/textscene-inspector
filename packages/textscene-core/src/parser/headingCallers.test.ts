@@ -107,7 +107,7 @@ describe.each([
       { startLine: 4, endLine: 6 },
       { startLine: 10, endLine: 13 },
     ],
-    nodeSelection: range(10, 0, 26),
+    nodeSelection: range(10, 0, 14),
     extReference: range(6, 8, 24),
     bannerLine: 7,
   },

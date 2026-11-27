@@ -1,3 +1,5 @@
+import { writeCaseFiles } from './writeCaseFiles.mjs';
+
 /** The scene's heading kinds, each with `@<kind>` where the sweep writes its field. */
 const SCENE_HEADINGS = ['gd_scene', 'ext_resource', 'sub_resource', 'node', 'connection', 'editable'];
 
@@ -53,13 +55,10 @@ export function fileWithField(kind, field) {
 
 export const HEADING_KINDS = ['gd_resource', ...SCENE_HEADINGS];
 
-/** Writes each case into a new or empty folder, so no file of the caller's is overwritten. */
-export async function writeCases(out, cases) {
-  const { existsSync, mkdirSync, readdirSync, writeFileSync } = await import('node:fs');
-  if (!out) throw new Error('expected a folder to write the cases to, got no argument');
-  if (existsSync(out) && readdirSync(out).length > 0) throw new Error(`expected an empty folder, got ${out}`);
-  mkdirSync(out, { recursive: true });
-  for (const { name, extension, text } of [REAL_RESOURCE, ...cases])
-    writeFileSync(`${out}/${name}.${extension}`, text);
-  console.log(cases.length + 1);
+/** Writes each case beside the real resource the scene reads. */
+export function writeCases(out, cases) {
+  writeCaseFiles(
+    out,
+    [REAL_RESOURCE, ...cases].map(({ name, extension, text }) => ({ file: `${name}.${extension}`, text }))
+  );
 }

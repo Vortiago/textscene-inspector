@@ -1,10 +1,5 @@
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { writeCaseFiles } from './writeCaseFiles.mjs';
 
-const out = process.argv[2];
-if (!out) throw new Error('expected a folder to write the cases to, got no argument');
-// The cases go into a new or empty folder, so no file of the caller's is overwritten.
-if (existsSync(out) && readdirSync(out).length > 0) throw new Error(`expected an empty folder, got ${out}`);
-mkdirSync(out, { recursive: true });
 const sceneHead = '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n';
 const childNode = '\n[node name="A" type="Node2D" parent="."]\n';
 const refusedHeading = '\n[node name="Z" parent="." type=]\n';
@@ -99,5 +94,7 @@ const cases = {
     backslash +
     '\nb"\n\n[ext_resource type="Resource" path="res://gone.tres" id="1"]\n',
 };
-for (const [name, text] of Object.entries(cases)) writeFileSync(`${out}/${name}.tscn`, text);
-console.log(Object.keys(cases).length);
+writeCaseFiles(
+  process.argv[2],
+  Object.entries(cases).map(([name, text]) => ({ file: `${name}.tscn`, text }))
+);

@@ -8,7 +8,7 @@
  */
 
 import { TscnParserCore, type ParseObserver, type SectionType } from '../parser/TscnParserCore.js';
-import { splitLines, type ParsedHeading } from '../parser/utils.js';
+import { splitLines, stripLineComment, type ParsedHeading } from '../parser/utils.js';
 
 /** The four section tags a feature reads, and `other` for the rest (`gd_scene`, `connection`). */
 type SectionKind = 'node' | 'sub_resource' | 'ext_resource' | 'resource' | 'other';
@@ -19,7 +19,7 @@ export interface PropertySlot {
   /** The key the engine stores it under, a deprecated spelling resolved. */
   readonly storedKey: string;
   readonly value: string;
-  /** One-based line the value starts on. */
+  /** One-based line the key sits on. */
   readonly startLine: number;
   /** The 0-based column its key starts at, past a heading's `]` where it follows one. */
   readonly startColumn: number;
@@ -168,11 +168,12 @@ export class LanguageDocument {
     return this.sectionByLine.get(line);
   }
 
-  /** A heading's first line up to the property its `]` may be followed by, so the heading reads alone. */
+  /** A heading's first line without a comment or the property after its `]`, so the heading reads alone. */
   headingText(section: DocumentSection): string {
     const line = this.lines[section.headingLine - 1] ?? '';
     const property = this.propertyByLine.get(section.headingLine)?.property;
-    return property?.startLine === section.headingLine ? line.slice(0, property.startColumn).trimEnd() : line;
+    const heading = property?.startLine === section.headingLine ? line.slice(0, property.startColumn) : line;
+    return stripLineComment(heading).trimEnd();
   }
 
   /** Whether a one-based line and a zero-based column fall in a heading, not in a property after its `]`. */
