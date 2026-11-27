@@ -3,7 +3,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseHeading, parseProperty, isHeading, isGodotBlank, godotIndent, leadingSpace } from './utils';
+import {
+  parseHeading,
+  parseProperty,
+  isHeading,
+  isGodotBlank,
+  godotIndent,
+  leadingSpace,
+  trimEndSpace,
+} from './utils';
 
 describe('parseHeading', () => {
   it('should parse simple heading without attributes', () => {
@@ -333,5 +341,15 @@ describe('leadingSpace', () => {
   it('covers a line of only spaces, and is zero on an empty line', () => {
     expect(leadingSpace('   ')).toBe(3);
     expect(leadingSpace('')).toBe(0);
+  });
+});
+
+describe('trimEndSpace', () => {
+  it('drops the codes up to 32 that end a string, where trimEnd keeps a control code', () => {
+    expect(trimEndSpace('true\x01\t \x1f')).toBe('true');
+  });
+
+  it('keeps the white space that starts a string', () => {
+    expect(trimEndSpace(' \x01true')).toBe(' \x01true');
   });
 });

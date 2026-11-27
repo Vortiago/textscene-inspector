@@ -66,11 +66,17 @@ export function leadingSpace(str: string): number {
   return at;
 }
 
-/** `str` without the white space at either end, where `String.prototype.trim` keeps a control character. */
-function trimSpace(str: string): string {
+/** `str` without the white space at its end, where `String.prototype.trimEnd` keeps a control character. */
+export function trimEndSpace(str: string): string {
   let end = str.length;
   while (end > 0 && isSpaceCode(str.charCodeAt(end - 1))) end--;
-  return str.slice(Math.min(leadingSpace(str), end), end);
+  return str.slice(0, end);
+}
+
+/** `str` without the white space at either end, where `String.prototype.trim` keeps a control character. */
+function trimSpace(str: string): string {
+  const trimmed = trimEndSpace(str);
+  return trimmed.slice(Math.min(leadingSpace(trimmed), trimmed.length));
 }
 
 /** `[A-Za-z0-9_]`: the characters a constructor name is built from. */

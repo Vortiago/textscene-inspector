@@ -14,6 +14,8 @@ const BLANK_PLACES = {
   before_key: (code: string) => `${HEADING}\n${code}position = Vector2(1, 2)\n`,
   around_equals: (code: string) => `${HEADING}\nposition${code}=${code}Vector2(1, 2)\n`,
   after_value: (code: string) => `${HEADING}\nposition = Vector2(1, 2)${code}\n`,
+  after_later_value: (code: string) => `${HEADING}\nposition =\nVector2(1, 2)${code}\n`,
+  after_multiline_value: (code: string) => `${HEADING}\nposition = Vector2(\n1, 2)${code}\n`,
 };
 
 const CELLS = Object.entries(BLANK_PLACES).flatMap(([place, scene]) =>

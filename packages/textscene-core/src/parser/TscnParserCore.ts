@@ -28,6 +28,7 @@ import {
   stripLineComment,
   leadingSpace,
   godotIndent,
+  trimEndSpace,
   isGodotBlank,
   splitLines,
 } from './utils.js';
@@ -252,7 +253,7 @@ export class TscnParserCore {
         // The one join per value: O(total length), not one per appended line.
         const joined = pendingMultiline.lines.join('\n');
         // A complete value ends where its key's line would trim it, so a value reads the same on either line.
-        const value = isIncompleteState(pendingMultiline.scanState) ? joined : joined.trimEnd();
+        const value = isIncompleteState(pendingMultiline.scanState) ? joined : trimEndSpace(joined);
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
         addBodyValue(value, pendingMultiline.godotStartLine, pendingMultiline.skippedNewlines);
@@ -396,7 +397,10 @@ export class TscnParserCore {
           headings.refuse({ error: '', code: GodotError.FileEof, line: godotLine });
         }
         observer?.onError?.({
-          message: `Invalid heading format: "${line.trim()}"`,
+          // Godot reads the header from the file's first token, so its error names the cause, not the line.
+          message: readsHeader
+            ? `Invalid file header: ${tag?.error || 'the file ends before it'}`
+            : `Invalid heading format: "${line.trim()}"`,
           line: lineNumber,
           column: column + indent + 1,
           code: 'INVALID_HEADING_FORMAT',

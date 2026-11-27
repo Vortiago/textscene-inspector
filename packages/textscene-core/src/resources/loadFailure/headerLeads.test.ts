@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Linter } from '../../linter/Linter';
 import { TscnParser } from '../../parser/TscnParser';
 import { previewerLoadResult, treeOf } from './headingSweep.testkit';
 
@@ -65,6 +66,15 @@ describe('text before the header, as Godot 4.6.3 loads it', () => {
     '$lead before a scene header draws the scene',
     ({ file }) => {
       expect(new TscnParser().parse(file.text).nodes.map(treeOf).join(', ')).toBe('Root[A(1.0, 2.0)]');
+    }
+  );
+
+  it.each(CELLS.filter(({ expected }) => expected.includes('Parse Error')))(
+    '$lead before a .$extension header names the error Godot prints',
+    ({ file, expected }) => {
+      const cause = expected.endsWith("Expected '['.") ? "Expected '['" : 'the file ends before it';
+      const messages = new Linter().lint(file.text).map((diagnostic) => diagnostic.message);
+      expect(messages).toContain(`Invalid file header: ${cause}`);
     }
   );
 });
