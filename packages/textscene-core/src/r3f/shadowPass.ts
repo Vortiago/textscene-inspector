@@ -1,11 +1,3 @@
-/**
- * The renderer's shadow pass. three r187 has no hook between its shadow pass and its draw
- * (`WebGLRenderer.js:1750-1765`), so the pass runs three's pass, then Godot's copy of each omni cube
- * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each spot light and split
- * sun, then each area light's paraboloid (`atlasDepthPass.ts`), then each reader of the maps, and
- * last writes the sun shadow terms and records the framebuffer height.
- */
-
 import * as THREE from 'three';
 import { AtlasOmniShadow } from './positionalShadow/atlasOmniShadow.js';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow.js';
@@ -17,6 +9,8 @@ import {
   type ThreeShadowPass,
 } from './positionalShadow/atlasDepthPass.js';
 import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
+import { OneAtlasClear } from './oneAtlasClear.js';
+import { isDirectionalShadowAtlas } from './directionalShadow/shadowAtlas.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
@@ -102,6 +96,8 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
         : countShadowDraws(renderer, () => drawCasters(lights, scene, camera)),
   };
   const copy = new OmniShadowCopy();
+  const sunAtlasClear = new OneAtlasClear(renderer, isDirectionalShadowAtlas);
+  const positionalAtlasClear = new OneAtlasClear(renderer, (target) => target === positionalShadowAtlas());
   shadowMap.render = (lights, scene, camera) => {
     const draws = passDraws(shadowMap);
     const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
@@ -111,10 +107,21 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     const isTimed = draws && lights.length > 0 && !isReading;
     if (isTimed) beginStep(renderer, 'Shadows');
     allocatePositionalShadowAtlas(renderer);
+    // One whole clear of the positional atlas, unless an omni light keeps an earlier pass's slot.
+    const clearsPositionalWhole = !lights.some(keepsOmniSlot);
     threePass.draw(lights, scene, camera);
+    sunAtlasClear.start();
+    if (clearsPositionalWhole) positionalAtlasClear.start();
+    try {
+      drawProjectedShadows(threePass, projected, scene, camera);
+      drawAreaShadows(threePass, areas, scene, camera);
+    } finally {
+      // Off in the reverse order, so each hook finds its own clear on top.
+      positionalAtlasClear.end();
+      sunAtlasClear.end();
+    }
+    // After the slot draws, whose clear erases a copy. Godot copies first: render_forward_clustered.cpp:2722.
     copyOmniShadows(renderer, copy, copied);
-    drawProjectedShadows(threePass, projected, scene, camera);
-    drawAreaShadows(threePass, areas, scene, camera);
     if (isTimed) endStep(renderer, 'Shadows');
     if (isReading) {
       readMaps(readers, scene, camera);
@@ -201,10 +208,25 @@ function collected<Kind extends THREE.Light>(
 
 /** An omni light with a slot whose cube three's pass is about to draw. */
 function needsCopy(light: THREE.Light): light is OmniLight {
+  const shadow = slottedOmniShadow(light);
+  return shadow !== null && isRedrawn(shadow);
+}
+
+/** An omni light with a slot that this pass does not copy, so its slot keeps an earlier pass's map. */
+function keepsOmniSlot(light: THREE.Light): boolean {
+  const shadow = slottedOmniShadow(light);
+  return shadow !== null && !isRedrawn(shadow);
+}
+
+/** The light's omni shadow when it holds a slot, else null. */
+function slottedOmniShadow(light: THREE.Light): AtlasOmniShadow | null {
   const { shadow } = light as THREE.Light & { shadow?: unknown };
-  return (
-    shadow instanceof AtlasOmniShadow && shadow.slot !== null && (shadow.autoUpdate || shadow.needsUpdate)
-  );
+  return shadow instanceof AtlasOmniShadow && shadow.slot !== null ? shadow : null;
+}
+
+/** True when three's pass draws this shadow again (r187 `WebGLShadowMap.js:170`). */
+function isRedrawn(shadow: THREE.LightShadow): boolean {
+  return shadow.autoUpdate || shadow.needsUpdate;
 }
 
 /**

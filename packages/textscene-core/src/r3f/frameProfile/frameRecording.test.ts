@@ -263,6 +263,62 @@ describe('recordFrames with draws', () => {
     expect(recording!.draws![0]!.gpuMs).toBe(2);
   });
 
+  it('times a clear as its own entry, named after the target it clears', async () => {
+    const { gpu, renderer } = drawingRenderer(2);
+    const atlas = new THREE.WebGLRenderTarget(4, 4);
+    atlas.texture.name = 'DirectionalShadowAtlasColour';
+    renderer.getRenderTarget = () => atlas;
+    renderer.clear = () => gpu.advanceGpu(3);
+    const profile = timed(renderer);
+    const recorded = recordFrames({ frames: 2, draws: true });
+    runFrames(profile, 0, 3, () => {
+      beginStep(renderer, 'Shadows');
+      renderer.clear();
+      endStep(renderer, 'Shadows');
+      gpu.resolve();
+    });
+    const [recording] = await recorded;
+    expect(recording!.draws).toEqual([
+      {
+        step: 'Shadows',
+        object: 'Clear',
+        material: 'DirectionalShadowAtlasColour',
+        gpuMs: 3,
+        gpuSpread: steady(3),
+        callsPerFrame: 1,
+      },
+    ]);
+  });
+
+  it('names a clear of a target whose texture has no name apart from the canvas (edge case)', async () => {
+    const { gpu, renderer } = drawingRenderer(2);
+    const cube = new THREE.WebGLCubeRenderTarget(4);
+    renderer.getRenderTarget = () => cube;
+    renderer.clear = () => gpu.advanceGpu(1);
+    const profile = timed(renderer);
+    const recorded = recordFrames({ frames: 2, draws: true });
+    runFrames(profile, 0, 3, () => {
+      renderer.clear();
+      gpu.resolve();
+    });
+    const [recording] = await recorded;
+    expect(recording!.draws![0]).toMatchObject({ object: 'Clear', material: 'unnamed target' });
+  });
+
+  it('names a clear of the canvas after the canvas (edge case)', async () => {
+    const { gpu, renderer } = drawingRenderer(2);
+    renderer.getRenderTarget = () => null;
+    renderer.clear = () => gpu.advanceGpu(1);
+    const profile = timed(renderer);
+    const recorded = recordFrames({ frames: 2, draws: true });
+    runFrames(profile, 0, 3, () => {
+      renderer.clear();
+      gpu.resolve();
+    });
+    const [recording] = await recorded;
+    expect(recording!.draws![0]).toMatchObject({ object: 'Clear', material: 'canvas' });
+  });
+
   it('keeps the steps summing to the frame GPU time while it times each draw', async () => {
     const { timings } = await recordedDraws();
     expect(timings.gpuMs).toBe(8);
@@ -320,27 +376,30 @@ describe('timeEachDraw', () => {
   it("restores the renderer's own draw once removed", () => {
     const renderer = cpuOnlyRenderer();
     const own = () => {};
+    const ownClear = () => {};
     renderer.renderBufferDirect = own;
-    timeEachDraw(
-      renderer,
-      () => {},
-      () => {}
-    )();
+    renderer.clear = ownClear;
+    timeEachDraw(renderer, {
+      beginDraw: () => {},
+      beginClear: () => {},
+      end: () => {},
+    })();
     expect(renderer.renderBufferDirect).toBe(own);
+    expect(renderer.clear).toBe(ownClear);
   });
 
   it('keeps a hook installed over it, which still calls it (edge case)', () => {
     const renderer = cpuOnlyRenderer();
     renderer.renderBufferDirect = () => {};
-    const remove = timeEachDraw(
-      renderer,
-      () => {},
-      () => {}
-    );
+    renderer.clear = () => {};
+    const remove = timeEachDraw(renderer, { beginDraw: () => {}, beginClear: () => {}, end: () => {} });
     const over: THREE.WebGLRenderer['renderBufferDirect'] = () => {};
+    const overClear: THREE.WebGLRenderer['clear'] = () => {};
     renderer.renderBufferDirect = over;
+    renderer.clear = overClear;
     remove();
     expect(renderer.renderBufferDirect).toBe(over);
+    expect(renderer.clear).toBe(overClear);
   });
 });
 
@@ -369,6 +428,16 @@ describe('DrawSources', () => {
     const material = new THREE.MeshBasicMaterial();
 
     expect(sources.of('Shadows', floor, material)).not.toBe(sources.of('Other', floor, material));
+  });
+
+  it('tells a clear apart from an object named like one (edge case)', () => {
+    const sources = new DrawSources();
+    const material = new THREE.MeshBasicMaterial();
+    material.name = 'canvas';
+
+    expect(sources.ofClear('Other', null)).not.toBe(
+      sources.of('Other', named(new THREE.Mesh(), 'Clear'), material)
+    );
   });
 });
 

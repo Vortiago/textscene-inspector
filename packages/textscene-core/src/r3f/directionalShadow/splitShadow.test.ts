@@ -311,7 +311,7 @@ describe('DirectionalSplitShadow.updateMatrices', () => {
 });
 
 describe('DirectionalSplitShadow share of the atlas', () => {
-  it('scissors the atlas to its light’s share before three clears and draws it', () => {
+  it('scissors the atlas to its light’s share, as a viewport does not clip a wide point', () => {
     const shadow = new DirectionalSplitShadow();
     shadow.setSplits(4, SECOND_OF_TWO);
     shadow.updateMatrices(new THREE.DirectionalLight());

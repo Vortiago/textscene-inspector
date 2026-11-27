@@ -67,12 +67,12 @@ export interface FrameTimings {
   steps: readonly StepStats[];
 }
 
-/** Where one draw call came from: the step it ran in, its object and its material. */
+/** Where one draw call or clear came from: the step it ran in, its object and its material. */
 export interface DrawSource {
   step: StepKey;
-  /** The name of the object or of its nearest named ancestor, else the object's type. */
+  /** The name of the object or of its nearest named ancestor, else the object's type. `Clear` for a clear. */
   object: string;
-  /** The material's name, else its type. */
+  /** The material's name, else its type. For a clear, the bound target's texture name, or `canvas`. */
   material: string;
 }
 

@@ -52,6 +52,33 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
   return { renderer: renderer as unknown as THREE.WebGLRenderer, threePass };
 }
 
+/** Runs a pass as three updates, binds, clears and draws each map: the clears, and each draw's scissor. */
+function clearingPass(lights: THREE.Light[]) {
+  const { renderer, threePass } = fakeRenderer();
+  let bound: THREE.RenderTarget | null = null;
+  let isScissored = false;
+  vi.mocked(renderer.getRenderTarget).mockImplementation(() => bound as THREE.WebGLRenderTarget | null);
+  const cleared: (THREE.RenderTarget | null)[] = [];
+  const drawsScissored: boolean[] = [];
+  renderer.clear = () => void cleared.push(bound);
+  (renderer as { state: unknown }).state = { setScissorTest: (on: boolean) => (isScissored = on) };
+  threePass.mockImplementation((drawn: THREE.Light[]) => {
+    for (const light of drawn) {
+      const { shadow } = light as THREE.Light & { shadow: THREE.LightShadow };
+      if (!shadow.autoUpdate && !shadow.needsUpdate) continue;
+      shadow.updateMatrices(light);
+      bound = shadow.map;
+      isScissored = shadow.map!.scissorTest;
+      renderer.clear();
+      drawsScissored.push(isScissored);
+      shadow.needsUpdate = false;
+    }
+  });
+  installShadowPass(renderer);
+  runPass(renderer, lights);
+  return { cleared, drawsScissored };
+}
+
 /** An omni light that holds a slot in the atlas, or none. */
 function omniLight(hasSlot = true): THREE.PointLight {
   const light = new THREE.PointLight();
@@ -171,7 +198,7 @@ describe('installShadowPass', () => {
     copy.mockRestore();
   });
 
-  it('draws each area light that holds a slot with three’s pass again, after the omni copies', () => {
+  it('draws each area light that holds a slot with three’s pass again, before the omni copies', () => {
     const order: string[] = [];
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => order.push('copy'));
     const { renderer, threePass } = fakeRenderer();
@@ -181,7 +208,7 @@ describe('installShadowPass', () => {
     installShadowPass(renderer);
     const [held, unheld] = [areaLight(), areaLight(false)];
     runPass(renderer, [omniLight(), held, unheld]);
-    expect(order).toEqual(['three', 'copy', 'area']);
+    expect(order).toEqual(['three', 'area', 'copy']);
     expect(threePass.mock.calls[1]![0]).toEqual([held]);
     copy.mockRestore();
   });
@@ -208,6 +235,36 @@ describe('installShadowPass', () => {
       [area],
     ]);
     expect(sun.shadow.needsUpdate).toBe(true);
+  });
+
+  it('clears the sun atlas once in a pass that draws two suns, so the second keeps the first', () => {
+    const [first, second] = [new SplitSunLight(), new SplitSunLight()];
+    const { cleared } = clearingPass([first, second]);
+    expect(cleared).toEqual([first.shadow.map]);
+  });
+
+  it('keeps each sun’s draws scissored to its share after the one whole clear', () => {
+    const { drawsScissored } = clearingPass([new SplitSunLight(), new SplitSunLight()]);
+    expect(drawsScissored).toEqual([true, true]);
+  });
+
+  it('keeps each spot light’s draws scissored to its slot after the one whole clear', () => {
+    const { drawsScissored } = clearingPass([spotLight(), spotLight()]);
+    expect(drawsScissored).toEqual([true, true]);
+  });
+
+  it('clears the positional atlas once in a pass that draws two spot lights', () => {
+    const { cleared } = clearingPass([spotLight(), spotLight()]);
+    expect(cleared).toEqual([positionalShadowAtlas()]);
+  });
+
+  it('clears each spot light’s slot while an omni light keeps an earlier pass’s slot (edge case)', () => {
+    const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
+    const kept = omniLight();
+    kept.shadow.autoUpdate = false;
+    const { cleared } = clearingPass([kept, spotLight(), spotLight()]);
+    expect(cleared).toEqual([positionalShadowAtlas(), positionalShadowAtlas()]);
+    copy.mockRestore();
   });
 
   it('draws a split sun’s casters flattened onto the box, as a pancake size does (edge case)', () => {

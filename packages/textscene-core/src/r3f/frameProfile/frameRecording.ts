@@ -2,11 +2,12 @@ import type * as THREE from 'three';
 import type { DrawSource, DrawStats, FrameRecording, GpuSpread, StepKey } from './frameStats.js';
 import type { RecordedDevice } from './recordedDevice.js';
 import { add, NS_PER_MS, statsOf, WindowSums } from './windowSums.js';
+import { spreadOfMs } from './gpuSpread.js';
 
 export interface RecordOptions {
   /** 120 by default: two seconds at 60 frames a second. */
   frames?: number;
-  /** Times each draw call on the GPU too, at the cost of a query per draw. False by default. */
+  /** Times each draw call and each clear on the GPU too, at the cost of a query each. False by default. */
   draws?: boolean;
 }
 
@@ -111,29 +112,43 @@ export class Recording {
   }
 }
 
-/** The median and the 10th and 90th percentiles of `ns`, in ms, or null for no frames. */
+/** The spread of `ns` in ms, or null for no frames. */
 function spreadOf(ns: readonly number[]): GpuSpread | null {
-  if (ns.length === 0) return null;
-  const sorted = [...ns].sort((a, b) => a - b);
-  const at = (fraction: number) => sorted[Math.round(fraction * (sorted.length - 1))]! / NS_PER_MS;
-  return { medianMs: at(0.5), lowMs: at(0.1), highMs: at(0.9) };
+  return spreadOfMs(ns.map((value) => value / NS_PER_MS));
 }
+
+/** The name of a cleared target whose texture has none, such as an omni light's cube. */
+const UNNAMED_TARGET = 'unnamed target';
 
 /** One draw source per step, object and material, so a recording's sums key on identity. */
 export class DrawSources {
-  private readonly sources = new Map<string, DrawSource>();
+  private readonly draws = new Map<string, DrawSource>();
+  // Its own map, so a node named `Clear` never shares a clear's source.
+  private readonly clears = new Map<string, DrawSource>();
 
   of(step: StepKey, object: THREE.Object3D, material: THREE.Material): DrawSource {
-    const objectName = nameOf(object);
-    const materialName = material.name || material.type;
-    const key = `${step}\n${objectName}\n${materialName}`;
-    let source = this.sources.get(key);
-    if (!source) {
-      source = { step, object: objectName, material: materialName };
-      this.sources.set(key, source);
-    }
-    return source;
+    return sourceFor(this.draws, step, nameOf(object), material.name || material.type);
   }
+
+  /** A clear of the bound target, named by its texture, or `canvas` for the screen. */
+  ofClear(step: StepKey, target: THREE.WebGLRenderTarget | null): DrawSource {
+    return sourceFor(this.clears, step, 'Clear', target ? target.texture.name || UNNAMED_TARGET : 'canvas');
+  }
+}
+
+function sourceFor(
+  sources: Map<string, DrawSource>,
+  step: StepKey,
+  object: string,
+  material: string
+): DrawSource {
+  const key = `${step}\n${object}\n${material}`;
+  let source = sources.get(key);
+  if (!source) {
+    source = { step, object, material };
+    sources.set(key, source);
+  }
+  return source;
 }
 
 /** Adds one call from `source` to each recording that times draws. */
@@ -146,25 +161,39 @@ export function addDrawGpuTime(recordings: readonly Recording[], source: DrawSou
   for (const recording of recordings) if (recording.timesDraws) add(recording.drawGpuNs, source, ns);
 }
 
-/** Brackets each draw, shadows too, at `renderBufferDirect` (r187 `WebGLRenderer.js:2182`). */
-export function timeEachDraw(
-  renderer: THREE.WebGLRenderer,
-  begin: (object: THREE.Object3D, material: THREE.Material) => void,
-  end: () => void
-): () => void {
+/** What `timeEachDraw` calls around each draw and each clear. */
+export interface DrawBrackets {
+  beginDraw: (object: THREE.Object3D, material: THREE.Material) => void;
+  beginClear: () => void;
+  end: () => void;
+}
+
+/** Brackets each draw at `renderBufferDirect` (r187 `WebGLRenderer.js:2182`) and each clear at `clear`. */
+export function timeEachDraw(renderer: THREE.WebGLRenderer, brackets: DrawBrackets): () => void {
   const draw = renderer.renderBufferDirect;
-  const timed: typeof draw = (camera, scene, geometry, material, object, group) => {
-    begin(object, material);
+  const clear = renderer.clear;
+  const timedDraw: typeof draw = (camera, scene, geometry, material, object, group) => {
+    brackets.beginDraw(object, material);
     try {
       draw.call(renderer, camera, scene, geometry, material, object, group);
     } finally {
-      end();
+      brackets.end();
     }
   };
-  renderer.renderBufferDirect = timed;
+  const timedClear: typeof clear = (color, depth, stencil) => {
+    brackets.beginClear();
+    try {
+      clear.call(renderer, color, depth, stencil);
+    } finally {
+      brackets.end();
+    }
+  };
+  renderer.renderBufferDirect = timedDraw;
+  renderer.clear = timedClear;
   return () => {
-    // A hook installed over this one calls it, so it stays: its `begin` and `end` gate themselves.
-    if (renderer.renderBufferDirect === timed) renderer.renderBufferDirect = draw;
+    // A hook installed over this one calls it, so it stays: its brackets gate themselves.
+    if (renderer.renderBufferDirect === timedDraw) renderer.renderBufferDirect = draw;
+    if (renderer.clear === timedClear) renderer.clear = clear;
   };
 }
 

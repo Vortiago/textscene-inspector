@@ -75,7 +75,13 @@ three calls `updateMatrices` before it binds and clears the atlas for the light
 2. Builds its matrix with the slot's rectangle, so the lookup reads the slot, as Godot's
    `atlas_rect` places it (`scene_forward_lights_inc.glsl:846`).
 3. Sets the atlas's scissor to the slot. three binds a target with its own scissor
-   (r187 `WebGLRenderer.js:3067-3097`), so the clear stays inside the slot.
+   (r187 `WebGLRenderer.js:3067-3097`), so the light's draws stay inside the slot.
+
+The shadow pass lets only the first clear of the atlas through in a pass, and clears the whole
+atlas with it (`oneAtlasClear.ts`). Every slotted spot and area light draws in each pass, and the
+omni copies run after them. So the clear erases no slot that the lit draw reads. Godot clears each
+slot on its own (`render_forward_clustered.cpp:1570`), because it keeps the slot of a light whose
+shadow did not change. When an omni light keeps an earlier pass's slot, the pass does the same.
 
 ## Omni shadows
 
@@ -89,8 +95,9 @@ the first of the next row after a row's last slot (`light_storage.h:683-691`).
   nothing and filters nothing. The copy filters the four nearest texels itself, as Godot's linear
   sampler does. A texel past a face's edge reads the neighbouring face.
 - three gives the renderer no hook between its shadow pass and its draw. So
-  `installShadowPass` wraps `renderer.shadowMap.render`: three's own pass, then each omni
-  light's copy, before the draw uploads the lights (r187 `WebGLRenderer.js:1750-1765`).
+  `installShadowPass` wraps `renderer.shadowMap.render`: three's own pass, then the slotted spot
+  and area lights, then each omni light's copy, before the draw uploads the lights
+  (r187 `WebGLRenderer.js:1750-1765`).
 - `OmniShadowCopy` ports `cube_to_dp.glsl`. Each texel of a slot holds the distance to the light
   over its range, along the direction its paraboloid maps it to. The first slot holds the light's
   -Z half, and the second its +Z half. Godot's cube follows its own face convention, which its copy

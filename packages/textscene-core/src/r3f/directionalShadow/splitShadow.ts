@@ -231,8 +231,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
    * as its vec4 repeats that split's far end. With no split drawn, every slot keeps its matrix.
    */
   override updateMatrices(_light: THREE.Light): void {
-    // three clears the whole target before it draws a light (r187 `WebGLShadowMap.js:340-341`), so the
-    // scissor keeps the clear inside this light's share.
+    // A viewport does not clip a wide point or line, so the scissor keeps them inside this share.
     confineShadowScissor(this, this.share);
     const lastSplit = Math.max(this.splitCount - 1, 0);
     for (let slot = 0; slot < SPLIT_SLOTS; slot++) {

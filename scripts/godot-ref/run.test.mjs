@@ -10,6 +10,7 @@ import { PNG } from 'pngjs';
 import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { LAVAPIPE_LOADER_ENV } from './lavapipe.mjs';
+import { GPU_TIME_DEFAULT_FRAMES, GPU_TIME_WARMUP_FRAMES } from './gpuTime.mjs';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_CAPTURE,
@@ -19,6 +20,7 @@ import {
 import {
   bootstrapScript,
   DEFAULT_RENDERING_METHOD,
+  defaultOutPath,
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
   EDITOR_FOV,
@@ -29,7 +31,9 @@ import {
   FOG_JITTER_CYCLE_FRAMES,
   FRAME_MARGIN,
   godotSpawnPlan,
+  gpuTimeSizeMessage,
   importAssets,
+  missingGpuTimeMessage,
   PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
@@ -1192,5 +1196,120 @@ describe('--particles advances the emitters by a named number of seconds', () =>
 
   it('leaves GPUParticles2D alone until the previewer draws it', () => {
     expect(bootstrap({ particles: 0.5 })).not.toContain('GPUParticles2D)');
+  });
+});
+
+describe('--gpu-time measures Godot on the host GPU', () => {
+  it('records the default frames when no count follows the flag', () => {
+    expect(parseArgs(['a.tscn', '--gpu-time']).gpuTimeFrames).toBe(GPU_TIME_DEFAULT_FRAMES);
+    expect(parseArgs(['a.tscn', '--gpu-time', '--no-previews']).gpuTimeFrames).toBe(GPU_TIME_DEFAULT_FRAMES);
+  });
+
+  it('records the count that follows the flag', () => {
+    expect(parseArgs(['a.tscn', '--gpu-time', '120']).gpuTimeFrames).toBe(120);
+    expect(parseArgs(['--gpu-time', '120', 'a.tscn']).scene).toBe('a.tscn');
+  });
+
+  it('records nothing without the flag', () => {
+    expect(parseArgs(['a.tscn']).gpuTimeFrames).toBe(0);
+  });
+
+  it('refuses a count that is not a whole number (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--gpu-time', '1.5'])).toThrow(
+      '--gpu-time needs a whole number, got "1.5"'
+    );
+  });
+
+  it('refuses the in-game mode, which it never times (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', 'in-game', '--gpu-time'])).toThrow('cannot take --gpu-time');
+  });
+
+  it('refuses a 2D mode, which it never times (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', '2d', '--gpu-time'])).toThrow(
+      '--gpu-time cannot take --mode 2d'
+    );
+    expect(() => parseArgs(['a.tscn', '--mode', '2d-root', '--gpu-time'])).toThrow(
+      '--gpu-time cannot take --mode 2d-root'
+    );
+  });
+
+  it('refuses a probe, which would read the host-GPU picture as a reference (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--gpu-time', '--probe', '1,2'])).toThrow(
+      '--gpu-time cannot take --probe'
+    );
+  });
+
+  it('names a 2D render that had nothing to time', () => {
+    expect(missingGpuTimeMessage('2d')).toBe('--gpu-time times only a 3D render, got a "2d" render');
+  });
+
+  it('names a 3D render that quit before the recording ended, and the hidden window that causes it', () => {
+    expect(missingGpuTimeMessage('3d')).toMatch(/Godot quit before it ended\. A window that is hidden/);
+  });
+
+  it('accepts a recording at the asked size', () => {
+    expect(gpuTimeSizeMessage([1073, 1830], { width: 1073, height: 1830 })).toBeNull();
+  });
+
+  it('refuses a recording the screen resized (error case)', () => {
+    expect(gpuTimeSizeMessage([1073, 1050], { width: 1073, height: 1830 })).toBe(
+      '--gpu-time asked for 1073 x 1830, but Godot drew 1073 x 1050. The window may not fit the screen.'
+    );
+  });
+
+  it('keeps the render pass running through the warm-up and the recorded frames', () => {
+    const argv = renderArgv('/tmp/work', { gpuTimeFrames: 300 });
+    const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
+    expect(quitAfter).toBeGreaterThan(NEVER_SETTLES_CAPTURE_FRAME + GPU_TIME_WARMUP_FRAMES + 300);
+    expect(argv).toContain('--gpu-profile');
+    expect(argv).toContain('--disable-vsync');
+  });
+
+  it('adds no timing flag to a plain reference', () => {
+    expect(renderArgv('/tmp/work')).not.toContain('--gpu-profile');
+  });
+
+  it('leaves the Vulkan loader to pick the host GPU', () => {
+    const plan = godotSpawnPlan([], { display: true, onHostGpu: true, hasDisplay: true });
+    expect(plan.env.VK_LOADER_DRIVERS_SELECT).toBe(process.env.VK_LOADER_DRIVERS_SELECT);
+  });
+
+  it('opens the window on the host screen when there is one', () => {
+    const plan = godotSpawnPlan(['--path', '/tmp/work'], {
+      display: true,
+      onHostGpu: true,
+      hasDisplay: true,
+    });
+    expect(plan.argv).not.toContain('xvfb-run');
+  });
+
+  it('falls back to a virtual X server on a host with no screen', () => {
+    const plan = godotSpawnPlan(['--path', '/tmp/work'], {
+      display: true,
+      onHostGpu: true,
+      hasDisplay: false,
+    });
+    expect(plan.argv).toContain('xvfb-run');
+  });
+
+  it('records after the 3D capture, with the picture settled', () => {
+    const script = bootstrap({ gpuTimeFrames: 300, gpuTimeOut: '/tmp/gpu.json' });
+    expect(script).toContain('const GPU_TIME_FRAMES := 300');
+    expect(script).toMatch(/_save_capture\(get_viewport\(\)\)\n\tawait _record_gpu_time\(get_viewport\(\)\)/);
+  });
+
+  it('keeps the host-GPU picture of a timed run off the lavapipe reference path', () => {
+    expect(defaultOutPath({ scene: 'a/b.tscn', gpuTimeFrames: 300 })).toMatch(/output\/b\.host-gpu\.png$/);
+    expect(defaultOutPath({ scene: 'a/b.tscn', gpuTimeFrames: 0 })).toMatch(/output\/b\.png$/);
+  });
+
+  it('adds no recording to an untimed render (edge case)', () => {
+    expect(bootstrap({ gpuTimeFrames: 0, gpuTimeOut: '' })).not.toContain('_record_gpu_time');
+  });
+
+  it('refuses an OpenGL driver, which has no RenderingDevice to time (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--gpu-time', '--rendering-driver', 'opengl3'])).toThrow(
+      '--gpu-time cannot take --rendering-driver opengl3'
+    );
   });
 });

@@ -644,7 +644,7 @@ The measurement of every frame on one renderer while the Performance toggle is o
 _Avoid_: "profiler" for the overlay. "stats" for the timing itself.
 
 **Frame recording** (`recordFrames`):
-The **frame profile**'s numbers on each view with Performance on, averaged over a count of frames the caller names, with each draw call's GPU time when asked. The web previewer's console calls it as `await textscene.profile({ frames: 120, draws: true })`.
+The **frame profile**'s numbers on each view with Performance on, averaged over a count of frames the caller names, with the GPU time of each draw call and each clear when asked. The web previewer's console calls it as `await textscene.profile({ frames: 120, draws: true })`.
 _Avoid_: "benchmark" (it measures the frames the view draws anyway).
 
 **Render step**:
