@@ -1,6 +1,6 @@
 name: Claude
 
-# The owner mentions @claude on an issue, and OpenCode runs Opus to prepare it: an agent brief as
+# The owner mentions @claude on an issue, and OpenCode runs Fable to prepare it: an agent brief as
 # a comment, and the labels. A new issue can carry the mention in its title or body. The mention
 # gets an eyes reaction when the run starts and a thumbs up when the brief is posted.
 #
@@ -87,7 +87,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       # A repository variable names another model, so a change of model needs no pull request.
-      MODEL: ${{ vars.CLAUDE_PREPARE_MODEL || 'anthropic/claude-opus-5-5#high' }}
+      MODEL: ${{ vars.CLAUDE_PREPARE_MODEL || 'anthropic/claude-fable-5-2#high' }}
     steps:
       # The whole history, so that the agent can read the log and bisect.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
