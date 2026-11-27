@@ -29,6 +29,7 @@ import {
   stripLineComment,
   leadingSpace,
   godotIndent,
+  headerIndent,
   trimEndSpace,
   isGodotBlank,
   splitLines,
@@ -632,13 +633,6 @@ function typeField(content: string, fields: readonly TagField[]): string | undef
   const field = fields.find(({ key }) => key === 'type');
   const value = field && strToVar(content.slice(field.start, field.end));
   return value?.type === VARIANT_TYPE.STRING ? value.value : undefined;
-}
-
-/** Where the header tag starts: a NUL before it ends the stream (measured), but a body line skips one. */
-function headerIndent(line: string): number {
-  const nul = line.indexOf('\0');
-  const indent = godotIndent(line);
-  return nul === -1 ? indent : Math.min(nul, indent);
 }
 
 /** A `[` after a token that can end a value, not a typed `Array[` or `Dictionary[`. */

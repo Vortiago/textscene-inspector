@@ -39,7 +39,11 @@ export const SECTION_READING: VariantReading = { resourceOf: () => null };
 /** The header's: it has none (resource_format_text.cpp:1131), so a reference reads as a `Resource()` path. */
 export const HEADER_READING: VariantReading = {};
 
-/** `parse_tag` from `start`, on line `line` (variant_parser.cpp:1874). Null at the end, as `ERR_FILE_EOF`. */
+/**
+ * `parse_tag` from `start`, on line `line` (variant_parser.cpp:1874). Null at the end, as `ERR_FILE_EOF`.
+ *
+ * @canonical Read a heading tag as Godot's tag parser does
+ */
 export function readTag(
   text: string,
   start: number,

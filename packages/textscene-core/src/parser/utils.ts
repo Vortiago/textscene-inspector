@@ -54,6 +54,17 @@ export function godotIndent(line: string): number {
 }
 
 /**
+ * Where the header tag starts: a NUL before it ends the stream (measured), but a body line skips one.
+ *
+ * @canonical Where Godot's tokenizer starts reading the header line
+ */
+export function headerIndent(line: string): number {
+  const nul = line.indexOf('\0');
+  const indent = godotIndent(line);
+  return nul === -1 ? indent : Math.min(nul, indent);
+}
+
+/**
  * A line with nothing to read: codes `get_token` skips, or JavaScript white space the lenient path skips.
  *
  * @canonical Whether a line holds nothing Godot reads

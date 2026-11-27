@@ -6,6 +6,7 @@
  */
 
 import { parseGodotFloat } from '../godot/variant/number.js';
+import { headerIndent } from '../parser/utils.js';
 import { strToVar } from '../godot/variant/strToVar.js';
 import { HEADER_READING, readTag } from '../godot/variant/tagReader.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
@@ -56,9 +57,10 @@ export function readHeaderFormat(content: string): HeaderFormat | null {
     const end = newline === -1 ? content.length : newline;
     const lineStart = at;
     const written = content.slice(at, end);
-    const trimmed = written.trim();
     at = end + 1;
-    if (trimmed === '' || trimmed.startsWith(';')) continue;
+    // Blank as the core scan judges the header line: a control code is a gap, a NUL ends the stream.
+    const indent = headerIndent(written);
+    if (indent === written.length || written[indent] === ';') continue;
 
     // The tag reader, not the line: a header may carry a comment, run over lines or have text after its `]`.
     const heading = readTag(content, lineStart, line, HEADER_READING);

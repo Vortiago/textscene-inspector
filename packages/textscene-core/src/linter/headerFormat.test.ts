@@ -33,6 +33,18 @@ describe('readHeaderFormat', () => {
     expect(readHeaderFormat('[gd_scene format="2"]\n')?.format).toBe(2);
   });
 
+  it('skips a line of control codes before the header, as the core scan does', () => {
+    expect(readHeaderFormat('\x01\n[gd_scene format=2]\n')).toEqual({ format: 2, line: 2, column: 1 });
+  });
+
+  it('finds no header after a NUL, which ends the stream as in the core scan', () => {
+    expect(readHeaderFormat('\0\n[gd_scene format=2]\n')).toBeNull();
+  });
+
+  it('finds no header after a line of NBSP, which Godot reads as a refused tag', () => {
+    expect(readHeaderFormat(' \n[gd_scene format=2]\n')).toBeNull();
+  });
+
   it('reports no version when the header declares none', () => {
     // Absent is current, not oldest: the engine defaults it to FORMAT_VERSION
     // (resource_format_text.cpp:1147-1148).
