@@ -1,9 +1,11 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { transform2DXform, TRANSFORM2D_IDENTITY } from '../../godot/math/transform2d';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d';
 import {
   directionalLightRow,
   itemLightBits,
+  itemLightBitsIn,
   lightArrayWords,
   pointLightRow,
   type PointLightPlacement,
@@ -107,5 +109,46 @@ describe('itemLightBits', () => {
 
   it('refuses a sixteenth positional light', () => {
     expect(() => itemLightBits(Array(16).fill(0))).toThrow(/at most 15/);
+  });
+});
+
+describe('itemLightBitsIn', () => {
+  /** A frame that lists ordinal 9 as its directional row, then the ordinals 4, 2 and 7. */
+  const frame = {
+    words: new Uint32Array(0),
+    directionalCount: 1,
+    indexOf: new Map([
+      [9, 0],
+      [4, 1],
+      [2, 2],
+      [7, 3],
+    ]),
+    texture: new THREE.DataTexture(),
+  };
+
+  it("indexes the item's lights into the frame's light_array, in the item's order", () => {
+    expect(itemLightBitsIn(frame, [7, 4])).toEqual(itemLightBits([3, 1]));
+  });
+
+  it('leaves out a light the render did not list, as Godot lists only lights on screen', () => {
+    expect(itemLightBitsIn(frame, [5, 2])).toEqual(itemLightBits([2]));
+  });
+
+  it('never indexes a directional row as a positional light', () => {
+    expect(itemLightBitsIn(frame, [9, 2])).toEqual(itemLightBits([2]));
+  });
+
+  it('keeps the first 15 listed lights of the item', () => {
+    const many = {
+      ...frame,
+      directionalCount: 0,
+      indexOf: new Map(Array.from({ length: 20 }, (_, n) => [n, n])),
+    };
+    expect(
+      itemLightBitsIn(
+        many,
+        Array.from({ length: 20 }, (_, n) => 19 - n)
+      ).flags
+    ).toBe(15);
   });
 });

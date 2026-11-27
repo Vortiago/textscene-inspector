@@ -3,8 +3,9 @@
  * item's rect, and the material state each surface inside takes from it.
  */
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { LIT_ITEM_USER_DATA } from '../lighting2d/itemLightCap';
+import type { TemplateDrawClaims } from '../lighting2d/templateDrawClaims';
 import {
   useLitItem,
   useSurfaceLighting,
@@ -79,8 +80,7 @@ export function useTemplateLighting(): ItemTemplateLighting | null {
   return useContext(TemplateLightingContext);
 }
 
-/** Takes the item's pixels into a template draw, and returns the step that gives them back. */
-type ClaimTemplateDraw = () => () => void;
+type ClaimTemplateDraw = TemplateDrawClaims['claim'];
 
 /** Null outside an item whose own pixels a template draw can take, such as a tile run's own mesh. */
 const TemplateDrawContext = createContext<ClaimTemplateDraw | null>(null);
@@ -89,16 +89,6 @@ TemplateDrawContext.displayName = 'TemplateDrawContext';
 /** The claim a template draw of the enclosing item's pixels makes while it draws them. */
 export function useTemplateDrawClaim(): ClaimTemplateDraw | null {
   return useContext(TemplateDrawContext);
-}
-
-/** Whether a template draw holds the item's pixels, and the claim it takes them with. */
-function useTemplateDraws(): [isTaken: boolean, claim: ClaimTemplateDraw] {
-  const [claims, setClaims] = useState(0);
-  const claim = useCallback(() => {
-    setClaims((held) => held + 1);
-    return () => setClaims((held) => held - 1);
-  }, []);
-  return [claims > 0, claim];
 }
 
 /** The `z_final` of the lit item around a mesh, 0 outside one. */
@@ -184,15 +174,13 @@ export function LitCanvasItemPixels({
   children,
 }: LitCanvasItemPixelsProps) {
   const item = useLitItem({ material, lightMask, zFinal });
-  // The template lights the pixels it takes itself, so the classic pass reads no light for them.
-  const [isTaken, claimTemplateDraw] = useTemplateDraws();
-  const pixelMaterial = usePixelMaterial(item, blendModeOf(material), surface, isDrawn && !isTaken);
+  const pixelMaterial = usePixelMaterial(item, blendModeOf(material), surface, isDrawn);
   return (
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
       <ItemZFinalContext.Provider value={zFinal}>
         <TemplateLightingContext.Provider value={item.template}>
           {/* The template draws no 2D shadow yet, so a shadowed item's own pixels stay classic. */}
-          <TemplateDrawContext.Provider value={item.template.isShadowed ? null : claimTemplateDraw}>
+          <TemplateDrawContext.Provider value={item.template.isShadowed ? null : item.claims.claim}>
             <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
               {typeof children === 'function' ? children(pixelMaterial) : children}
             </CanvasItemPixelMaterialContext.Provider>

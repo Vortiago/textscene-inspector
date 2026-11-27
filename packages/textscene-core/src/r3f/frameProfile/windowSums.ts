@@ -19,6 +19,7 @@ export class WindowSums {
   drawCalls = 0;
   objects = 0;
   primitives = 0;
+  uploads = 0;
   readonly stepCpuMs = new Map<StepKey, number>();
   readonly stepRuns = new Map<StepKey, number>();
   readonly stepDrawCalls = new Map<StepKey, number>();
@@ -48,7 +49,7 @@ export function statsOf(sums: WindowSums, timings: { hasGpuTimer: boolean } | nu
 }
 
 function timingsOf(sums: WindowSums, hasGpuTimer: boolean): FrameTimings {
-  const { frames, gpuNs, stepCpuMs, stepRuns, stepDrawCalls, stepGpuNs } = sums;
+  const { frames, gpuNs, uploads, stepCpuMs, stepRuns, stepDrawCalls, stepGpuNs } = sums;
   const steps: StepStats[] = [];
   for (const step of STEP_KEYS) {
     const runs = step === 'Other' ? frames : (stepRuns.get(step) ?? 0);
@@ -62,7 +63,7 @@ function timingsOf(sums: WindowSums, hasGpuTimer: boolean): FrameTimings {
       drawCallsPerFrame: (stepDrawCalls.get(step) ?? 0) / frames,
     });
   }
-  return { gpuMs: sums.gpuMsPerFrame(gpuNs), hasGpuTimer, steps };
+  return { gpuMs: sums.gpuMsPerFrame(gpuNs), hasGpuTimer, uploadsPerFrame: uploads / frames, steps };
 }
 
 /** Adds `amount` to the sum at `key`. */

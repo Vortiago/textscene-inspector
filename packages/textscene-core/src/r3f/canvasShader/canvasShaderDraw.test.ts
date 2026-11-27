@@ -13,11 +13,12 @@ import {
   type CanvasShader,
 } from './canvasShaderDraw';
 import type { CanvasShaderCommand } from './canvasCommands';
-import { directionalLightCullKey } from '../lighting2d/lightCullKey';
+import { DEFAULT_LIGHT_CULL_KEY, directionalLightCullKey } from '../lighting2d/lightCullKey';
 import type { CanvasLightRows } from '../lighting2d/lightRows';
 import type { CanvasLightDeclaration } from '../lighting2d/itemLightList';
 import { type CanvasLightRow } from '../../shaders/canvas/canvasLights';
 import type { RowBlock } from '../../shaders/template/rowBlock';
+import type { CanvasVariant } from '../../shaders/canvas/transpileCanvas';
 import { FLAGS } from '../../shaders/canvas/canvasInstance';
 import { fakeCanvasRenderer, MAX_ANISOTROPY_PARAMETER } from '../testing/fakeCanvasRenderer';
 
@@ -37,6 +38,7 @@ function itemOf(code = VALID) {
 const gl = {
   getRenderTarget: () => null,
   getDrawingBufferSize: (size: THREE.Vector2) => size.set(64, 32),
+  info: { render: { frame: 0 } },
 } as unknown as THREE.WebGLRenderer;
 
 const RECT = { x: 0, y: 0, w: 8, h: 4 };
@@ -361,31 +363,57 @@ describe('canvasShaderDraw anisotropy', () => {
 });
 
 describe('canvasShaderDraw lighting', () => {
-  const SUN: CanvasLightDeclaration = {
-    reach: directionalLightCullKey(0, 0),
-    sequence: null,
-    slot: 0,
-    shadowItemCullMask: null,
-    castsShadow: false,
-    tintsShadow: false,
-    mixes: false,
-  };
-
-  const SUN_ROW: CanvasLightRow = {
+  const rowOf = (r: number): CanvasLightRow => ({
     textureMatrix: { a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0 },
-    color: { r: 0.5, g: 0.25, b: 1, a: 2 },
+    color: { r, g: 0.25, b: 1, a: 2 },
     flags: 0,
     height: 0,
     position: { x: 0, y: -1 },
     atlasRect: { x: 0, y: 0, w: 0, h: 0 },
-  };
-
-  const rows = (): CanvasLightRows => ({
-    lights: new Map([[0, SUN]]),
-    writers: new Map([[0, () => SUN_ROW]]),
   });
 
-  const BITS = { flags: 2, lights: [3 | (4 << 8), 0, 0, 0] as const };
+  const lightOf = (sequence: number | null, row: CanvasLightRow): CanvasLightDeclaration => ({
+    reach:
+      sequence === null
+        ? directionalLightCullKey(0, 0)
+        : { ...DEFAULT_LIGHT_CULL_KEY, layerMin: 0, layerMax: 0 },
+    sequence,
+    slot: sequence === null ? 0 : undefined,
+    shadowItemCullMask: null,
+    castsShadow: false,
+    tintsShadow: false,
+    mixes: false,
+    rowSource: { listedRow: () => row },
+  });
+
+  /** A sun at index 0 of `light_array`, then the positional ordinals 1 and 2 at indices 1 and 2. */
+  const rows = (): CanvasLightRows => ({
+    lights: new Map([
+      [0, lightOf(null, rowOf(0.5))],
+      [1, lightOf(0, rowOf(0.75))],
+      [2, lightOf(1, rowOf(1))],
+    ]),
+  });
+
+  const lightingOf = (lights: readonly number[] = [2, 1]) => ({ rows: rows(), layer: 0, lights });
+
+  /** Runs the light hook of `draw`'s `variant` as one render draws it. */
+  function render(
+    item: ReturnType<typeof itemOf>,
+    draw: ReturnType<typeof drawOf>,
+    variant: CanvasVariant = 'quad'
+  ) {
+    const block = item.draw(variant).buffers.get('light_array') as RowBlock;
+    const camera = new THREE.OrthographicCamera();
+    block['store'].node.update({
+      renderer: {},
+      renderId: 1,
+      frameId: 1,
+      object: draw.object,
+      camera,
+    } as never);
+    return block;
+  }
 
   const lightingBit = (item: ReturnType<typeof itemOf>) =>
     (item.draw('quad').specialisations.get('pso_sc_packed_0')!.value as number) & 1;
@@ -406,28 +434,61 @@ describe('canvasShaderDraw lighting', () => {
     const item = itemOf();
     const draw = drawOf([RECT_COMMAND], item);
 
-    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+    draw.setLighting(lightingOf());
     const lit = lightingBit(item);
     draw.setLighting(null);
 
     expect([lit, lightingBit(item)]).toEqual([1, 0]);
   });
 
-  it("writes the item's light count and indices into each rect record", () => {
-    const draw = drawOf();
-    draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+  /** The bits of the lights [2, 1] at their indices 2 and 1 of `light_array`. */
+  const BITS = { flags: 2, lights: [2 | (1 << 8), 0, 0, 0] };
 
-    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+  it("writes the item's light count and indices into each rect record before the render", () => {
+    const item = itemOf();
+    const draw = drawOf([RECT_COMMAND], item);
+    draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+    draw.setLighting(lightingOf());
+    render(item, draw);
+
+    draw.writeRecords();
 
     const words = recordWords(draw.object.children[0]!);
-    expect([words[FLAGS]! & 15, ...words.slice(28, 32)]).toEqual([2, 3 | (4 << 8), 0, 0, 0]);
+    expect([words[FLAGS]! & 15, ...words.slice(28, 32)]).toEqual([2, ...BITS.lights]);
+  });
+
+  it('writes no light into the records before the first render lists the lights', () => {
+    const draw = drawOf();
+    draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+    draw.setLighting(lightingOf());
+
+    draw.writeRecords();
+
+    expect(recordWords(draw.object.children[0]!)[FLAGS]! & 15).toBe(0);
+  });
+
+  it('writes the light indices out of the records once the item draws unlit', () => {
+    const item = itemOf();
+    const draw = drawOf([RECT_COMMAND], item);
+    draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+    draw.setLighting(lightingOf());
+    render(item, draw);
+    draw.writeRecords();
+
+    draw.setLighting(null);
+    draw.writeRecords();
+
+    expect(recordWords(draw.object.children[0]!)[FLAGS]! & 15).toBe(0);
   });
 
   it("hands a mesh the item's light indices", () => {
-    const draw = drawOf([meshCommand()]);
+    const item = itemOf();
+    const draw = drawOf([meshCommand()], item);
     draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+    draw.setLighting(lightingOf());
+    render(item, draw, 'attributes');
 
-    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+    draw.writeRecords();
 
     expect(draw.object.children[0]!.userData.attributesConstants.lights).toEqual(BITS);
   });
@@ -437,31 +498,23 @@ describe('canvasShaderDraw lighting', () => {
     const draw = drawOf([RECT_COMMAND], item);
     const placeholder = item.draw('quad').textures.get('atlas_texture')?.value;
 
-    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+    draw.setLighting(lightingOf());
 
     expect(item.draw('quad').textures.get('atlas_texture')!.value).not.toBe(placeholder);
   });
 
-  it("writes the canvas layer's light rows and directional count before a lit draw", () => {
+  it("points a lit draw at its canvas layer's light rows, and writes the directional count", () => {
     const item = itemOf();
     const draw = drawOf([RECT_COMMAND], item);
-    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
-    const quad = item.draw('quad');
-    const block = quad.buffers.get('light_array') as RowBlock;
-    const camera = new THREE.OrthographicCamera();
+    draw.setLighting(lightingOf());
 
-    block['store'].node.update({
-      renderer: {},
-      renderId: 1,
-      frameId: 1,
-      object: draw.object,
-      camera,
-    } as never);
+    const block = render(item, draw);
 
-    const firstWord = block['placed']!.firstRow.value * 1024 * 4;
-    const data = new Float32Array((block.texture.image as { data: Uint32Array }).data.buffer);
-    const color = Array.from(data.slice(firstWord + 16, firstWord + 20));
-    const count = (quad.uniforms.get('canvas_data.directional_light_count') as { value: number }).value;
+    const texture = block['store'].node.value as THREE.DataTexture;
+    const data = new Float32Array((texture.image as { data: Uint32Array }).data.buffer);
+    const color = Array.from(data.slice(16, 20));
+    const count = (item.draw('quad').uniforms.get('canvas_data.directional_light_count') as { value: number })
+      .value;
     expect([count, color]).toEqual([1, [0.5, 0.25, 1, 2]]);
   });
 });

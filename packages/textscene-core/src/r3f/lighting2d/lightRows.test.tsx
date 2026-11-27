@@ -1,12 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { decalAtlasRect, updateDecalAtlas } from '../../nodes/3d/decal/decalAtlas';
 import type { CanvasLightView } from '../canvasShader/canvasFrameLights';
 import type { DirectionalLightTerm, LightTerm, PointLightTerm } from './CanvasLight2D';
-import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING, type CanvasLighting2D } from './lightPassContext';
-import { useLightRow, type LightRowWriter } from './lightRows';
+import { LightTermRow, useLightRowSource } from './lightRows';
 
 const SHADOW = {
   enabled: false,
@@ -55,61 +53,69 @@ const VIEW: CanvasLightView = {
   canvasTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
 };
 
-function spyRows() {
-  const unregister = vi.fn();
-  const registerLightRow = vi.fn((_ordinal: number, _writer: LightRowWriter) => unregister);
-  const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerLightRow };
-  const Wrap = ({ children }: { children: ReactNode }) => (
-    <CanvasLighting2DContext.Provider value={value}>{children}</CanvasLighting2DContext.Provider>
-  );
-  return { Wrap, registerLightRow, unregister };
+function mountedRow(term: LightTerm, at = new THREE.Vector3()): LightTermRow {
+  const source = new LightTermRow(term);
+  const origin = new THREE.Object3D();
+  origin.position.copy(at);
+  origin.updateMatrixWorld();
+  source.setOrigin(origin);
+  return source;
 }
 
-function mountRow(ordinal: number | null, term: LightTerm) {
-  const spies = spyRows();
-  const hook = renderHook(({ term: current }) => useLightRow(ordinal, current), {
-    wrapper: spies.Wrap,
-    initialProps: { term },
-  });
-  return { ...spies, ...hook };
-}
-
-describe('useLightRow', () => {
-  it('registers no row before its origin mounts', () => {
-    const { registerLightRow } = mountRow(2, directionalTerm());
-    expect(registerLightRow).not.toHaveBeenCalled();
+describe('LightTermRow', () => {
+  it('lists no row before its origin mounts', () => {
+    expect(new LightTermRow(directionalTerm()).listedRow(VIEW)).toBeNull();
   });
 
-  it("registers the light's row under its ordinal once its origin mounts", () => {
-    const { result, registerLightRow } = mountRow(2, directionalTerm());
-    act(() => result.current(new THREE.Object3D()));
-    expect(registerLightRow.mock.calls.map(([ordinal]) => ordinal)).toEqual([2]);
+  it("lists the light's row once its origin mounts", () => {
+    expect(mountedRow(directionalTerm(3)).listedRow(VIEW)?.color.a).toBe(3);
   });
 
-  it('registers no row for a light the canvas has not declared', () => {
-    const { result, registerLightRow } = mountRow(null, directionalTerm());
-    act(() => result.current(new THREE.Object3D()));
-    expect(registerLightRow).not.toHaveBeenCalled();
+  it('hands the same row while nothing it reads moved', () => {
+    const source = mountedRow(pointTerm());
+    expect(source.listedRow(VIEW)).toBe(source.listedRow(VIEW));
   });
 
-  it('withdraws the row when its origin unmounts', () => {
-    const { result, unregister } = mountRow(2, directionalTerm());
-    act(() => result.current(new THREE.Object3D()));
-    act(() => result.current(null));
-    expect(unregister).toHaveBeenCalledTimes(1);
+  it('builds the row again from a new term', () => {
+    const source = mountedRow(directionalTerm(2));
+    source.listedRow(VIEW);
+    source.term = directionalTerm(3);
+    expect(source.listedRow(VIEW)?.color.a).toBe(3);
   });
 
-  it('writes the last term it was given, with no new registration', () => {
-    const { result, rerender, registerLightRow } = mountRow(2, directionalTerm(2));
-    act(() => result.current(new THREE.Object3D()));
-    rerender({ term: directionalTerm(3) });
-    const writer = registerLightRow.mock.calls[0]![1];
-    expect([registerLightRow.mock.calls.length, writer(VIEW).color.a]).toEqual([1, 3]);
+  it('builds the row again once the light moves', () => {
+    const origin = new THREE.Object3D();
+    const source = new LightTermRow(pointTerm());
+    source.setOrigin(origin);
+    const first = source.listedRow(VIEW);
+    origin.position.x = 4;
+    origin.updateMatrixWorld();
+    expect(source.listedRow(VIEW)).not.toBe(first);
+  });
+
+  it('lists no row for a point light whose texture rect misses the viewport, as Godot culls it', () => {
+    expect(mountedRow(pointTerm(), new THREE.Vector3(1000, 0, 0)).listedRow(VIEW)).toBeNull();
+  });
+
+  it('lists a directional light wherever its node is', () => {
+    expect(mountedRow(directionalTerm(), new THREE.Vector3(1000, 0, 0)).listedRow(VIEW)).not.toBeNull();
+  });
+});
+
+describe('useLightRowSource', () => {
+  it('keeps one source for the light, holding the last term', () => {
+    const { result, rerender } = renderHook(({ term }) => useLightRowSource(term), {
+      initialProps: { term: directionalTerm(2) },
+    });
+    const first = result.current;
+    const next = directionalTerm(3);
+    rerender({ term: next });
+    expect([result.current === first, result.current.term]).toEqual([true, next]);
   });
 
   it("holds a point light's texture in the light atlas while it lights", () => {
     const texture = cookie();
-    const { unmount } = mountRow(2, pointTerm(texture));
+    const { unmount } = renderHook(() => useLightRowSource(pointTerm(texture)));
     updateDecalAtlas(16384);
     const held = decalAtlasRect(texture) !== undefined;
     unmount();

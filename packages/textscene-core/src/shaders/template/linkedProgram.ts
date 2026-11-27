@@ -84,5 +84,10 @@ export function linkedProgram(
   // Sky and spatial targets are linear: `sky.cpp:193`, `scene_shader_forward_clustered.cpp:595`.
   const parameters = bindParameters(tree, { usesLinearColors, sampling });
   const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
-  return { linked, resources: programResources(program.specialisedMembers), parameters, parameterValues };
+  return {
+    linked,
+    resources: programResources({ specialisedMembers: program.specialisedMembers }),
+    parameters,
+    parameterValues,
+  };
 }

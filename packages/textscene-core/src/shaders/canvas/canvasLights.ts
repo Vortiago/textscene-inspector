@@ -8,6 +8,7 @@ import {
 } from '../../godot/math/transform2d.js';
 import { normalizedVector2, type Vector2 } from '../../godot/math/vector.js';
 import { ZERO_RECT, type Rect2 } from '../../godot/math/rect2.js';
+import type * as THREE from 'three';
 import type { NodeFrame } from 'three/webgpu';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasDraw } from './transpileCanvas.js';
@@ -64,16 +65,6 @@ const LIGHT_FLAGS_BLEND_SHIFT = 16;
 const LIGHT_FLAGS_FILTER_SHIFT = 22;
 
 const ZERO_TRANSFORM: Transform2DColumns = Object.freeze({ a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0 });
-
-/** An unlit row, for a declared light whose row is not registered yet: its index still holds. */
-export const DARK_LIGHT_ROW: CanvasLightRow = Object.freeze({
-  textureMatrix: ZERO_TRANSFORM,
-  color: { r: 0, g: 0, b: 0, a: 0 },
-  flags: 0,
-  height: 0,
-  position: { x: 0, y: 0 },
-  atlasRect: ZERO_RECT,
-});
 
 /** Shadows stay on the classic pass, so a row never sets `LIGHT_FLAGS_HAS_SHADOW`. */
 function lightFlags({ blendMode, shadowFilter }: Light2DValues): number {
@@ -198,11 +189,19 @@ export function itemLightBits(indices: readonly number[]): ItemLightBits {
   return { flags: indices.length, lights };
 }
 
+export function sameLightBits(a: ItemLightBits, b: ItemLightBits): boolean {
+  return a.flags === b.flags && a.lights.every((word, index) => word === b.lights[index]);
+}
+
 /** What a lit draw reads of its canvas layer's lights in one render. */
 export interface CanvasLightsFrame {
   /** `light_array`: the directional rows, then the positional ones. */
   readonly words: Uint32Array;
   readonly directionalCount: number;
+  /** Each listed light's index of `light_array`, by ordinal. */
+  readonly indexOf: ReadonlyMap<number, number>;
+  /** The words in the texture every lit draw of the layer reads, uploaded once. */
+  readonly texture: THREE.DataTexture;
 }
 
 const LIGHT_BINDINGS: readonly Binding<CanvasLightsFrame>[] = [
@@ -216,14 +215,24 @@ const LIGHT_BINDINGS: readonly Binding<CanvasLightsFrame>[] = [
 /** The light frame of a draw, or null for one that reads no light. */
 export type LightsFrameOf = (frame: NodeFrame) => CanvasLightsFrame | null;
 
-/** Writes `draw`'s `light_array` before each draw, uploading only when another array replaces it. */
+/** Points `draw`'s `light_array` at its layer's texture before each draw: one upload for every lit draw. */
 export function bindCanvasLightsEachDraw(draw: CanvasDraw, framesOf: LightsFrameOf): void {
-  let written: Uint32Array | null = null;
-  draw.buffers.get('light_array')?.writeEachDraw((_object, nodeFrame) => {
+  draw.buffers.get('light_array')?.readEachDraw((nodeFrame) => {
     const lights = framesOf(nodeFrame);
     if (!lights) return null;
     writeBindings(LIGHT_BINDINGS, draw.uniforms, lights);
-    if (lights.words === written) return null;
-    return (written = lights.words);
+    return lights.texture;
   });
+}
+
+/** The bits of an item that takes the positional lights `ordinals`, in Godot's loop order, in `frame`. */
+export function itemLightBitsIn(frame: CanvasLightsFrame, ordinals: readonly number[]): ItemLightBits {
+  const indices: number[] = [];
+  for (const ordinal of ordinals) {
+    const index = frame.indexOf.get(ordinal);
+    if (index === undefined || index < frame.directionalCount) continue;
+    indices.push(index);
+    if (indices.length === MAX_POSITIONAL_LIGHTS_PER_ITEM) break;
+  }
+  return itemLightBits(indices);
 }

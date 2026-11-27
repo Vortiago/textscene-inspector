@@ -60,6 +60,8 @@ export interface FrameTimings {
   gpuMs: number | null;
   /** False when the context offers no timer query, so every GPU time stays null. */
   hasGpuTimer: boolean;
+  /** The mean texture uploads of the frame: each `texImage` and `texSubImage` call of the context. */
+  uploadsPerFrame: number;
   /**
    * The steps that ran in the window or had a GPU result arrive in it, in `RENDER_STEPS` order,
    * then Other.

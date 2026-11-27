@@ -29,6 +29,7 @@ import type { ApartLightBuffers, CanvasLightList } from './lightPassContext.js';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture.js';
 import type { ItemLighting } from '../canvasShader/canvasShaderDraw.js';
 import { isShadowedByLight, itemTemplateLights } from './templateLights.js';
+import { TemplateDrawClaims } from './templateDrawClaims.js';
 
 export type { CanvasItemLightingProps };
 
@@ -139,6 +140,8 @@ export interface LitItem {
   readonly list: CanvasLightList | undefined;
   /** What a template draw of the item reads of its lights. */
   readonly template: ItemTemplateLighting;
+  /** The template draws that hold the item's own pixels, the same object for the item's life. */
+  readonly claims: TemplateDrawClaims;
   readonly plain: CanvasItemLightingUniforms;
   /** The material props of a surface that has no normal map, which never change once mounted. */
   readonly plainProps: CanvasItemLightingProps;
@@ -186,7 +189,7 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
     () => ({
       rows: lightRows,
       layer: canvasLayer,
-      bits: itemTemplateLights(lights, placement, godotLights),
+      lights: itemTemplateLights(lights, placement, godotLights),
       isLit: isReachedByLight,
       isShadowed: isShadowedByLight(lights, placement),
     }),
@@ -214,9 +217,21 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
 
   const { isLinear: isLinearCanvas } = canvasSpace;
   const plainProps = useMemo(() => canvasItemLightingProps(bound, isLinearCanvas), [bound, isLinearCanvas]);
+  const claims = useRef<TemplateDrawClaims | null>(null);
+  claims.current ??= new TemplateDrawClaims();
+  const itemClaims = claims.current;
   return useMemo(
-    () => ({ placement, lightMode, list, template, plain: bound, plainProps, geometryRef }),
-    [placement, lightMode, list, template, bound, plainProps]
+    () => ({
+      placement,
+      lightMode,
+      list,
+      template,
+      claims: itemClaims,
+      plain: bound,
+      plainProps,
+      geometryRef,
+    }),
+    [placement, lightMode, list, template, itemClaims, bound, plainProps]
   );
 }
 
@@ -236,7 +251,7 @@ export function useSurfaceLighting(
   const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
   const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
   const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
-  useRegisterLitItem(placement, isDrawn ? read : null);
+  useRegisterLitItem(placement, isDrawn ? read : null, item.claims);
 
   // A normal map scales each light by its own normal term, so it shades the lights the list keeps
   // apart.

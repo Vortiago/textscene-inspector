@@ -27,7 +27,7 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 2,344,163 B, 1,418 B over the measured 2,342,745 B. It replaces ADR-0055's 1,150,000 B, which
+is 2,345,475 B, 1,418 B over the measured 2,344,057 B. It replaces ADR-0055's 1,150,000 B, which
 held only the canvas-paint closure of the split build. The bake of a sky's layers through Godot's
 octmap compute stages (`shaders/template/compute`, `resources/sky/octmapPasses.ts`) adds 5,479 B of
 the measure. The other 4,818 B over the measure before it are the shader branch's growth that no
@@ -51,7 +51,8 @@ A canvas item without a shader of its own drawn through the canvas template behi
 A sun's soft shadow and transmittance on a lit surface, with its three reads of the stored depth and the probe that
 picks one (`r3f/directionalShadow`), and the frame recording (`r3f/frameProfile`), add 2,371 B. A lit canvas item
 drawn through the canvas template's lit variant, with its light rows and the shared program of one shader
-(`r3f/lighting2d/lightRows.ts`, `shaders/canvas/canvasLights.ts`, `r3f/canvasShader`), adds 4,745 B.
+(`r3f/lighting2d/lightRows.ts`, `shaders/canvas/canvasLights.ts`, `r3f/canvasShader`), adds 6,015 B. The
+texture upload count of the frame recording (`r3f/frameProfile/textureUploads.ts`) adds 42 B.
 
 The shader translator adds about 464,000 B to the script. The groups below gzip alone, so they are shares
 of that growth, not exact bytes:

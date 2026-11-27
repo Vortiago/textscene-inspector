@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_LIGHT_CULL_KEY, directionalLightCullKey } from './lightCullKey';
 import type { CanvasLightDeclaration, ItemPlacement } from './itemLightList';
-import { isShadowedByLight, itemTemplateLights, layerLightOrder } from './templateLights';
+import { isShadowedByLight, itemTemplateLights, layerLightCandidates } from './templateLights';
 
 function positional(
   sequence: number,
@@ -33,15 +33,15 @@ function directional(slot: number, overrides: Partial<CanvasLightDeclaration> = 
 
 const ITEM: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
 
-describe('layerLightOrder', () => {
-  it('lists the directional lights by slot first, then the positional lights by sequence', () => {
+describe('layerLightCandidates', () => {
+  it('lists the directional lights by slot, and the positional lights by sequence', () => {
     const lights = new Map([
       [0, positional(5)],
       [1, directional(1)],
       [2, positional(2)],
       [3, directional(0)],
     ]);
-    expect(layerLightOrder(lights, 0)).toMatchObject({ ordinals: [3, 1, 2, 0], directionalCount: 2 });
+    expect(layerLightCandidates(lights, 0)).toEqual({ directional: [3, 1], positional: [2, 0] });
   });
 
   it('leaves out a light whose layer window misses the canvas layer', () => {
@@ -50,24 +50,23 @@ describe('layerLightOrder', () => {
       [1, positional(1, { reach: { ...DEFAULT_LIGHT_CULL_KEY, layerMin: 1, layerMax: 3 } })],
       [2, directional(0, { reach: directionalLightCullKey(2, 2) })],
     ]);
-    expect(layerLightOrder(lights, 2)).toMatchObject({ ordinals: [2, 1], directionalCount: 1 });
-    expect(layerLightOrder(lights, 0)).toMatchObject({ ordinals: [0], directionalCount: 0 });
+    expect(layerLightCandidates(lights, 2)).toEqual({ directional: [2], positional: [1] });
   });
 
-  it("keeps the first 256 lights of a layer, Godot's budget for a render", () => {
+  it('keeps every light of a layer: the render caps the ones it lists on screen', () => {
     const lights = new Map(Array.from({ length: 300 }, (_, ordinal) => [ordinal, positional(ordinal)]));
-    expect(layerLightOrder(lights, 0).ordinals).toHaveLength(256);
+    expect(layerLightCandidates(lights, 0).positional).toHaveLength(300);
   });
 });
 
 describe('itemTemplateLights', () => {
-  it("indexes the item's positional lights into the layer's light_array, past the directional rows", () => {
+  it('takes the positional lights that reach the item, by sequence', () => {
     const lights = new Map([
       [0, positional(1)],
       [1, directional(0)],
       [2, positional(0)],
     ]);
-    expect(itemTemplateLights(lights, ITEM, null)).toEqual({ flags: 2, lights: [1 | (2 << 8), 0, 0, 0] });
+    expect(itemTemplateLights(lights, ITEM, null)).toEqual([2, 0]);
   });
 
   it('takes only the positional lights whose mask and z window reach the item', () => {
@@ -79,12 +78,12 @@ describe('itemTemplateLights', () => {
       ],
       [2, positional(2)],
     ]);
-    expect(itemTemplateLights(lights, ITEM, null)).toEqual({ flags: 1, lights: [2, 0, 0, 0] });
+    expect(itemTemplateLights(lights, ITEM, null)).toEqual([2]);
   });
 
   it("takes the cap's list of the lights that meet the item when one is given", () => {
     const lights = new Map(Array.from({ length: 20 }, (_, ordinal) => [ordinal, positional(ordinal)]));
-    expect(itemTemplateLights(lights, ITEM, [17, 3]).lights[0]).toBe(17 | (3 << 8));
+    expect(itemTemplateLights(lights, ITEM, [17, 3])).toEqual([17, 3]);
   });
 });
 

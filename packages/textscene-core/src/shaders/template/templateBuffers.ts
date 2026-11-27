@@ -13,18 +13,22 @@ export class TemplateBuffers {
   /** Written only by `block`, at the first buffer: one texture for every buffer, so one sampler for all. */
   private store: RowStore | undefined;
 
+  /** `apart` names the buffers that each take a texture of their own, one more sampler each. */
+  constructor(private readonly apart: ReadonlySet<string> = new Set()) {}
+
   /** The value of a `buffer` block's instance, read from its region of the store. */
   block(block: InterfaceBlockNode, structOf: (type: string) => StructNode | undefined): StructValue {
     const name = block.instanceName!;
     let rows = this.byName.get(name);
     if (!rows) {
       const members = block.members.flatMap((member) => (member.kind === 'slot' ? [] : [member]));
-      this.byName.set(
-        name,
-        (rows = new RowBlock(members, packingOf(block), structOf, (this.store ??= new RowStore())))
-      );
+      this.byName.set(name, (rows = new RowBlock(members, packingOf(block), structOf, this.storeOf(name))));
     }
     return rows.value;
+  }
+
+  private storeOf(name: string): RowStore {
+    return this.apart.has(name) ? new RowStore() : (this.store ??= new RowStore());
   }
 }
 

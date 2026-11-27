@@ -138,7 +138,7 @@ describe('emitTemplateStage', () => {
       'layout(set = 0, binding = 3, std140) uniform Params {\n\tuint flags;\n} params;',
     ].join('\n');
     const guarded = (flags: number) => {
-      const resources = programResources(new Set([FLAGS]));
+      const resources = programResources({ specialisedMembers: new Set([FLAGS]) });
       const globals = GLOBALS;
       const body =
         'color = vec4(0.0);\nif (bool(params.flags & 4u)) { color = texture(sampler2D(atlas, atlas_sampler), vec2(0.5)); }';
@@ -156,7 +156,7 @@ describe('emitTemplateStage', () => {
     });
 
     it('emits only the operand a folded `?:` takes', () => {
-      const resources = programResources(new Set([FLAGS]));
+      const resources = programResources({ specialisedMembers: new Set([FLAGS]) });
       const body =
         'color = bool(params.flags & 4u) ? texture(sampler2D(atlas, atlas_sampler), vec2(0.5)) : vec4(0.0);';
       expect(generatedFragmentShader(stageOf(GLOBALS, body, resources).result)).not.toMatch(

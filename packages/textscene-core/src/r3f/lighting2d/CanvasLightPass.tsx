@@ -48,7 +48,7 @@ import { capItemLights, type CappedItem } from './itemLightCap.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 import type { Rgba } from '../../godot/math/math.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
-import type { CanvasLightRows, LightRowWriter } from './lightRows.js';
+import type { CanvasLightRows } from './lightRows.js';
 
 interface CanvasLightPassProps {
   /** The canvas the pass lights, and the caller that runs it. */
@@ -145,18 +145,8 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
     [apartPlacers]
   );
   // Read by the template draws each render. The lights follow each new state before the draws read them.
-  const lightWriters = useRef(new Map<number, LightRowWriter>()).current;
-  const lightRows = useRef<CanvasLightRows>({ lights, writers: lightWriters }).current;
+  const lightRows = useRef<CanvasLightRows>({ lights }).current;
   lightRows.lights = lights;
-  const registerLightRow = useCallback(
-    (ordinal: number, writer: LightRowWriter) => {
-      lightWriters.set(ordinal, writer);
-      return () => {
-        if (lightWriters.get(ordinal) === writer) lightWriters.delete(ordinal);
-      };
-    },
-    [lightWriters]
-  );
   // One per ordinal, kept for the canvas's life, so an item binds it once: ordinals are dense and
   // reused, so the map stays as small as the most lights the canvas has held at once.
   const apartPlaces = useRef(new Map<number, THREE.Vector3>()).current;
@@ -307,7 +297,6 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
       registerCappedItem,
       registerApartPlacer,
       lightRows,
-      registerLightRow,
       registerPassMesh,
       registerPassStep,
     };
@@ -322,7 +311,6 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
     registerCappedItem,
     registerApartPlacer,
     lightRows,
-    registerLightRow,
     registerPassMesh,
     registerPassStep,
   ]);

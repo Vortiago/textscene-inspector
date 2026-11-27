@@ -82,6 +82,9 @@ const CANVAS: ProgramTemplate = {
   pinnedMacros: NO_CANVAS_SHADOWS,
 };
 
+/** Every lit draw of a canvas reads one `light_array` texture, uploaded once a frame. */
+const SHARED_LIGHT_ARRAY: ReadonlySet<string> = new Set(['light_array']);
+
 /** One variant of a canvas item's material. */
 export interface CanvasDraw {
   readonly material: BoundNodeMaterial;
@@ -209,7 +212,7 @@ function canvasDraw(
   target: DrawTarget
 ): CanvasDraw {
   const emulatesPoints = usesPointSize && writesPointSize(target.variant);
-  const resources = programResources();
+  const resources = programResources({ buffersApart: SHARED_LIGHT_ARRAY });
   const viewportInTarget = uniform(new THREE.Vector4(0, 0, 1, 1));
   const specialisations = resources.uniforms.specialisations;
   const material = new BoundNodeMaterial({ ...shader, specialisations });

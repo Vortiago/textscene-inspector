@@ -16,6 +16,7 @@ import {
 } from './frameStats.js';
 import { add, statsOf, WindowSums } from './windowSums.js';
 import { recordedDevice } from './recordedDevice.js';
+import { countTextureUploads } from './textureUploads.js';
 import {
   addDrawGpuTime,
   countDraw,
@@ -143,6 +144,9 @@ class Profile implements FrameProfile {
   private segmentDrawCalls = 0;
   /** Written only by `startTimings` and `stopTimings`. */
   private gpu: GpuTimer<Segment> | null = null;
+  private stopCountingUploads: (() => void) | null = null;
+  /** The open frame's texture uploads, counted while the timings run. */
+  private frameUploads = 0;
   /** The GPU frame `collect` hands over: written by `addGpuTime`, cleared by `endGpuFrame`. */
   private gpuFrameNs = 0;
   private readonly gpuFrameDrawNs = new Map<DrawSource, number>();
@@ -187,6 +191,7 @@ class Profile implements FrameProfile {
     this.current = 'Other';
     this.segmentStart = this.frameStart;
     this.segmentDrawCalls = 0;
+    this.frameUploads = 0;
     this.gpu?.switchTo(STEP_SEGMENTS.get('Other')!);
   }
 
@@ -203,6 +208,7 @@ class Profile implements FrameProfile {
       sums.frames += 1;
       sums.cpuMs += cpuMs;
       sums.drawCalls += drawCalls;
+      sums.uploads += this.frameUploads;
     });
     if (this.lastTimestamp! - this.windowStart! >= STATS_WINDOW_MS) this.publishWindow();
     this.finishCompleteRecordings();
@@ -248,7 +254,9 @@ class Profile implements FrameProfile {
     this.isTimed = true;
     this.segmentStart = this.now();
     this.segmentDrawCalls = this.renderer.info.render.calls;
-    this.gpu = GpuTimer.create(this.renderer.getContext() as WebGL2RenderingContext);
+    const context = this.renderer.getContext() as WebGL2RenderingContext;
+    this.gpu = GpuTimer.create(context);
+    this.stopCountingUploads = countTextureUploads(context, () => (this.frameUploads += 1));
   }
 
   stopTimings(): void {
@@ -256,6 +264,8 @@ class Profile implements FrameProfile {
     this.isTimed = false;
     this.gpu?.dispose();
     this.gpu = null;
+    this.stopCountingUploads?.();
+    this.stopCountingUploads = null;
   }
 
   stop(): void {

@@ -26,7 +26,10 @@ import {
 } from '../../shaders/canvas/canvasInstance';
 import {
   bindCanvasLightsEachDraw,
+  itemLightBitsIn,
   NO_ITEM_LIGHTS,
+  sameLightBits,
+  type CanvasLightsFrame,
   type ItemLightBits,
 } from '../../shaders/canvas/canvasLights';
 import {
@@ -58,7 +61,7 @@ import type { CanvasLightRows } from '../lighting2d/lightRows';
 import { canvasTransformInto } from '../node2dTransform';
 import { boundByItem, itemBox, type CanvasShaderCommand } from './canvasCommands';
 import { canvasDataOf, type CanvasColors, type CanvasItemFrame } from './canvasFrameBlocks';
-import { canvasLightsOf } from './canvasFrameLights';
+import { canvasLightsOf, nextCanvasLightsOf } from './canvasFrameLights';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
 
@@ -122,11 +125,12 @@ export interface ItemColors {
   readonly canvasModulate: Rgba;
 }
 
-/** The lights that reach a lit item: its canvas's rows, its canvas layer and its indices into them. */
+/** The lights that reach a lit item: its canvas's rows, its canvas layer and the ordinals it takes. */
 export interface ItemLighting {
   readonly rows: CanvasLightRows;
   readonly layer: number;
-  readonly bits: ItemLightBits;
+  /** The positional lights in Godot's loop order, which each render maps to indices of `light_array`. */
+  readonly lights: readonly number[];
 }
 
 /** A translated item's draw: its three object, and the record writer the frame runs before the draw. */
@@ -211,12 +215,27 @@ export function canvasShaderDraw(
   const world = mutableTransform2D();
   // Written by `setColors`, and read again by `setSource`: new rects or texel sizes need new records.
   let finalModulate: Rgba | null = null;
-  // Written by `setLighting`, and read by each later record write.
+  // Written by `setLighting`, and read by the next record write, which runs before the render.
+  let lighting: ItemLighting | null = null;
+  // Written by `writeLights`: the bits of `lighting` in the last listing, rewritten when they change.
   let lights = NO_ITEM_LIGHTS;
+  let lightsFrame: CanvasLightsFrame | null = null;
+  let lightsOrdinals: readonly number[] | null = null;
   const writeColors = () => {
     if (!finalModulate) return;
     const itemDraw = { transform: canvasTransformInto(world, object), finalModulate, usesLinearColors };
     for (const batch of batches) batch.writeColors(itemDraw, lights);
+  };
+  const writeLights = () => {
+    const frame = lighting && nextCanvasLightsOf(gl, object, lighting.rows, lighting.layer);
+    const ordinals = lighting?.lights ?? null;
+    if (frame === lightsFrame && ordinals === lightsOrdinals) return;
+    lightsFrame = frame;
+    lightsOrdinals = ordinals;
+    const bits = frame && lighting ? itemLightBitsIn(frame, lighting.lights) : NO_ITEM_LIGHTS;
+    if (sameLightBits(bits, lights)) return;
+    lights = bits;
+    writeColors();
   };
   return {
     object,
@@ -234,15 +253,15 @@ export function canvasShaderDraw(
       finalModulate = colors.finalModulate;
       writeColors();
     },
-    setLighting: (lighting) => {
-      for (const { draw } of variants.values()) lightDraw(gl, draw, lighting);
+    setLighting: (next) => {
+      for (const { draw } of variants.values()) lightDraw(gl, draw, next);
+      lighting = next;
       const wasLit = isLit;
-      isLit = lighting !== null;
+      isLit = next !== null;
       if (isLit !== wasLit) bindSource();
-      lights = lighting?.bits ?? NO_ITEM_LIGHTS;
-      writeColors();
     },
     writeRecords: () => {
+      writeLights();
       object.updateWorldMatrix(true, false);
       canvasTransformInto(world, object);
       for (const batch of batches) batch.writeWorld(world);

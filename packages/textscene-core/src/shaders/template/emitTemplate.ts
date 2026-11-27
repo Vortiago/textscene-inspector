@@ -55,10 +55,21 @@ export interface ProgramResources {
   readonly varyings: StageVaryings;
 }
 
-export const programResources = (specialisedMembers?: ReadonlySet<string>): ProgramResources => ({
+/** What a program's resources hold apart from the template's own layout. */
+export interface ResourceOptions {
+  /** The block members the previewer holds for a whole frame, each folded as a specialisation constant. */
+  readonly specialisedMembers?: ReadonlySet<string>;
+  /** The buffers each read from a texture of their own, which the previewer can share between programs. */
+  readonly buffersApart?: ReadonlySet<string>;
+}
+
+export const programResources = ({
+  specialisedMembers,
+  buffersApart,
+}: ResourceOptions = {}): ProgramResources => ({
   uniforms: new TemplateUniforms(specialisedMembers),
   textures: new Map(),
-  buffers: new TemplateBuffers(),
+  buffers: new TemplateBuffers(buffersApart),
   varyings: new StageVaryings(),
 });
 

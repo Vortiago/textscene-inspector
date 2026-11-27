@@ -20,7 +20,7 @@ import { FullScreenQuad } from './fullScreenQuad';
 import { createDirectionalLightMaterial, type DirectionalShadowSampling } from './directionalLightQuad';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { placeDirectionalLight, useApartLightOrigin } from './apartLight';
-import { useLightRow } from './lightRows';
+import { useLightRowSource } from './lightRows';
 import { Light2DBlendMode } from '../../godot/scene/light2d';
 
 export function DirectionalLightQuads({ term }: { term: DirectionalLightTerm }) {
@@ -31,6 +31,7 @@ export function DirectionalLightQuads({ term }: { term: DirectionalLightTerm }) 
   const casters = useLightShadowCasters(shadow.enabled, shadow.itemCullMask);
   // Its shadow reaches every item it lights, so it declares no `shadow_item_cull_mask`.
   const tintsShadow = casters.length > 0 && shadowColorContributes(shadow.color, shadow.filter);
+  const rowSource = useLightRowSource(term);
   const ordinal = useRegisterCanvasLight2D(slot !== null, {
     reach: directionalLightCullKey(term.layerMin, term.layerMax),
     sequence: null,
@@ -39,16 +40,15 @@ export function DirectionalLightQuads({ term }: { term: DirectionalLightTerm }) 
     castsShadow: casters.length > 0,
     tintsShadow,
     mixes: term.blendMode === Light2DBlendMode.MIX,
+    rowSource,
   });
-
-  const setRowOrigin = useLightRow(ordinal, term);
 
   if (slot === null) return null;
   return (
     <DirectionalQuad
       term={term}
       ordinal={ordinal}
-      rowOrigin={setRowOrigin}
+      rowOrigin={rowSource.setOrigin}
       renderOrder={directionalRenderOrder(slot)}
       casters={casters}
     />

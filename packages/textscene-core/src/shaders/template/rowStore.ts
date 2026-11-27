@@ -21,11 +21,13 @@ export interface RowRegion {
 /** The words a draw of `object` writes, or null to leave the last ones. */
 export type DrawWords = (object: THREE.Object3D, frame: NodeFrame) => Uint32Array | null;
 
-/** Each fetch is a clone, which keeps the class and the shared writes. */
+/** Each fetch is a clone, which keeps the class, the shared writes and the family of clones. */
 class RowsNode extends TextureNode {
   override updateType = NodeUpdateType.OBJECT;
-  /** Written only by `RowStore.writeEachDraw`, once for each region a draw writes. */
+  /** Written only by `RowStore.writeEachDraw` and `readEachDraw`, once for each region a draw writes. */
   drawWrites: ((frame: NodeFrame) => void)[] = [];
+  /** The node and each clone of it: `RowStore.readEachDraw` points every one at the texture a draw reads. */
+  family: RowsNode[] = [this];
 
   override update(frame: NodeFrame): undefined {
     for (const write of this.drawWrites) write(frame);
@@ -35,6 +37,8 @@ class RowsNode extends TextureNode {
   override clone(): this {
     const node = super.clone();
     node.drawWrites = this.drawWrites;
+    node.family = this.family;
+    this.family.push(node);
     return node;
   }
 }
@@ -93,6 +97,19 @@ export class RowStore {
       if (!words) return;
       this.write(region, words);
       if (followsOwnDraw) uploadBetweenDraws(frame.renderer as unknown as THREE.WebGLRenderer, this.texture);
+    });
+  }
+
+  // Only a store of one region can: the texture holds no other region.
+  /** Points each draw at the texture `textureOf` answers, so the draws of many programs read one upload. */
+  readEachDraw(region: RowRegion, textureOf: (frame: NodeFrame) => THREE.DataTexture | null): void {
+    if (this.regions.length !== 1 || this.regions[0] !== region)
+      throw new Error(
+        `expected a store of the one region to read another texture, found ${this.regions.length}`
+      );
+    this.node.drawWrites.push((frame) => {
+      const texture = textureOf(frame) ?? this.texture;
+      for (const node of this.node.family) node.value = texture;
     });
   }
 

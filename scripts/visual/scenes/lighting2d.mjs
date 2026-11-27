@@ -155,4 +155,10 @@ export const LIGHTING_2D_SCENES = [
     file: 'unit-directionallight2d-normal-map.tscn',
     canvasItem: 'translated',
   },
+  // The lit template: a render lists at most 256 lights, counted over the lights on screen.
+  {
+    name: 'pointlight2d-render-light-budget-translated',
+    file: 'unit-pointlight2d-render-light-budget.tscn',
+    canvasItem: 'translated',
+  },
 ];

@@ -34,12 +34,19 @@ describe('statsOf', () => {
     expect(statsOf(steadySums(10), null)).not.toHaveProperty('timings');
   });
 
+  it('gives the texture uploads per frame in the timings', () => {
+    const sums = steadySums(10);
+    sums.uploads = 30;
+    expect(statsOf(sums, { hasGpuTimer: true }).timings?.uploadsPerFrame).toBe(3);
+  });
+
   it('keeps the Other row with no GPU time when no result arrived (error case)', () => {
     const { timings } = statsOf(steadySums(10), { hasGpuTimer: true });
 
     expect(timings).toEqual({
       gpuMs: null,
       hasGpuTimer: true,
+      uploadsPerFrame: 0,
       steps: [{ step: 'Other', cpuMs: 0, gpuMs: null, runsPerFrame: 1, drawCallsPerFrame: 0 }],
     });
   });

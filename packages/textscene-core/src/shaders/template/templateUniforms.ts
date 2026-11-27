@@ -20,8 +20,8 @@ export interface WrittenArray {
   readonly array: unknown[];
 }
 
-/** A template uniform as a binding table writes it: a uniform node, or an array of a block's buffer. */
-export type TemplateUniform = UniformNode<unknown> | WrittenArray;
+/** A template uniform as a binding table writes it: a uniform node, an integer vector, or a block array. */
+export type TemplateUniform = UniformNode<unknown> | IntegerVectorUniform | WrittenArray;
 
 /** The stages of one program share them, so a block both stages declare is one set. */
 export class TemplateUniforms {
@@ -146,7 +146,7 @@ export class TemplateUniforms {
     const lanes = integerVectorLanes(type);
     if (lanes) {
       const vector = new IntegerVectorUniform(type, lanes);
-      this.byName.set(name, vector as unknown as UniformNode<unknown>);
+      this.byName.set(name, vector);
       return vector.node;
     }
     const node = (uniform as unknown as (value: unknown, type: string) => Node)(initialValue(type), type);

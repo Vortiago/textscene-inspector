@@ -13,6 +13,7 @@ import { MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.
 import { lightReachesItem, type LightCullKey } from './lightCullKey.js';
 import { rect2Intersects, type Rect2 } from '../../godot/math/rect2.js';
 import { perObject } from '../../utils/perObject.js';
+import type { LightRowSource } from './lightRows.js';
 
 /** What a light tells the pass about itself. */
 export interface CanvasLightDeclaration {
@@ -39,6 +40,8 @@ export interface CanvasLightDeclaration {
   readonly tintsShadow: boolean;
   /** Whether the light blends by MIX, which a normal-mapped item reads to shade it. */
   readonly mixes: boolean;
+  /** The light's row of `light_array`, which a lit template draw reads. */
+  readonly rowSource?: LightRowSource;
 }
 
 /** Where an item sits for the cull test: its `light_mask`, `z_final` and canvas layer. */
