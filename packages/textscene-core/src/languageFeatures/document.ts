@@ -201,9 +201,9 @@ export class LanguageDocument {
   isInHeading(line: number, character: number): boolean {
     const section = this.sectionAt(line, character);
     if (section?.headingLine !== line) return false;
-    const location = this.propertyByLine.get(line);
-    const property = location?.section === section ? location.property : undefined;
-    return !(property && property.startLine === line && character >= property.startColumn);
+    // Past a `]` that closes the heading before its line ends is body: a property, or a key being typed.
+    const { end } = section.headingColumns;
+    return character < end || end === (this.lines[line - 1]?.length ?? 0);
   }
 
   /** The property a one-based line belongs to, with its section. */

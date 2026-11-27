@@ -417,13 +417,15 @@ export class TscnParserCore {
         }
         // An unclosed heading draws nothing, and the lines its tag read are no section's body.
         if (tag) {
-          const stopLine = lineAndColumnOf(lineStarts, tag.stop, i).line;
-          // The lenient tree reads a heading on the stop line, wherever on it the tag stopped.
-          const opensNextTag =
-            (content[tag.stop] === '[' &&
-              tag.stop === lineStarts[stopLine]! + godotIndent(lines[stopLine]!)) ||
-            (stopLine > i && isSectionHeading(stripLineComment(lines[stopLine]!)));
-          i = Math.max(i, opensNextTag ? stopLine - 1 : stopLine);
+          const stop = lineAndColumnOf(lineStarts, tag.stop, i);
+          // The lenient tree reads a heading the tag stopped at, from its `[`, wherever on the line it opens.
+          if (content[tag.stop] === '[' && stop.line > i) {
+            resumeColumn = stop.column;
+            i = stop.line - 1;
+          } else {
+            const opensNextLine = stop.line > i && isSectionHeading(stripLineComment(lines[stop.line]!));
+            i = Math.max(i, opensNextLine ? stop.line - 1 : stop.line);
+          }
         }
         continue;
       }

@@ -124,9 +124,11 @@ function classNameItems(section: DocumentSection): readonly CompletionItem[] {
  * nodes in file order and resolves each parent then (`packed_scene.cpp:157-165, 205-215`), so the
  * node itself, every node below it and every stranded node are no parent.
  */
-function parentItems(document: LanguageDocument, headingLine: number): readonly CompletionItem[] {
+function parentItems(document: LanguageDocument, heading: DocumentSection): readonly CompletionItem[] {
+  // File order, not the line: a heading earlier on the same line is above this one too.
+  const before = new Set(document.sections.slice(0, document.sections.indexOf(heading)));
   const paths = [...seatedNodePaths(document)]
-    .filter(([section]) => section.headingLine < headingLine)
+    .filter(([section]) => before.has(section))
     .map(([, path]) => (path === SCENE_ROOT_PATH ? ROOT_PARENT : path));
   return [...new Set(paths)].map((path) => ({
     label: path,
@@ -216,7 +218,7 @@ async function headingItems(
   if (typeStart !== undefined) return replacing(classNameItems(section), position, typeStart);
   const parentStart = headingValueStartAt(line, 'parent', position.character);
   if (parentStart !== undefined) {
-    return replacing(parentItems(document, section.headingLine), position, parentStart);
+    return replacing(parentItems(document, section), position, parentStart);
   }
   const textBeforeCursor = line.slice(0, position.character);
   return (
@@ -225,14 +227,16 @@ async function headingItems(
   );
 }
 
-/** The keys for a line that holds only a key being typed, replacing it from its first character. */
+/** The keys for a body from `bodyStart` that holds only a key being typed, replacing that key. */
 function partialKeyItems(
   section: DocumentSection,
   line: string,
+  bodyStart: number,
   position: Position
 ): readonly CompletionItem[] {
-  if (!PARTIAL_KEY_RE.test(line)) return [];
-  return replacing(keyItems(section), position, line.length - line.trimStart().length);
+  const body = line.slice(bodyStart);
+  if (!PARTIAL_KEY_RE.test(body)) return [];
+  return replacing(keyItems(section), position, bodyStart + body.length - body.trimStart().length);
 }
 
 /**
@@ -254,7 +258,10 @@ export async function completionsAt(
   }
 
   const location = document.propertyAt(documentLine);
-  if (!location) return partialKeyItems(section, line, position);
+  if (!location) {
+    const bodyStart = section.headingLine === documentLine ? section.headingColumns.end : 0;
+    return partialKeyItems(section, line, bodyStart, position);
+  }
 
   const isOnFirstLine = location.property.startLine === documentLine;
   const key = propertyKeySpan(line, isOnFirstLine ? location.property.startColumn : 0);

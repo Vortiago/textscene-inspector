@@ -100,6 +100,11 @@ describe('LanguageDocument', () => {
     expect(document.isInHeading(1, 34)).toBe(false);
   });
 
+  it('places a key being typed after the `]` outside the heading', () => {
+    const document = new LanguageDocument('[node name="Root" type="Node2D"] pos\n');
+    expect(document.isInHeading(1, 35)).toBe(false);
+  });
+
   it('places no body line in a heading', () => {
     const document = new LanguageDocument('[node name="Root" type="Node2D"]\nvisible = false\n');
     expect(document.isInHeading(2, 0)).toBe(false);

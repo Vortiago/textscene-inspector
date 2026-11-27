@@ -113,6 +113,11 @@ describe.each(CASES)('headings that share a line: $name', (scene) => {
     });
   });
 
+  it('completes the first heading as a parent of the second', async () => {
+    const items = await completionsAt(document, inHeading(text, 'B', 'parent="', 8));
+    expect(items.map((item) => item.label)).toContain('A');
+  });
+
   it('goes from the second heading’s parent to the first heading’s line', () => {
     expect(definitionRangeAt(document, inHeading(text, 'B', 'parent="', 8))?.start.line).toBe(SHARED_LINE);
   });
