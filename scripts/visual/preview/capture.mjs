@@ -77,9 +77,9 @@ export async function openScene(
   page,
   baseUrl,
   fixture,
-  { canvas2D = false, camera, litSurface, canvasItem, onSlow } = {}
+  { canvas2D = false, camera, litSurface, canvasItem, storedDepthRead, onSlow } = {}
 ) {
-  await gotoFixture(page, baseUrl, fixture, onSlow, { camera, litSurface, canvasItem });
+  await gotoFixture(page, baseUrl, fixture, onSlow, { camera, litSurface, canvasItem, storedDepthRead });
   return findCaptureTarget(page, { canvas2D });
 }
 

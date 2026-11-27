@@ -14,7 +14,10 @@ import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { NO_BLEND } from './fitDirectionalShadowSplits.js';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas.js';
+import { storedDepthRead } from './storedDepthRead.js';
+import type { StoredDepthRead } from '../../shaders/spatial/directionalShadowDepth.js';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
+import { DIRECTIONAL_SHADOW_PANCAKE_DEPTH } from '../../godot/rendering/lights/directionalShadow.js';
 import {
   installSunShadowUniforms,
   SLOT_MATRIX_ROWS,
@@ -26,6 +29,9 @@ import {
 } from './sunShadowUniforms.js';
 
 const CHUNK = 'shadowmap_pars_fragment';
+
+/** Godot's pancake stop as the light side's depth from 0, as the blocker search reads it. */
+const SUN_PANCAKE_T = (1 - DIRECTIONAL_SHADOW_PANCAKE_DEPTH).toExponential(0);
 
 const THREE_SLOT_COUNT = '#define SUN_LIGHT_CASCADES 2';
 
@@ -87,6 +93,18 @@ const GODOT_SUN_PCF = `
 \t\t}
 `;
 
+/** The blocker search's raw depth: one sample of two bytes or a float, or `godotRawDepth`'s four texels. */
+const SUN_RAW_DEPTHS: Record<StoredDepthRead, string> = {
+  sampled: `dot( textureLod( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv, 0.0 ).rg * 255.0, vec2( 256.0, 1.0 ) ) / 65535.0`,
+  float: `textureLod( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv, 0.0 ).r`,
+  fetched: `godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv )`,
+};
+
+function sunRawDepth(read: StoredDepthRead): string {
+  const depth = SUN_RAW_DEPTHS[read];
+  return `\t\tfloat godotSunRawDepth( vec2 uv ) {\n\t\t\treturn ${depth};\n\t\t}\n`;
+}
+
 /** The condition the soft shadow and its dispatch compile under. */
 const SOFT_SHADOW_BLOCK = `#if defined( SHADOWMAP_TYPE_PCF ) && defined( ${DIRECTIONAL_SOFT_SHADOWS} )`;
 
@@ -96,12 +114,12 @@ const SOFT_SHADOW_BLOCK = `#if defined( SHADOWMAP_TYPE_PCF ) && defined( ${DIREC
  * (`sample_directional_soft_shadow`, `scene_forward_lights_inc.glsl:381-424`). `directionalShadow.md`
  * holds how it measures the search radius, the box size and the penumbra.
  */
-const GODOT_SUN_SOFT_SHADOW = `
+const godotSunSoftShadow = (read: StoredDepthRead) => `
 \t\t${SOFT_SHADOW_BLOCK}
 \t\tuniform sampler2D ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM};
-\t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
+${sunRawDepth(read)}\t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tuniform vec4 ${SUN_RANGE_BEGINS}[ NUM_SUN_LIGHT_SHADOWS ];
-\t\tconst float GODOT_SUN_PANCAKE = 1e-4;
+\t\tconst float GODOT_SUN_PANCAKE = ${SUN_PANCAKE_T};
 \t\tfloat godotSunBlockerShadow( sampler2DShadow atlas, vec3 coord, vec2 texScale, float lightSide ) {
 \t\t\tmat2 rotation = godotDiskRotation();
 \t\t\tfloat blockerSum = 0.0;
@@ -109,7 +127,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\tfloat pancaked = lightSide + GODOT_SUN_PANCAKE * ( 1.0 - lightSide );
 \t\t\tfor ( int i = 0; i < GODOT_PENUMBRA_SHADOW_SAMPLES; i ++ ) {
 \t\t\t\tvec2 uv = coord.xy + ( rotation * GODOT_PENUMBRA_SHADOW_KERNEL[ i ] ) * texScale;
-\t\t\t\tfloat blocker = max( godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv ), pancaked );
+\t\t\t\tfloat blocker = max( godotSunRawDepth( uv ), pancaked );
 \t\t\t\tif ( blocker < coord.z ) {
 \t\t\t\t\tblockerSum += blocker;
 \t\t\t\t\tblockerCount += 1.0;
@@ -182,7 +200,7 @@ const GODOT_SUN_FADE = `
  * darkens the fade (`lightmapProgram.ts`). `directionalShadow.md` (The split lookup) gives the
  * split choice, filter radius and blend band.
  */
-const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
+const godotLookup = (read: StoredDepthRead) => `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
 \t\t\t\tsampler2DShadow shadowMap,
 \t\t\t#else
@@ -244,7 +262,7 @@ const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOK
 \t\t\treturn shadow;
 
 \t\t}
-${GODOT_SUN_SOFT_SHADOW}
+${godotSunSoftShadow(read)}
 ${GODOT_SUN_FADE}
 \t\tfloat godotSunShadowBeforeFade(
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
@@ -296,12 +314,12 @@ ${GODOT_SUN_FADE}
 `;
 
 /** Godot's split lookup in place of three's, with the slot count and the rows it reads. */
-const SPLIT_SHADOW_EDITS: readonly ChunkEdit<typeof CHUNK>[] = [
+const splitShadowEdits = (read: StoredDepthRead): readonly ChunkEdit<typeof CHUNK>[] => [
   {
     chunk: CHUNK,
     three: THREE_LOOKUP_START,
     until: LOOKUP_BLOCK_END,
-    godot: GODOT_LOOKUP + LOOKUP_BLOCK_END,
+    godot: godotLookup(read) + LOOKUP_BLOCK_END,
   },
   { chunk: CHUNK, three: THREE_SLOT_COUNT, godot: `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}` },
   { chunk: CHUNK, three: THREE_SLOT_MATRICES, godot: GODOT_SLOT_ROWS },
@@ -316,7 +334,7 @@ const SPLIT_SHADOW_EDITS: readonly ChunkEdit<typeof CHUNK>[] = [
 export function installGodotSplitShadow(): void {
   const isPatched = installChunkEdits({
     requires: [installSoftShadowFilter],
-    edits: SPLIT_SHADOW_EDITS,
+    edits: splitShadowEdits(storedDepthRead()),
     mark: SPLIT_LOOKUP,
     patch: 'split shadow',
   });

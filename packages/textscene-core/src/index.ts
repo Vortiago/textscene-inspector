@@ -24,3 +24,5 @@ export {
 } from './r3f/index';
 
 export { ResourceLoader } from './resources/ResourceLoader';
+
+export { recordFrames } from './r3f/frameProfile/frameProfile';

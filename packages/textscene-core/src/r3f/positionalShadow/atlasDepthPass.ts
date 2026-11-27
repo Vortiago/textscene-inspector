@@ -9,8 +9,15 @@
 import type * as THREE from 'three';
 import type { AreaShadowLight } from './atlasAreaShadow.js';
 import type { AtlasSpotShadow } from './atlasSpotShadow.js';
-import type { SplitSunLight } from '../directionalShadow/splitSun.js';
-import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './atlasDepthMaterials.js';
+import { isSplitSun, type SplitSunLight } from '../directionalShadow/splitSun.js';
+import { storedDepthRead } from '../directionalShadow/storedDepthRead.js';
+import {
+  AtlasDepthMaterial,
+  FlattenedAtlasDepthMaterial,
+  FlattenedFloatAtlasDepthMaterial,
+  FloatAtlasDepthMaterial,
+  ParaboloidDepthMaterial,
+} from './atlasDepthMaterials.js';
 
 /** three's shadow pass as three wrote it, and the shadow map it draws for. */
 export interface ThreeShadowPass {
@@ -23,8 +30,15 @@ type SpotShadowLight = THREE.SpotLight & { shadow: AtlasSpotShadow };
 /** A light whose casters three projects as it projects them for its own pass. */
 export type ProjectedShadowLight = SpotShadowLight | SplitSunLight;
 
-/** The one depth material every spot light's and split sun's casters draw with. */
+/** The depth material of every spot light, and of an unflattened split sun on a page with a byte colour. */
 const atlasDepth = new AtlasDepthMaterial();
+
+/** The one depth material the casters of a split sun with a pancake size draw with. */
+const flattenedDepth = new FlattenedAtlasDepthMaterial();
+
+/** The depth materials of a split sun on a page whose directional atlas holds a float colour. */
+const floatDepth = new FloatAtlasDepthMaterial();
+const flattenedFloatDepth = new FlattenedFloatAtlasDepthMaterial();
 
 /** The one depth material every area light's casters draw with: each vertex bent onto its paraboloid. */
 const areaDepth = new ParaboloidDepthMaterial();
@@ -39,7 +53,27 @@ export function drawProjectedShadows(
   scene: THREE.Scene,
   camera: THREE.Camera
 ): void {
-  drawWearing(pass, lights, atlasDepth, scene, camera);
+  const isFloatRead = storedDepthRead() === 'float';
+  for (const light of lights) lightsWearing.get(depthOf(light, isFloatRead))!.push(light);
+  try {
+    for (const [depth, group] of lightsWearing) drawWearing(pass, group, depth, scene, camera);
+  } finally {
+    for (const group of lightsWearing.values()) group.length = 0;
+  }
+}
+
+const PROJECTED_DEPTHS = [flattenedFloatDepth, floatDepth, flattenedDepth, atlasDepth];
+
+/** Written only by `drawProjectedShadows`, which empties each group once drawn: no array per frame. */
+const lightsWearing = new Map<THREE.MeshDepthMaterial, ProjectedShadowLight[]>(
+  PROJECTED_DEPTHS.map((depth) => [depth, []])
+);
+
+function depthOf(light: ProjectedShadowLight, isFloatRead: boolean): THREE.MeshDepthMaterial {
+  const isFloat = isSplitSun(light) && isFloatRead;
+  if (isSplitSun(light) && light.shadow.flattensNearCasters)
+    return isFloat ? flattenedFloatDepth : flattenedDepth;
+  return isFloat ? floatDepth : atlasDepth;
 }
 
 /** Draws `lights` as `drawProjectedShadows` does, each caster bent onto the light's paraboloid. */

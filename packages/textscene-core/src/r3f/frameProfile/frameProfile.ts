@@ -8,12 +8,22 @@ import type * as THREE from 'three';
 import { GpuTimer } from './gpuTimer.js';
 import {
   RENDER_STEPS,
+  type DrawSource,
+  type FrameRecording,
   type FrameStats,
-  type FrameTimings,
   type RenderStep,
   type StepKey,
-  type StepStats,
 } from './frameStats.js';
+import { add, statsOf, WindowSums } from './windowSums.js';
+import { recordedDevice } from './recordedDevice.js';
+import {
+  addDrawGpuTime,
+  countDraw,
+  DrawSources,
+  Recording,
+  timeEachDraw,
+  type RecordOptions,
+} from './frameRecording.js';
 
 /**
  * Twice a second: the digits stay readable, and the overlay re-renders rarely enough to leave the
@@ -21,11 +31,18 @@ import {
  */
 const STATS_WINDOW_MS = 500;
 
-const STEP_KEYS: readonly StepKey[] = [...RENDER_STEPS, 'Other'];
+/** What a GPU query times: one step's own work, or one draw call in it. */
+interface Segment {
+  readonly step: StepKey;
+  readonly draw: DrawSource | null;
+}
 
-/** Written only by `startFrameProfile` and `Profile.stop`. */
-// eslint-disable-next-line no-restricted-syntax -- startFrameProfile replaces an entry and Profile.stop deletes it
-const profiles = new WeakMap<THREE.WebGLRenderer, Profile>();
+const STEP_SEGMENTS = new Map<StepKey, Segment>(
+  [...RENDER_STEPS, 'Other' as const].map((step) => [step, { step, draw: null }])
+);
+
+/** Written only by `start` and `Profile.stop`. A Map, not a WeakMap, so `recordFrames` reaches each. */
+const profiles = new Map<THREE.WebGLRenderer, Profile>();
 
 /** Starts timing `step` on `renderer`, when a profile runs there and a frame is open. */
 export function beginStep(renderer: THREE.WebGLRenderer, step: RenderStep): void {
@@ -82,25 +99,6 @@ function start(renderer: THREE.WebGLRenderer, create: () => Profile): Profile {
   return profile;
 }
 
-/** One window's sums, reset each time the window publishes. */
-class WindowSums {
-  frames = 0;
-  intervals = 0;
-  intervalMs = 0;
-  cpuMs = 0;
-  drawCalls = 0;
-  objects = 0;
-  primitives = 0;
-  readonly stepCpuMs = new Map<StepKey, number>();
-  readonly stepRuns = new Map<StepKey, number>();
-  readonly stepDrawCalls = new Map<StepKey, number>();
-  gpuFrames = 0;
-  gpuNs = 0;
-  readonly stepGpuNs = new Map<StepKey, number>();
-}
-
-const NS_PER_MS = 1e6;
-
 /** A running profile. Its starter marks each frame and stops it. */
 export interface FrameProfile {
   /** Opens a frame at `timestamp`, the animation frame's time. */
@@ -113,8 +111,24 @@ export interface FrameProfile {
   stop(): void;
 }
 
+/** The overlay's numbers over `options.frames` frames, per view with Performance on. Rejects with none on. */
+export async function recordFrames(options: RecordOptions = {}): Promise<FrameRecording[]> {
+  const timed = [...profiles.values()].filter((profile) => profile.isTimed);
+  if (timed.length === 0) throw new Error('expected a view with Performance on in its View menu, got none');
+  return Promise.all(timed.map((profile) => profile.record(options)));
+}
+
 class Profile implements FrameProfile {
   private sums = new WindowSums();
+  /** Written only by `record`: recordings that start at the next frame. */
+  private readonly starting: Recording[] = [];
+  /** Filled from `starting` at each frame's start: a finished recording leaves at once, a failed one then. */
+  private recordings: Recording[] = [];
+  private readonly drawSources = new DrawSources();
+  /** Hooked at the first recording that times draws, and unhooked at `stop`. */
+  private unhookDraws: (() => void) | null = null;
+  /** Whether a recording in this frame times draws: the hook does nothing while none does. */
+  private isTimingDraws = false;
   /** The `beginFrame` timestamp the window opened at, null before the first frame. */
   private windowStart: number | null = null;
   private lastTimestamp: number | null = null;
@@ -128,8 +142,12 @@ class Profile implements FrameProfile {
   private segmentStart = 0;
   private segmentDrawCalls = 0;
   /** Written only by `startTimings` and `stopTimings`. */
-  private gpu: GpuTimer | null = null;
-  private isTimed = false;
+  private gpu: GpuTimer<Segment> | null = null;
+  /** The GPU frame `collect` hands over: written by `addGpuTime`, cleared by `endGpuFrame`. */
+  private gpuFrameNs = 0;
+  private readonly gpuFrameDrawNs = new Map<DrawSource, number>();
+  /** Written only by `startTimings` and `stopTimings`: `recordFrames` reads it. */
+  isTimed = false;
   private readonly wasAutoReset: boolean;
 
   constructor(
@@ -147,10 +165,20 @@ class Profile implements FrameProfile {
     if (profiles.get(this.renderer) !== this) return;
     if (this.isFrameOpen) this.endFrame();
     if (this.lastTimestamp !== null) {
-      this.sums.intervals += 1;
-      this.sums.intervalMs += timestamp - this.lastTimestamp;
+      const intervalMs = timestamp - this.lastTimestamp;
+      this.addToEach((sums) => {
+        sums.intervals += 1;
+        sums.intervalMs += intervalMs;
+      });
     }
-    if (this.gpu) this.sums.gpuFrames += this.gpu.collect(this.addGpuTime);
+    if (this.gpu) {
+      const frames = this.gpu.collect(this.addGpuTime, this.endGpuFrame);
+      this.addToEach((sums) => (sums.gpuFrames += frames));
+    }
+    this.recordings = [...this.recordings, ...this.starting.splice(0)].filter(
+      (recording) => !recording.isSettled
+    );
+    this.isTimingDraws = this.recordings.some((recording) => recording.timesDraws);
     this.windowStart ??= timestamp;
     this.lastTimestamp = timestamp;
     this.isFrameOpen = true;
@@ -159,7 +187,7 @@ class Profile implements FrameProfile {
     this.current = 'Other';
     this.segmentStart = this.frameStart;
     this.segmentDrawCalls = 0;
-    this.gpu?.switchTo('Other');
+    this.gpu?.switchTo(STEP_SEGMENTS.get('Other')!);
   }
 
   endFrame(): void {
@@ -169,15 +197,21 @@ class Profile implements FrameProfile {
     this.openSteps.length = 0;
     this.isViewDrawOpen = false;
     this.isFrameOpen = false;
-    this.sums.frames += 1;
-    this.sums.cpuMs += this.now() - this.frameStart;
-    this.sums.drawCalls += this.renderer.info.render.calls;
+    const cpuMs = this.now() - this.frameStart;
+    const drawCalls = this.renderer.info.render.calls;
+    this.addToEach((sums) => {
+      sums.frames += 1;
+      sums.cpuMs += cpuMs;
+      sums.drawCalls += drawCalls;
+    });
     if (this.lastTimestamp! - this.windowStart! >= STATS_WINDOW_MS) this.publishWindow();
+    this.finishCompleteRecordings();
+    for (const recording of this.recordings) recording.restartStallTimer();
   }
 
   beginStep(step: RenderStep): void {
     if (!this.isFrameOpen) return;
-    if (this.isTimed) add(this.sums.stepRuns, step, 1);
+    if (this.isTimed) this.addToEach((sums) => add(sums.stepRuns, step, 1));
     this.openSteps.push(step);
     this.switchTo(step);
   }
@@ -189,7 +223,7 @@ class Profile implements FrameProfile {
   }
 
   countShadowDraws(drawCalls: number): void {
-    if (this.isViewDrawOpen) this.sums.objects += drawCalls;
+    if (this.isViewDrawOpen) this.addToEach((sums) => (sums.objects += drawCalls));
   }
 
   openViewDraw(): void {
@@ -199,8 +233,10 @@ class Profile implements FrameProfile {
   closeViewDraw(objects: number, primitives: number): void {
     if (!this.isViewDrawOpen) return;
     this.isViewDrawOpen = false;
-    this.sums.objects += objects;
-    this.sums.primitives += primitives;
+    this.addToEach((sums) => {
+      sums.objects += objects;
+      sums.primitives += primitives;
+    });
   }
 
   innermostStep(): RenderStep | null {
@@ -216,6 +252,7 @@ class Profile implements FrameProfile {
   }
 
   stopTimings(): void {
+    this.failRecordings('Performance turned off');
     this.isTimed = false;
     this.gpu?.dispose();
     this.gpu = null;
@@ -223,11 +260,55 @@ class Profile implements FrameProfile {
 
   stop(): void {
     this.isFrameOpen = false;
+    this.failRecordings('the view closed its profile');
     this.stopTimings();
     // A replaced profile's second stop leaves the renderer to the profile that replaced it.
     if (profiles.get(this.renderer) !== this) return;
+    this.unhookDraws?.();
     this.renderer.info.autoReset = this.wasAutoReset;
     profiles.delete(this.renderer);
+  }
+
+  /** Starts a recording at the next frame. Its frames count in the published windows too. */
+  record(options: RecordOptions): Promise<FrameRecording> {
+    const recording = new Recording(options);
+    this.starting.push(recording);
+    if (recording.timesDraws) {
+      this.unhookDraws ??= timeEachDraw(this.renderer, this.beginDraw, this.endDraw);
+    }
+    return recording.result;
+  }
+
+  private readonly beginDraw = (object: THREE.Object3D, material: THREE.Material): void => {
+    if (!this.isTimingDraws || !this.isFrameOpen) return;
+    const draw = this.drawSources.of(this.current, object, material);
+    countDraw(this.recordings, draw);
+    this.gpu?.switchTo({ step: this.current, draw });
+  };
+
+  private readonly endDraw = (): void => {
+    if (this.isTimingDraws && this.isFrameOpen) this.gpu?.switchTo(STEP_SEGMENTS.get(this.current)!);
+  };
+
+  /** Adds a frame's numbers to the published window and to each recording. */
+  private addToEach(update: (sums: WindowSums) => void): void {
+    update(this.sums);
+    for (const recording of this.recordings) update(recording.sums);
+  }
+
+  private finishCompleteRecordings(): void {
+    const complete = this.recordings.filter((recording) => recording.isComplete());
+    if (complete.length === 0) return;
+    this.recordings = this.recordings.filter((recording) => !recording.isComplete());
+    const device = recordedDevice(this.renderer);
+    for (const recording of complete) recording.finish(this.gpu !== null, device);
+    this.isTimingDraws = this.recordings.some((recording) => recording.timesDraws);
+  }
+
+  private failRecordings(reason: string): void {
+    for (const recording of [...this.starting.splice(0), ...this.recordings.splice(0)])
+      recording.fail(reason);
+    this.isTimingDraws = false;
   }
 
   /** Ends the running step's segment and starts `next`'s. */
@@ -235,62 +316,44 @@ class Profile implements FrameProfile {
     if (next === this.current) return;
     this.endSegment();
     this.current = next;
-    this.gpu?.switchTo(next);
+    this.gpu?.switchTo(STEP_SEGMENTS.get(next)!);
   }
 
   // Untimed, the steps only nest: `innermostStep` still reads them, and no sum grows.
   private endSegment(): void {
     if (!this.isTimed) return;
     const time = this.now();
-    add(this.sums.stepCpuMs, this.current, time - this.segmentStart);
+    const cpuMs = time - this.segmentStart;
     this.segmentStart = time;
     const drawCalls = this.renderer.info.render.calls;
-    add(this.sums.stepDrawCalls, this.current, drawCalls - this.segmentDrawCalls);
+    const segmentDrawCalls = drawCalls - this.segmentDrawCalls;
     this.segmentDrawCalls = drawCalls;
+    this.addToEach((sums) => {
+      add(sums.stepCpuMs, this.current, cpuMs);
+      add(sums.stepDrawCalls, this.current, segmentDrawCalls);
+    });
   }
 
-  private readonly addGpuTime = (step: StepKey, ns: number): void => {
-    this.sums.gpuNs += ns;
-    add(this.sums.stepGpuNs, step, ns);
+  private readonly addGpuTime = ({ step, draw }: Segment, ns: number): void => {
+    this.addToEach((sums) => {
+      sums.gpuNs += ns;
+      add(sums.stepGpuNs, step, ns);
+    });
+    this.gpuFrameNs += ns;
+    if (!draw) return;
+    addDrawGpuTime(this.recordings, draw, ns);
+    add(this.gpuFrameDrawNs, draw, ns);
+  };
+
+  private readonly endGpuFrame = (): void => {
+    for (const recording of this.recordings) recording.addGpuFrame(this.gpuFrameNs, this.gpuFrameDrawNs);
+    this.gpuFrameNs = 0;
+    this.gpuFrameDrawNs.clear();
   };
 
   private publishWindow(): void {
-    const { frames, intervals, intervalMs, cpuMs, drawCalls, objects, primitives } = this.sums;
-    const frameMs = intervalMs / intervals;
-    this.publish({
-      fps: 1000 / frameMs,
-      frameMs,
-      cpuMs: cpuMs / frames,
-      drawCallsPerFrame: drawCalls / frames,
-      objectsPerFrame: objects / frames,
-      primitivesPerFrame: primitives / frames,
-      ...(this.isTimed && { timings: this.windowTimings() }),
-    });
+    this.publish(statsOf(this.sums, this.isTimed ? { hasGpuTimer: this.gpu !== null } : null));
     this.sums = new WindowSums();
     this.windowStart = this.lastTimestamp;
   }
-
-  private windowTimings(): FrameTimings {
-    const { frames, gpuFrames, gpuNs, stepCpuMs, stepRuns, stepDrawCalls, stepGpuNs } = this.sums;
-    const gpuMsPerFrame = (ns: number) => (gpuFrames > 0 ? ns / NS_PER_MS / gpuFrames : null);
-    const steps: StepStats[] = [];
-    for (const step of STEP_KEYS) {
-      const runs = step === 'Other' ? frames : (stepRuns.get(step) ?? 0);
-      // A GPU result arrives frames after its step ran, so a step can have one in a window it did
-      // not run in. Its row keeps the rows summing to the frame's GPU time.
-      if (runs === 0 && !stepGpuNs.has(step)) continue;
-      steps.push({
-        step,
-        cpuMs: (stepCpuMs.get(step) ?? 0) / frames,
-        gpuMs: gpuMsPerFrame(stepGpuNs.get(step) ?? 0),
-        runsPerFrame: runs / frames,
-        drawCallsPerFrame: (stepDrawCalls.get(step) ?? 0) / frames,
-      });
-    }
-    return { gpuMs: gpuMsPerFrame(gpuNs), hasGpuTimer: this.gpu !== null, steps };
-  }
-}
-
-function add<K>(sums: Map<K, number>, key: K, amount: number): void {
-  sums.set(key, (sums.get(key) ?? 0) + amount);
 }

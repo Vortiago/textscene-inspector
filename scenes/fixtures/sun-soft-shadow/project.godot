@@ -1,0 +1,14 @@
+; A res:// root of its own: the screen-space subsurface blur is a PROJECT setting, turned off here so
+; the wall shows the transmittance alone. The previewer runs no such blur.
+
+config_version=5
+
+[application]
+
+config/name="Sun soft shadow"
+run/main_scene="res://unit-spatial-shader-lit-sun-soft-shadow.tscn"
+config/features=PackedStringArray("4.6")
+
+[rendering]
+
+environment/subsurface_scattering/subsurface_scattering_quality=0

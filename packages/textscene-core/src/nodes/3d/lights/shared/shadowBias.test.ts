@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { directionalShadowBias, omniShadowBias, spotShadowBias } from './shadowBias';
+import {
+  directionalShadowBias,
+  directionalTransmittanceBias,
+  omniShadowBias,
+  spotShadowBias,
+} from './shadowBias';
 
 describe('directionalShadowBias', () => {
   it('is Godot’s own depth-range-free fraction, negated for three’s compare', () => {
@@ -21,6 +26,21 @@ describe('directionalShadowBias', () => {
 
   it('is zero when the author zeroes the bias (edge case)', () => {
     expect(directionalShadowBias(0, 2)).toBe(-0);
+  });
+});
+
+describe('directionalTransmittanceBias', () => {
+  it('is Godot’s transmittance bias per world unit of the split’s range, unnegated', () => {
+    // `light_storage.cpp:725`: 0.5 / 100 * 2 = 0.01.
+    expect(directionalTransmittanceBias(0.5, 2)).toBeCloseTo(0.01, 12);
+  });
+
+  it('scales by soft_shadow_scale, as Godot does', () => {
+    expect(directionalTransmittanceBias(0.5, 1)).toBeCloseTo(0.005, 12);
+  });
+
+  it('is zero when the author zeroes the bias (edge case)', () => {
+    expect(directionalTransmittanceBias(0, 2)).toBe(0);
   });
 });
 

@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import {
+  DIRECTIONAL_SHADOW_CASTER_CULL_REACH,
   DIRECTIONAL_SHADOW_MAX_SPLITS,
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   directionalShadowSplitAtlasRect,
@@ -26,6 +27,9 @@ export const SPLIT_SLOTS = DIRECTIONAL_SHADOW_MAX_SPLITS;
 
 /** The `up` of every split camera, which three's `lookAt` rolls the split boxes by. */
 export const SPLIT_CAMERA_UP: Readonly<THREE.Vector3> = new THREE.Vector3(0, 1, 0);
+
+/** Index of the near plane in a frustum three builds (r187 `Frustum.js:112-124`). */
+const NEAR_PLANE = 5;
 
 /** A plane that every point lies behind. */
 const nowhere = () => new THREE.Plane(new THREE.Vector3(1, 0, 0), -Infinity);
@@ -72,6 +76,15 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
 
   /** Godot's `shadow_bias` of each slot in world units, which the fitter writes with `_cascadeData`. */
   readonly depthBiases = new THREE.Vector4();
+
+  /** Each slot box's light side, unmoved by the bias: Godot's `range_begin`. The fitter writes it. */
+  readonly godotRangeBegins = new THREE.Vector4();
+
+  /** Each slot box's depth from its light side to its far side: Godot's `farplane`. The fitter writes it. */
+  readonly zRanges = new THREE.Vector4();
+
+  /** Whether a positive pancake size flattens nearer casters (`render_forward_clustered.cpp:2606`). */
+  flattensNearCasters = true;
 
   /** The fade over the far end of the last split, which the fitter writes with the slots. */
   fade: DirectionalShadowFade = NO_SHADOW_FADE;
@@ -195,7 +208,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
    */
   placeSplitFrusta(): void {
     for (let slot = 0; slot < this.splitCount; slot++) {
-      cameraFrustum(this.splitCameras[slot]!, this.splitFrustums[slot]!);
+      reachTowardsLight(cameraFrustum(this.splitCameras[slot]!, this.splitFrustums[slot]!));
     }
   }
 
@@ -239,6 +252,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
     const camera = this.splitCameras[slot]!;
     this.followDepthConvention(camera);
     this._updateMatrix(camera, this.splitMatrices[slot]!, this.splitFrustums[slot]!, this._viewports[slot]!);
+    reachTowardsLight(this.splitFrustums[slot]!);
   }
 
   /**
@@ -251,4 +265,9 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
     (camera as unknown as { _reversedDepth: boolean })._reversedDepth = reversedDepth;
     camera.updateProjectionMatrix();
   }
+}
+
+/** Moves the near plane of a split's frustum towards the light, so the cull keeps far casters. */
+function reachTowardsLight(frustum: THREE.Frustum): void {
+  frustum.planes[NEAR_PLANE]!.constant += DIRECTIONAL_SHADOW_CASTER_CULL_REACH;
 }

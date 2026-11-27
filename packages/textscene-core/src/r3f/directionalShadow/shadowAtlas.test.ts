@@ -42,10 +42,10 @@ describe('the directional shadow atlas', () => {
     ]);
   });
 
-  it('holds depth as three holds a PCF shadow map', () => {
+  it('holds 16-bit depth as Godot’s default atlas, compared as three compares a PCF shadow map', () => {
     const depth = atlasModule.directionalShadowAtlasDepth();
     expect(depth.format).toBe(THREE.DepthFormat);
-    expect(depth.type).toBe(THREE.UnsignedIntType);
+    expect(depth.type).toBe(THREE.UnsignedShortType);
     expect(depth.compareFunction).toBe(THREE.LessEqualCompare);
     expect([depth.minFilter, depth.magFilter]).toEqual([THREE.LinearFilter, THREE.LinearFilter]);
   });
@@ -105,5 +105,29 @@ describe('releaseDirectionalShadowAtlas', () => {
     atlasModule.releaseDirectionalShadowAtlas(shadow);
     atlasModule.releaseDirectionalShadowAtlas(shadow);
     expect(frees()).toBe(1);
+  });
+});
+
+describe('formatDirectionalShadowColour', () => {
+  it('holds the depth as a float in red for the float read', () => {
+    atlasModule.formatDirectionalShadowColour('float');
+
+    const colour = atlasModule.directionalShadowAtlasColour();
+    expect([colour.format, colour.type]).toEqual([THREE.RedFormat, THREE.FloatType]);
+  });
+
+  it.each(['sampled', 'fetched'] as const)('keeps two bytes for the %s read', (read) => {
+    atlasModule.formatDirectionalShadowColour(read);
+
+    const colour = atlasModule.directionalShadowAtlasColour();
+    expect([colour.format, colour.type]).toEqual([THREE.RGFormat, THREE.UnsignedByteType]);
+  });
+
+  it('frees the atlas only when the format changes, so three builds it again in the new one', () => {
+    const freed = freesOf(atlasModule.holdDirectionalShadowAtlas(aShadow()));
+    atlasModule.formatDirectionalShadowColour('fetched');
+    atlasModule.formatDirectionalShadowColour('float');
+
+    expect(freed()).toBe(1);
   });
 });

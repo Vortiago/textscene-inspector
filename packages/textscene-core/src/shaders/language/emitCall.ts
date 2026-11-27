@@ -12,6 +12,7 @@ import {
   leafTypes,
   leavesOf,
   type StructOf,
+  uniformViewId,
   type Value,
   valueOfLeaves,
   variablesOf,
@@ -90,17 +91,22 @@ export class CalledFunctions {
     return called;
   }
 
-  /** A GLSL function per set of textures its sampler arguments read: a TSL function takes no sampler. */
+  /** A GLSL function per set of textures and uniform views it reads in place: TSL passes no sampler. */
   private functionNamed(name: string, args: readonly (Value | undefined)[]): GlslFunction {
     const tree = this.trees.get(name);
     if (tree === undefined) throw new Error(`expected a function ${name} in the shader`);
     const samplers = samplerArguments(tree.lowered.arguments, args);
-    const key = [name, ...[...samplers.values()].map(samplerKey)].join(' ');
+    const views = viewArguments(tree, args);
+    const key = [
+      name,
+      ...[...samplers.values()].map(samplerKey),
+      ...[...views].map(([argument, view]) => `${argument}=${uniformViewId(view)}`),
+    ].join(' ');
     let built = this.built.get(key);
     if (built === undefined) {
       // GLSL ES reserves every name with two underscores in a row (section 3.8), as in `_unpack`'s.
       const glslName = `sl${this.built.size}_${tree.lowered.rname}`.replace(/__+/g, '_');
-      built = new GlslFunction(tree, glslName, this.structOf, this.body, samplers);
+      built = new GlslFunction(tree, glslName, this.structOf, this.body, new Map([...samplers, ...views]));
       this.built.set(key, built);
     }
     return built;
@@ -130,13 +136,15 @@ class GlslFunction {
     name: string,
     private readonly structOf: StructOf,
     body: BodyEmitter,
-    private readonly samplers: ReadonlyMap<string, Value>
+    /** The sampler and uniform-view arguments, by name, which the body reads as the call gives them. */
+    private readonly fixed: ReadonlyMap<string, Value>
   ) {
     const definition = tree.lowered;
-    const typesOf = (argument: Argument) =>
-      isTextureArgument(argument.type)
-        ? samplerLeafTypes(samplers.get(argument.name)!)
-        : leafTypes(argument.type, argument.arraySize ?? 0, structOf);
+    const typesOf = (argument: Argument) => {
+      if (isTextureArgument(argument.type)) return samplerLeafTypes(fixed.get(argument.name)!);
+      if (fixed.has(argument.name)) return [];
+      return leafTypes(argument.type, argument.arraySize ?? 0, structOf);
+    };
     this.parameters = definition.arguments.map((argument) => ({
       argument,
       leafCount: typesOf(argument).length,
@@ -182,6 +190,7 @@ class GlslFunction {
     const leaves = this.parameters.flatMap(({ argument }, index) => {
       if (argument.qualifier === 'out') return [];
       if (isTextureArgument(argument.type)) return samplerLeaves(args[index]!);
+      if (this.fixed.has(argument.name)) return [];
       return this.leavesOfValue(args[index]!, argument.type, argument.arraySize ?? 0);
     });
     const node = this.fn(...leaves);
@@ -231,7 +240,11 @@ class GlslFunction {
       }
       const leaves = given[next++]!;
       if (isTextureArgument(argument.type)) {
-        names.set(argument.name, samplerParameter(this.samplers.get(argument.name)!, leaves));
+        names.set(argument.name, samplerParameter(this.fixed.get(argument.name)!, leaves));
+        continue;
+      }
+      if (this.fixed.has(argument.name)) {
+        names.set(argument.name, this.fixed.get(argument.name)!);
         continue;
       }
       const value = valueOfLeaves(argument.type, size, this.structOf, leaves);
@@ -287,6 +300,21 @@ function samplerArguments(
     parameters.flatMap((argument, index) =>
       isTextureArgument(argument.type) ? [[argument.name, args[index]!] as const] : []
     )
+  );
+}
+
+/** The `in` arguments a body never writes that a call gives a uniform view, by name: no copy per call. */
+function viewArguments(tree: EmittedTree, args: readonly (Value | undefined)[]): ReadonlyMap<string, Value> {
+  return new Map(
+    tree.lowered.arguments.flatMap((argument, index) => {
+      const given = args[index];
+      const isReadInPlace =
+        argument.qualifier === 'in' &&
+        !tree.written.has(argument.name) &&
+        given !== undefined &&
+        uniformViewId(given) !== undefined;
+      return isReadInPlace ? [[argument.name, given] as const] : [];
+    })
   );
 }
 

@@ -1,0 +1,92 @@
+import * as THREE from 'three';
+import * as TSL from 'three/tsl';
+import type { Node, TextureNode } from 'three/webgpu';
+import { readAsStored } from '../language/readAsStored.js';
+import { readStoredDepth } from '../language/storedDepthReads.js';
+import type { Float, Vec2 } from '../tslTypes.js';
+
+/** A raw read of the stored depth: one sample of two bytes or of a float, or four texels by hand. */
+export type StoredDepthRead = 'sampled' | 'float' | 'fetched';
+
+/** A byte colour holds each texel's stored depth as two bytes (`atlasDepthMaterials.ts`). */
+const DEPTH_BYTES = TSL.vec2(256, 1);
+const DEPTH_STEPS = 65535;
+
+/** What a read binds while no atlas is drawn. A light with no shadow reads nothing. */
+const NO_COLOUR = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+NO_COLOUR.needsUpdate = true;
+
+/** The colour a read binds while no atlas is drawn, which the previewer releases on unmount. */
+export function unboundDirectionalShadowColour(): THREE.Texture {
+  return NO_COLOUR;
+}
+
+/** Written only by `directionalShadowAtlasNode`: the colour each program's atlas node reads raw. */
+// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
+const colourReads = new WeakMap<TextureNode, TextureNode>();
+
+function storedDepthAt(colour: TextureNode, texel: Node): Float {
+  const load = colour.load(texel as never);
+  // A texel needs no uv transform, which three's load would apply as a matrix product to each texel.
+  load.updateMatrix = false;
+  const bytes = TSL.floor(load.rg.mul(255).add(0.5));
+  return TSL.dot(bytes, DEPTH_BYTES).div(DEPTH_STEPS) as unknown as Float;
+}
+
+/** One filtered sample, as Godot takes: a GPU that filters in floating point mixes the bytes exactly. */
+function sampledStoredDepth(colour: TextureNode, uv: Vec2): Float {
+  const sample = colour.sample(uv as never).level(TSL.float(0) as never) as unknown as TextureNode;
+  sample.updateMatrix = false;
+  return TSL.dot(sample.rg.mul(255), DEPTH_BYTES).div(DEPTH_STEPS) as unknown as Float;
+}
+
+/** One filtered sample of a float colour, which holds the 16-bit depth exactly. */
+function floatStoredDepth(colour: TextureNode, uv: Vec2): Float {
+  const sample = colour.sample(uv as never).level(TSL.float(0) as never) as unknown as TextureNode;
+  sample.updateMatrix = false;
+  return sample.r as unknown as Float;
+}
+
+const STORED_DEPTH_READS = {
+  sampled: sampledStoredDepth,
+  float: floatStoredDepth,
+  fetched: filteredStoredDepth,
+};
+
+/** Filtered by hand over four texels: a GPU that filters 8-bit channels at 8 bits loses the low byte. */
+function filteredStoredDepth(colour: TextureNode, uv: Vec2): Float {
+  const size = TSL.vec2(colour.size(TSL.int(0)) as never) as unknown as Vec2;
+  const last = TSL.ivec2(size.sub(1) as never);
+  const position = TSL.clamp(uv, 0, 1).mul(size).sub(0.5) as unknown as Vec2;
+  const corner = TSL.ivec2(TSL.floor(position) as never);
+  const weight = TSL.fract(position) as unknown as Vec2;
+  const at = (x: number, y: number) =>
+    storedDepthAt(
+      colour,
+      TSL.clamp(corner.add(TSL.ivec2(x, y)) as never, TSL.ivec2(0) as never, last as never) as unknown as Node
+    );
+  const bottom = TSL.mix(at(0, 0), at(1, 0), weight.x);
+  const top = TSL.mix(at(0, 1), at(1, 1), weight.x);
+  return TSL.mix(bottom, top, weight.y) as unknown as Float;
+}
+
+/** The template's directional atlas, whose reads take Godot's depth through the one raw read picked. */
+export function directionalShadowAtlasNode(read: StoredDepthRead): TextureNode {
+  // Every read goes through the stored depth, so the node's own texture is never sampled.
+  const atlas = TSL.texture(NO_COLOUR) as unknown as TextureNode;
+  const colour = TSL.texture(NO_COLOUR) as unknown as TextureNode;
+  readAsStored(colour);
+  colourReads.set(atlas, colour);
+  const storedDepth = STORED_DEPTH_READS[read];
+  readStoredDepth(atlas, {
+    read: (uv) => TSL.float(1).sub(storedDepth(colour, uv as unknown as Vec2) as never) as unknown as Node,
+    storedReference: (_uv, reference) => TSL.float(1).sub(reference as never) as unknown as Node,
+  });
+  return atlas;
+}
+
+/** Binds the colour of `atlas`'s raw reads. */
+export function bindDirectionalShadowColour(atlas: TextureNode, colour: THREE.Texture | undefined): void {
+  const read = colourReads.get(atlas);
+  if (read) read.value = colour ?? NO_COLOUR;
+}

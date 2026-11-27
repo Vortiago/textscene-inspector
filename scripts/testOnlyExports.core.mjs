@@ -38,6 +38,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'r3f/controls/native/text/useSettledFont.ts#resetLoaderlessFonts',
   // No runtime code lists the vendored icons, and the icon test checks each one against its raster.
   'r3f/controls/native/themeIcons.ts#vendoredIconSvgUrls',
+  // The probe's read-back needs a GPU, so the unit test holds the parse of its byte apart from it.
+  'r3f/directionalShadow/twoByteFilterProbe.ts#isFullPrecisionByte',
   // The TypeScript twins of a light's blend: the test holds both shader forms to them.
   'r3f/lighting2d/lightBlend.ts#blendLayer',
   'r3f/lighting2d/lightBlend.ts#lightBlendCompute',

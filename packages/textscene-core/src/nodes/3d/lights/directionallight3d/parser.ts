@@ -17,6 +17,7 @@ export function parseDirectionalLight3D(
     ...node3dProps,
     ...baseLightProps,
     light_angular_distance: parseOptionalFloat(properties.light_angular_distance),
+    shadow_transmittance_bias: parseOptionalFloat(properties.shadow_transmittance_bias),
     directional_shadow_mode: parseOptionalInt(properties.directional_shadow_mode),
     directional_shadow_split_1: parseOptionalFloat(properties.directional_shadow_split_1),
     directional_shadow_split_2: parseOptionalFloat(properties.directional_shadow_split_2),

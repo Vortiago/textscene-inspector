@@ -6,6 +6,10 @@
  */
 
 import * as THREE from 'three';
+import {
+  DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS,
+  DIRECTIONAL_SHADOW_PANCAKE_DEPTH,
+} from '../../godot/rendering/lights/directionalShadow.js';
 import { composeInjections, injectProgram, type ProgramInjection } from '../materialProgramInputs.js';
 import { editedProgram } from '../shaderPatch/chunkPatch.js';
 
@@ -21,22 +25,59 @@ vec2 packAtlasDepth( float depth ) {
 	return vec2( high, bits - high * 256.0 ) / 255.0;
 }`;
 
-const ATLAS_DEPTH: ProgramInjection = {
-  cacheKey: 'godot-atlas-depth',
+/** Writes the atlas colour of each caster fragment as `colourOf`, a GLSL expression after `helpers`. */
+function atlasDepthInjection(cacheKey: string, helpers: string, colourOf: string): ProgramInjection {
+  return {
+    cacheKey,
+    onBeforeCompile(shader) {
+      editedProgram(
+        shader,
+        {
+          fragment: [
+            { three: 'void main() {', godot: `${helpers}\nvoid main() {` },
+            // The last `#endif` of three's depth packing ends `main`, where the atlas colour is written.
+            { three: '#endif\n}', godot: `#endif\n\tgl_FragColor = ${colourOf};\n}\n` },
+          ],
+        },
+        'atlas depth'
+      );
+    },
+  };
+}
+
+const ATLAS_DEPTH = atlasDepthInjection(
+  'godot-atlas-depth',
+  PACK_ATLAS_DEPTH,
+  'vec4( packAtlasDepth( gl_FragCoord.z ), 0.0, 1.0 )'
+);
+
+const DIRECTIONAL_DEPTH_STEPS = (2 ** DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS - 1).toFixed(1);
+
+/** The atlas's depth, rounded to its bits, as a float in red, for a GPU that filters the float exactly. */
+const FLOAT_ATLAS_DEPTH = atlasDepthInjection(
+  'godot-float-atlas-depth',
+  '',
+  `vec4( floor( clamp( gl_FragCoord.z, 0.0, 1.0 ) * ${DIRECTIONAL_DEPTH_STEPS} + 0.5 ) / ${DIRECTIONAL_DEPTH_STEPS}, 0.0, 0.0, 1.0 )`
+);
+
+/** Godot's reversed pancake depth, and the same stop in three's forward clip space. */
+const PANCAKE_REVERSED_Z = DIRECTIONAL_SHADOW_PANCAKE_DEPTH.toFixed(4);
+const PANCAKE_FORWARD_Z = (1 - 2 * DIRECTIONAL_SHADOW_PANCAKE_DEPTH).toFixed(4);
+
+const FLATTENED_VERTEX = /* glsl */ `#include <project_vertex>
+#ifdef USE_REVERSED_DEPTH_BUFFER
+gl_Position.z = min( gl_Position.z, ${PANCAKE_REVERSED_Z} * gl_Position.w );
+#else
+gl_Position.z = max( gl_Position.z, ${PANCAKE_FORWARD_Z} * gl_Position.w );
+#endif`;
+
+const FLATTEN_NEAR_CASTERS: ProgramInjection = {
+  cacheKey: 'godot-flattened-depth',
   onBeforeCompile(shader) {
     editedProgram(
       shader,
-      {
-        fragment: [
-          { three: 'void main() {', godot: `${PACK_ATLAS_DEPTH}\nvoid main() {` },
-          // The last `#endif` of three's depth packing ends `main`, where the atlas colour is written.
-          {
-            three: '#endif\n}',
-            godot: '#endif\n\tgl_FragColor = vec4( packAtlasDepth( gl_FragCoord.z ), 0.0, 1.0 );\n}\n',
-          },
-        ],
-      },
-      'atlas depth'
+      { vertex: [{ three: '#include <project_vertex>', godot: FLATTENED_VERTEX }] },
+      'flattened depth'
     );
   },
 };
@@ -86,6 +127,24 @@ abstract class InjectedDepthMaterial extends THREE.MeshDepthMaterial {
 export class AtlasDepthMaterial extends InjectedDepthMaterial {
   constructor() {
     super(ATLAS_DEPTH);
+  }
+}
+
+export class FlattenedAtlasDepthMaterial extends InjectedDepthMaterial {
+  constructor() {
+    super(composeInjections([FLATTEN_NEAR_CASTERS, ATLAS_DEPTH])!);
+  }
+}
+
+export class FloatAtlasDepthMaterial extends InjectedDepthMaterial {
+  constructor() {
+    super(FLOAT_ATLAS_DEPTH);
+  }
+}
+
+export class FlattenedFloatAtlasDepthMaterial extends InjectedDepthMaterial {
+  constructor() {
+    super(composeInjections([FLATTEN_NEAR_CASTERS, FLOAT_ATLAS_DEPTH])!);
   }
 }
 

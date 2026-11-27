@@ -84,7 +84,10 @@ material's program and uploads its uniforms again, since the lights' state versi
    `light_storage.cpp:724`), so the fitter turns it into world units for each box.
 
 6. The far side of each box sits one radius past its centre. The near side sits one radius plus
-   `directional_shadow_pancake_size` towards the light (`:2284`, `:2327`).
+   `directional_shadow_pancake_size` towards the light (`:2284`, `:2327`). The cull reaches 1e6
+   units further towards the light (`:2322`). For a positive pancake size the depth draw flattens a
+   caster past the near side onto it (`scene_forward_clustered.glsl:679-682`), so it casts in every
+   split. For a pancake size of 0 the near side clips it, as Godot's does.
 7. The shadow fades out across the far end of the last split, from
    `directional_shadow_fade_start` of its far depth to that depth (`light_storage.cpp:752-754`).
    Past it nothing is shadowed (`scene_forward_clustered.glsl:2491`), although the boxes reach
@@ -176,16 +179,15 @@ surface with its size term, `1 - cos` of the angle (`light_storage.cpp:670`,
 - The depth grows away from the light, where Godot's reversed depth shrinks, so a blocker is a
   smaller depth.
 - Godot's penumbra divides by a blocker's distance from its near plane, the range start
-  (`scene_forward_lights_inc.glsl:407`). The caster reach moves this box's near plane further towards
-  the light, so the search finds the range start's depth, `lightSide`, through the slot matrix's z
-  row. A blocker nearer the light lies on that side in Godot, which pancakes it to `0.9999` of its
-  depth range (`scene_forward_clustered.glsl:679-682`). That range is `1 - lightSide` in this box's
-  depth, so the search raises such a blocker to `1e-4` of it past `lightSide`.
+  (`scene_forward_lights_inc.glsl:407`). The box's near plane is the range start, so the search
+  finds its depth, `lightSide`, through the slot matrix's z row, as 0. The depth draw flattens a
+  blocker nearer the light to `0.9999` of the depth range (`scene_forward_clustered.glsl:679-682`),
+  and the search raises any blocker to `1e-4` of the range past `lightSide`.
 - The fitter widens each split's box by the tangent of the angle times its depth
   (`renderer_scene_cull.cpp:2286-2299`), so a caster the search reaches is in the box.
 - The search reads the atlas's depth raw, from its colour attachment. The atlas pass of the
-  positional shadows draws the suns' shares too, with `AtlasDepthMaterial`, which writes the depth
-  again into that colour (`../positionalShadow/atlasDepthPass.ts`). So a `DirectionalSplitShadow`
+  positional shadows draws the suns' shares too, with `FlattenedAtlasDepthMaterial`, or
+  `AtlasDepthMaterial` for a pancake size of 0, which write the depth again into that colour (`../positionalShadow/atlasDepthPass.ts`). So a `DirectionalSplitShadow`
   turns three's own update off.
 
 ## The three.js design
@@ -210,7 +212,7 @@ shades through three parts, whatever its split count:
   `installShaderPatches` installs it when a canvas is created, before any program compiles.
 
 `fitDirectionalShadowSplits.ts` holds the maths. It fits one box per split through
-`directionalShadowBoxFitter`, which computes the light's axes and caster reach once. It returns
+`directionalShadowBoxFitter`, which computes the light's axes once. It returns
 the boxes, the light's fade and the four slots the shader reads. Each slot holds its split's far
 end, depth bias, normal bias and blend start. The lookup never reads slot 3's blend start.
 
@@ -251,9 +253,9 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
   (r187 `WebGLUniforms.js:586-598`).
 - A shadow lets go of the atlas when its sun is removed. The last holder frees the atlas's GPU
   memory, and three builds it again at the next shadow pass that draws into it.
-- The atlas holds three's PCF map: a 24-bit depth texture that compares less-or-equal
-  with linear filtering (r187 `WebGLShadowMap.js:253-266`). `TscnCanvas` asks for that type with
-  `shadows="percentage"`, and it never reverses the depth buffer.
+- The atlas holds a 16-bit depth texture, as Godot's default `directional_shadow/16_bits` does
+  (`rendering_server.cpp:3708`), that compares less-or-equal with linear filtering, as three's PCF
+  map does (r187 `WebGLShadowMap.js:253-266`). `TscnCanvas` never reverses the depth buffer.
 - `splitShadow.test.ts` reads three's shadow pass and `setRenderTarget`, and fails on a release
   that changes what the atlas relies on.
 
@@ -299,9 +301,9 @@ at no size. The fit costs microseconds in every mode, far below the draw. Most o
 walk of the scene that finds the lights.
 
 The atlas is one 4096 target, as three builds a shadow map: an RG colour attachment of two bytes
-that holds the depth again for the soft shadow, beside a 24-bit depth texture, so it takes about
-96 MiB. Godot's atlas takes 32 MiB, since it stores 16-bit
-depth and nothing else (`rendering_server.cpp:3708`). A change in how many lights share the atlas
+that holds the depth again for the soft shadow, beside a 16-bit depth texture, so it takes about
+64 MiB. Godot's atlas takes 32 MiB, since it stores 16-bit depth and nothing else
+(`rendering_server.cpp:3708`). A change in how many lights share the atlas
 moves each light's share and keeps the atlas.
 
 ### Fragment uniforms
@@ -346,15 +348,6 @@ define. A slot count that varied by scene would need a define three's program ke
 - **Axes.** Godot snaps along the light node's own X and Y axes. three builds each shadow
   camera with `lookAt` and the camera's `up`, which can roll the square about the light
   direction. The box covers the same slice. Only the snap grid turns.
-- **Pancaking.** Godot flattens a caster nearer the light than the near plane onto that plane
-  (`scene_forward_clustered.glsl:679-682`), for any positive pancake size
-  (`render_forward_clustered.cpp:2606`). three clips such a caster. So the fitter moves every
-  box's near plane to one diameter of the whole view slice's sphere past that slice's near face.
-  Every split takes this same reach, so a caster casts into all of them or into none. A caster
-  beyond it casts nothing.
-- **Bias.** Godot spends the depth bias over its own depth range (`:2348`). When the near plane
-  moves out, three's range is longer, so the fitter divides the declared bias by the same
-  factor. The bias then holds the same size in world units.
 - **Normal bias direction.** three moves the lookup along the whole world normal
   (r187 `shadowmap_vertex.glsl.js:35`). Godot scales the normal by `1 - max(0, -N·L)`, which is 1 on a
   lit face, and removes its component along the light (`scene_forward_clustered.glsl:2301-2307`).

@@ -158,6 +158,16 @@ describe('the program key of a transpiled spatial material', () => {
     expect(keyOf(transpileSpatial(LIT, first))).toBe(keyOf(transpileSpatial(LIT, second)));
   });
 
+  it('is one key for the default read of the stored depth and that read named', () => {
+    expect(keyOf(transpileSpatial(LIT))).toBe(keyOf(transpileSpatial(LIT, { storedDepthRead: 'fetched' })));
+  });
+
+  it('differs for another read of the stored depth', () => {
+    expect(keyOf(transpileSpatial(LIT))).not.toBe(
+      keyOf(transpileSpatial(LIT, { storedDepthRead: 'sampled' }))
+    );
+  });
+
   it('differs for another text', () => {
     expect(keyOf(transpileSpatial(LIT))).not.toBe(keyOf(transpileSpatial(LIT.replace('0.6', '0.5'))));
   });

@@ -1,5 +1,7 @@
 /** What a frame profile publishes: one window's frames, averaged per frame. */
 
+import type { RecordedDevice } from './recordedDevice.js';
+
 /** The render steps a frame profile times, in the order the overlay lists them. */
 export const RENDER_STEPS = [
   'SubViewports',
@@ -63,4 +65,39 @@ export interface FrameTimings {
    * then Other.
    */
   steps: readonly StepStats[];
+}
+
+/** Where one draw call came from: the step it ran in, its object and its material. */
+export interface DrawSource {
+  step: StepKey;
+  /** The name of the object or of its nearest named ancestor, else the object's type. */
+  object: string;
+  /** The material's name, else its type. */
+  material: string;
+}
+
+/** A GPU time over a recording's frames: the median and the 10th and 90th percentiles, in ms. */
+export interface GpuSpread {
+  medianMs: number;
+  lowMs: number;
+  highMs: number;
+}
+
+export interface DrawStats extends DrawSource {
+  /** The GPU time per frame of every call from this source, or null while no GPU result has arrived. */
+  gpuMs: number | null;
+  /** Over the frames that drew this source, or null while no GPU result has arrived. */
+  gpuSpread: GpuSpread | null;
+  callsPerFrame: number;
+}
+
+/** What a recording of one canvas answers: the overlay's numbers, averaged over its own frames. */
+export interface FrameRecording extends FrameStats {
+  frames: number;
+  device: RecordedDevice;
+  timings: FrameTimings;
+  /** The whole frame's GPU time, or null while no GPU result has arrived. */
+  gpuSpread: GpuSpread | null;
+  /** Present when the recording timed each draw, slowest first. Each draw costs its own GPU query. */
+  draws?: readonly DrawStats[];
 }

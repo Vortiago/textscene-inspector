@@ -20,6 +20,7 @@ const DECLARATION: DirectionalShadowDeclaration = {
   fadeStart: 0.8,
   depthBias: -0.002,
   normalBias: 2,
+  transmittanceBias: 0,
   filterRadius: 2,
   softShadowAngle: 0,
   drawsSoftShadow: false,
@@ -37,7 +38,12 @@ function viewingCamera(): THREE.PerspectiveCamera {
   return camera;
 }
 
-function sceneWithSun(options: { declared: boolean; casts: boolean; splitCount?: number }): {
+function sceneWithSun(options: {
+  declared: boolean;
+  casts: boolean;
+  splitCount?: number;
+  pancakeSize?: number;
+}): {
   scene: THREE.Scene;
   light: THREE.DirectionalLight;
 } {
@@ -46,7 +52,11 @@ function sceneWithSun(options: { declared: boolean; casts: boolean; splitCount?:
   light.position.set(10, 20, 5);
   light.castShadow = options.casts;
   if (options.declared) {
-    light.userData = directionalShadowUserData({ ...DECLARATION, splitCount: options.splitCount ?? 1 });
+    light.userData = directionalShadowUserData({
+      ...DECLARATION,
+      splitCount: options.splitCount ?? 1,
+      pancakeSize: options.pancakeSize ?? DECLARATION.pancakeSize,
+    });
   }
   scene.add(light, light.target);
   // `WebGLRenderer.render` updates the world matrices before the hook that runs the fit.
@@ -75,9 +85,32 @@ describe('fitSceneDirectionalShadows', () => {
     const shadowCamera = shadow.getCamera(0);
     expect(shadow.splitCount).toBe(1);
     expect(shadowCamera.right - shadowCamera.left).toBeGreaterThan(80);
-    const threeDepth = shadowCamera.far - shadowCamera.near;
-    const godotDepth = (threeDepth - DECLARATION.pancakeSize) / 2 + DECLARATION.pancakeSize;
-    expect(shadow._cascadeData[0]!.y).toBeCloseTo((DECLARATION.depthBias * godotDepth) / threeDepth, 12);
+    expect(shadow._cascadeData[0]!.y).toBe(DECLARATION.depthBias);
+  });
+
+  it('culls in a caster a thousand units towards the light, as Godot’s cull reaches past the box', () => {
+    const { scene, light } = sceneWithSun({ declared: true, casts: true });
+    fitRender(scene, viewingCamera());
+    const towardsLight = light.position.clone().normalize().multiplyScalar(1000);
+    const caster = new THREE.Box3().setFromCenterAndSize(towardsLight, new THREE.Vector3(1, 1, 1));
+    expect(splitSunOf(light)!.shadow.holdsBox(caster)).toBe(true);
+  });
+
+  it('culls a caster past the far side of the box (edge case)', () => {
+    const { scene, light } = sceneWithSun({ declared: true, casts: true });
+    fitRender(scene, viewingCamera());
+    const awayFromLight = light.position.clone().normalize().multiplyScalar(-1000);
+    const caster = new THREE.Box3().setFromCenterAndSize(awayFromLight, new THREE.Vector3(1, 1, 1));
+    expect(splitSunOf(light)!.shadow.holdsBox(caster)).toBe(false);
+  });
+
+  it('flattens casters nearer the light than the box for a pancake size above zero', () => {
+    const flattens = [20, 0].map((pancakeSize) => {
+      const { scene, light } = sceneWithSun({ declared: true, casts: true, pancakeSize });
+      fitRender(scene, viewingCamera());
+      return splitSunOf(light)!.shadow.flattensNearCasters;
+    });
+    expect(flattens).toEqual([true, false]);
   });
 
   it('marks the first drawn light as the one a shadowmask in mode Only fills', () => {
