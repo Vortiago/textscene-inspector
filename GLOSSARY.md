@@ -708,6 +708,9 @@ A render target texture that a **sub-viewport** pass redraws, which every reader
 **Light pass host** (`r3f/lighting2d/lightPassHost.ts`):
 The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumulates and shades through, and the call that runs it. The 2D stage and each **sub-viewport** with 2D content are hosts, and each one's lights, occluders and CanvasModulate act on its own items alone (ADR-0033).
 
+**Light pass inputs** (`r3f/lighting2d/lightPassInputs.ts`):
+Everything the 2D light pass draws from, read as numbers each frame: the camera, the buffer size, the canvas modulate, the lists and their windows, and each light mesh's matrix, material and uniform values. A frame whose inputs match the last drawn frame's keeps the light buffers and draws nothing (ADR-0095).
+
 **Light kept apart** (`r3f/lighting2d/apartLight.ts`):
 A light on a list that a normal-mapped canvas item reads, drawn alone into its own layer instead of the list's accumulation buffer, with where it sits and its height, so the item shades it by its own normal term (ADR-0062).
 _Avoid_: "per-light buffer" for the light itself. The layer is its buffer.

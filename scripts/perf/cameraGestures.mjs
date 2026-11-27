@@ -68,3 +68,27 @@ function driveEachFrame({ gesture, selector }) {
   requestAnimationFrame(step);
   return true;
 }
+
+/** A notch of a mouse wheel, toward the screen: one zooms the 2D view in by a step. */
+const WHEEL_NOTCH_IN = -100;
+
+/** Zooms the 2D view in by `notches` wheel notches at its centre, one a frame. Null, or why it cannot. */
+export async function zoomStageIn(page, notches) {
+  const selector = `[data-testid="${CANVAS_2D_TESTIDS.stage}"]`;
+  const isZoomed = await page.evaluate(wheelEachFrame, { selector, notches, deltaY: WHEEL_NOTCH_IN });
+  return isZoomed ? null : `expected ${selector} to zoom in, found none`;
+}
+
+/** Runs in the page, and resolves a frame after the last notch, once the view has drawn it. */
+async function wheelEachFrame({ selector, notches, deltaY }) {
+  const target = document.querySelector(selector);
+  if (!target) return false;
+  const { left, top, width, height } = target.getBoundingClientRect();
+  const at = { bubbles: true, cancelable: true, clientX: left + width / 2, clientY: top + height / 2 };
+  for (let notch = 0; notch < notches; notch += 1) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    target.dispatchEvent(new WheelEvent('wheel', { ...at, deltaY }));
+  }
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  return true;
+}

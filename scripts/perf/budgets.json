@@ -112,11 +112,11 @@
     }
   },
   "pointlight2d": {
-    "drawCalls": 6,
+    "drawCalls": 2,
     "sceneRenders": 0,
     "steps": {
       "2D lights": {
-        "drawCalls": 4,
+        "drawCalls": 0,
         "runs": 1
       },
       "Scene draw": {
@@ -212,11 +212,11 @@
     }
   },
   "demo-2d-lights-and-shadows": {
-    "drawCalls": 46,
+    "drawCalls": 36,
     "sceneRenders": 0,
     "steps": {
       "2D lights": {
-        "drawCalls": 10,
+        "drawCalls": 0,
         "runs": 1
       },
       "Scene draw": {
@@ -265,6 +265,50 @@
       },
       "Scene draw": {
         "drawCalls": 308,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "dungeon-zoomed-in": {
+    "drawCalls": 112,
+    "sceneRenders": 0,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 111,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "dungeon-zoomed-in-pan": {
+    "drawCalls": 258,
+    "sceneRenders": 0,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 146,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 111,
         "runs": 1
       },
       "Canvas copy": {
