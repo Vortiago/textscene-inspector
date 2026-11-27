@@ -14,7 +14,12 @@ The end of this message names three paths: the issue file, the owner request fil
 3. For a bug, load the `diagnosing-bugs` skill and reproduce the bug with a command that fails on it. Stop at the cause. Do not fix it.
 4. For a design question, load the `codebase-design` or the `domain-modeling` skill.
 
-The workspace has its dependencies installed, so the `pnpm` scripts run. `gh` holds a read-only token. Godot is not installed, so `pnpm ref:godot` does not run.
+The job runs in the CI image, with the dependencies installed:
+
+- Godot, `xvfb-run` and lavapipe are installed, so `pnpm ref:godot`, `pnpm ref:ours` and `pnpm ref:diff` run. For a rendering issue, measure against Godot. `AGENTS.md` says how.
+- The locked Chromium is installed, so the golden harness and the E2E tests run.
+- The web previewer is built. Set `VISUAL_SKIP_BUILD=1` to capture from that build. Leave it unset after you change a source file.
+- `gh` holds a read-only token.
 
 Never ask a question during the run: nobody answers. Put each question in the brief.
 

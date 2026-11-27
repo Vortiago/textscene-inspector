@@ -7,8 +7,8 @@ name: Claude
 # It authenticates with the `ANTHROPIC_API_KEY` secret, so a run spends API credit. OpenCode runs
 # the model because the Claude Code action gets "Credit balance is too low" on that credit.
 #
-# The agent has a shell, so that it can run the code and reproduce a bug. Issue text comes from
-# anyone, so two rules bound what a run can do:
+# The agent has a shell in the CI image, so that it can run the code, the browser harness and
+# real Godot to reproduce a bug. Issue text comes from anyone, so two rules bound what a run can do:
 # - Only the owner's own mention starts a run.
 # - The agent's job holds a read-only token. The second job runs no model: it posts the brief
 #   and sets labels from a fixed list.
@@ -29,6 +29,7 @@ env:
 
 jobs:
   # Its own job, because a reaction needs write access and the agent's job holds a read-only token.
+  # It also names the CI image, which a job must know before it starts in it.
   acknowledge:
     name: Acknowledge
     if: >-
@@ -42,7 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
+      contents: read
       issues: write
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
     steps:
       # The brief is the answer to the mention, so a failed reaction does not stop the run.
       - name: React to the mention with eyes
@@ -50,6 +54,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api --silent --method POST "repos/$GITHUB_REPOSITORY/$REACTION_TARGET/reactions" -f content=eyes
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The image CI published for this commit: it has run on every commit of the default branch.
+      - id: image
+        run: node scripts/ci/ciImage.mjs >> "$GITHUB_OUTPUT"
 
   prepare:
     name: Prepare
@@ -60,6 +72,11 @@ jobs:
       group: ${{ github.workflow }}-${{ github.event.issue.number }}
       queue: max
     runs-on: ubuntu-latest
+    # The image holds Godot with xvfb and lavapipe for `pnpm ref:godot`, and the locked Chromium.
+    # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB without the option.
+    container:
+      image: ${{ needs.acknowledge.outputs.image }}
+      options: --ipc=host
     timeout-minutes: 60
     permissions:
       contents: read
@@ -80,12 +97,19 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # Through `env`, never in the script text: the request is text a shell would run.
+      # The image holds no gh, which the next step and the agent both use.
+      - name: Install gh
+        run: apt-get update && apt-get install -y --no-install-recommends gh
+
+      # Through `env`, never in the script text: the request is text a shell would run. The output
+      # is the directory as the container sees it, which `runner.temp` does not give.
       - name: Write the issue and the request
+        id: files
         env:
           REQUEST: ${{ github.event.comment.body || github.event.issue.body }}
         run: |
           mkdir -p "$RUNNER_TEMP/claude/out"
+          echo "out=$RUNNER_TEMP/claude/out" >> "$GITHUB_OUTPUT"
           gh issue view "$ISSUE_NUMBER" --json number,title,body,author,labels,comments \
             > "$RUNNER_TEMP/claude/issue.json"
           printf '%s\n' "$REQUEST" > "$RUNNER_TEMP/claude/request.md"
@@ -112,6 +136,10 @@ jobs:
             "permissions": [{ "action": "question", "resource": "*", "effect": "deny" }]
           }
           JSON
+
+      # The harness and `pnpm ref:diff` then capture with VISUAL_SKIP_BUILD=1, with no build of their own.
+      - name: Build the web previewer
+        run: pnpm --filter @textscene/web-previewer build
 
       - name: Prepare the issue
         env:
@@ -142,7 +170,7 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: claude-brief
-          path: ${{ runner.temp }}/claude/out
+          path: ${{ steps.files.outputs.out }}
           if-no-files-found: error
           retention-days: 7
 
