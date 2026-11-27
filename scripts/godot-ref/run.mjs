@@ -1976,7 +1976,7 @@ async function renderInto(
 }
 
 /** A recording that does not parse is refused, naming a stall, which can leave it half-written. */
-async function parsedGpuTime(gpuTimeOut, { refuse, stall }) {
+export async function parsedGpuTime(gpuTimeOut, { refuse, stall }) {
   try {
     return parseGpuTime(await readFile(gpuTimeOut, 'utf8'));
   } catch (error) {

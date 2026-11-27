@@ -7,7 +7,7 @@ import { spreadOfMs } from './gpuSpread.js';
 export interface RecordOptions {
   /** 120 by default: two seconds at 60 frames a second. */
   frames?: number;
-  /** Times each draw call on the GPU too, at the cost of a query per draw. False by default. */
+  /** Times each draw call and each clear on the GPU too, at the cost of a query each. False by default. */
   draws?: boolean;
 }
 

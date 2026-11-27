@@ -1,3 +1,6 @@
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hasHostDisplay, parseGpuTime } from './gpuTime.mjs';
 import {
@@ -5,6 +8,7 @@ import {
   gpuTimeSizeMessage,
   missingGpuTimeMessage,
   parseArgs,
+  parsedGpuTime,
   projectConfig,
   projectSize,
   requestedRenderingMethod,
@@ -53,6 +57,19 @@ describe('--gpu-time render outcome', () => {
     expect(missingGpuTimeMessage('3d', 'did not finish within 300s')).toBe(
       '--gpu-time expected a recording, but the engine did not finish within 300s'
     );
+  });
+
+  it.each([
+    ['{', null, 'could not read the recording'],
+    ['{', 'did not finish within 300s', 'The engine did not finish within 300s'],
+    ['{"frames":[],"passFrames":[]}', null, 'got 0 frames'],
+  ])('a recording %j after a stall %s is refused', async (text, stall, refusal) => {
+    const file = join(await mkdtemp(join(tmpdir(), 'gpu-time-')), 'gpu.json');
+    await writeFile(file, text);
+    const refuse = async (message) => {
+      throw new Error(message);
+    };
+    await expect(parsedGpuTime(file, { refuse, stall })).rejects.toThrow(refusal);
   });
 
   it.each([

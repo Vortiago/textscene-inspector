@@ -117,6 +117,15 @@ describe('formatGpuTime', () => {
       ].join('\n')
     );
   });
+
+  it('leaves out a pass at exactly the threshold, as the print keeps only a pass above it', () => {
+    const text = formatGpuTime({
+      device: { adapter: 'llvmpipe', driver: 'vulkan', size: [955, 756] },
+      frame: { medianMs: 1, lowMs: 1, highMs: 1 },
+      passes: [{ name: 'Cull 3D Scene', spread: { medianMs: 0.01, lowMs: 0.01, highMs: 0.01 } }],
+    });
+    expect(text).not.toContain('Cull 3D Scene');
+  });
 });
 
 describe('gpuTimeScript', () => {
@@ -139,7 +148,7 @@ describe('gpuTimeScript', () => {
   });
 
   it("skips the bracket timestamps, as Godot's own --gpu-profile print does", () => {
-    // rendering_server_default.cpp:169: a name that starts with < or > opens or closes a group.
+    // rendering_server_default.cpp:169
     expect(script).toMatch(/begins_with\("<"\) or pass_name\.begins_with\(">"\)/);
   });
 
