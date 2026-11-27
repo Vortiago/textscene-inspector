@@ -22,7 +22,7 @@ The job runs in the CI image, with the dependencies installed:
 - The Godot engine source is cloned, as `REFERENCES.md` describes: 4.6.3 for each `file:line` citation, and 4.7.2 for a bound that the newer release changed. Check that a path resolves before you cite it.
 - `gh` holds a read-only token.
 
-Never ask a question during the run: nobody answers. Put each question in the brief.
+Never ask a question during the run: nobody answers. Decide what you can, and put the rest in the brief.
 
 ## Write the output
 
@@ -33,10 +33,11 @@ Write two files in the output directory. Do not commit, push or write to GitHub.
 - **Evidence:** for a bug, the command that reproduces it and the output that shows it. Copy each image that supports the brief, such as a `pnpm ref:godot` render or a `pnpm ref:diff` image, to an `evidence` directory in the output directory, and name each file here.
 - **Testing strategy:** the tests that prove the change, and where they live.
 - **Complexity:** simple, moderate or complex. Give no time estimate.
-- **Open questions:** each question that only the owner can answer, with your recommended answer. Write `None` when there are none.
+- **Decisions:** each choice the issue leaves open that you can settle from the code, the issue, Godot or the rules of this repository. State the choice you took, the reason and the alternative, and write the rest of the brief for that choice. The owner overrules a decision with a comment. Write `None` when there are none.
+- **Open questions:** only a question that you cannot settle. Either the evidence favours no answer, the answer is a fact that only the owner has, or your answer contradicts what the owner wrote on the issue. Give your recommended answer where you have one. Write `None` when there are none.
 
 `labels.txt` holds one label on each line:
 
 - `bug` or `enhancement`.
 - Each area label that the fix is likely to change. `docs/agents/issue-tracker.md` lists them.
-- `ready` when the brief has no open question, and `needs-info` when it has one.
+- `ready` when **Open questions** is `None`, and `needs-info` when it holds a question. A decision does not make an issue `needs-info`.
