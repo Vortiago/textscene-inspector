@@ -132,7 +132,8 @@ function scanSections(text: string, lines: readonly string[]): DocumentSection[]
   const headings = scanHeadings(text);
   return headings.map((heading, index) => {
     const next = headings[index + 1];
-    const lastLine = next ? next.line - 1 : lines.length;
+    // A heading that shares its line with the next one still holds that line.
+    const lastLine = next ? Math.max(heading.line, next.line - 1) : lines.length;
     return {
       kind: heading.kind,
       tag: heading.tag,
@@ -183,9 +184,10 @@ export class LanguageDocument {
   sectionAt(line: number, character: number): DocumentSection | undefined {
     const section = this.sectionByLine.get(line);
     if (section?.headingLine !== line) return section;
-    // The column picks the last heading on the line that starts at or before it.
-    const started = this.headingsByLine.get(line)!.filter((found) => found.headingColumns.start <= character);
-    return started.at(-1) ?? section;
+    // The column picks the last heading on the line that starts at or before it, else the first one.
+    const onLine = this.headingsByLine.get(line)!;
+    const started = onLine.filter((found) => found.headingColumns.start <= character);
+    return started.at(-1) ?? onLine[0];
   }
 
   /** A heading's first line, blank outside its own columns and without a comment: each offset is a column. */
