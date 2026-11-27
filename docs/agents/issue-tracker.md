@@ -11,6 +11,14 @@ Use the `gh` CLI inside the clone.
 - **Add or remove a label**: `gh issue edit <number> --add-label "..."` or `--remove-label "..."`
 - **Close an issue**: `gh issue close <number> --comment "..."`
 
+## Taking an issue
+
+When the user picks an issue to implement, mark it before the first write that is not a read:
+`gh issue edit <number> --add-label in-progress`. Keep `ready` on it: `ready` says the brief is
+complete, `in-progress` says someone holds the work, and both are true while a patch is open.
+Remove `in-progress` when the pull request merges or the work is abandoned, and keep it off
+issues nobody is working on.
+
 ## Area labels
 
 An area label names a part of the repository: `goldens`, `parser`, `renderer`, `linter`, `core`,
