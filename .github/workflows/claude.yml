@@ -1,0 +1,267 @@
+name: Claude
+
+# The owner mentions @claude on an issue, and OpenCode runs Fable to prepare it: an agent brief as
+# a comment, and the labels. A new issue can carry the mention in its title or body. The mention
+# gets an eyes reaction when the run starts and a thumbs up when the brief is posted.
+#
+# It authenticates with the `ANTHROPIC_API_KEY` secret, so a run spends API credit. OpenCode runs
+# the model because the Claude Code action gets "Credit balance is too low" on that credit.
+#
+# The agent has a shell in the CI image, so that it can run the code, the browser harness and
+# real Godot to reproduce a bug. Issue text comes from anyone, so two rules bound what a run can do:
+# - Only the owner's own mention starts a run.
+# - The agent's job holds a read-only token. The second job runs no model: it posts the brief
+#   and sets labels from a fixed list.
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+env:
+  # The mention is a comment, or the issue itself when a new issue carries it.
+  REACTION_TARGET: >-
+    ${{ github.event.comment.id && format('issues/comments/{0}', github.event.comment.id) ||
+    format('issues/{0}', github.event.issue.number) }}
+
+jobs:
+  # Its own job, because a reaction needs write access and the agent's job holds a read-only token.
+  # It also names the CI image, which a job must know before it starts in it.
+  acknowledge:
+    name: Acknowledge
+    if: >-
+      github.event.sender.login == github.repository_owner &&
+      !github.event.issue.pull_request &&
+      ((github.event_name == 'issue_comment' &&
+        contains(github.event.comment.body, '@claude')) ||
+       (github.event_name == 'issues' &&
+        (contains(github.event.issue.body, '@claude') ||
+         contains(github.event.issue.title, '@claude'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
+    steps:
+      # The brief is the answer to the mention, so a failed reaction does not stop the run.
+      - name: React to the mention with eyes
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --silent --method POST "repos/$GITHUB_REPOSITORY/$REACTION_TARGET/reactions" -f content=eyes
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The image CI published for this commit: it has run on every commit of the default branch.
+      - id: image
+        run: node scripts/ci/ciImage.mjs >> "$GITHUB_OUTPUT"
+
+  prepare:
+    name: Prepare
+    needs: acknowledge
+    # A later mention queues behind the active run. The group sits on the job, so a skipped run,
+    # such as another comment, holds no place in the queue.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.issue.number }}
+      queue: max
+    runs-on: ubuntu-latest
+    # The image holds Godot with xvfb and lavapipe for `pnpm ref:godot`, and the locked Chromium.
+    # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB without the option.
+    container:
+      image: ${{ needs.acknowledge.outputs.image }}
+      options: --ipc=host
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      artifact-url: ${{ steps.artifact.outputs.artifact-url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      # A repository variable names another model, so a change of model needs no pull request.
+      MODEL: ${{ vars.CLAUDE_PREPARE_MODEL || 'anthropic/claude-fable-5-2#high' }}
+    steps:
+      # The whole history, so that the agent can read the log and bisect.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      # The image holds no gh, which the next step and the agent both use.
+      - name: Install gh
+        run: apt-get update && apt-get install -y --no-install-recommends gh
+
+      # Through `env`, never in the script text: the request is text a shell would run. The outputs
+      # are the directories as the container sees them, which `runner.temp` does not give.
+      - name: Write the issue and the request
+        id: files
+        env:
+          REQUEST: ${{ github.event.comment.body || github.event.issue.body }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/claude/out"
+          echo "temp=$RUNNER_TEMP" >> "$GITHUB_OUTPUT"
+          echo "out=$RUNNER_TEMP/claude/out" >> "$GITHUB_OUTPUT"
+          gh issue view "$ISSUE_NUMBER" --json number,title,body,author,labels,comments \
+            > "$RUNNER_TEMP/claude/issue.json"
+          printf '%s\n' "$REQUEST" > "$RUNNER_TEMP/claude/request.md"
+
+      # Pinned to a commit, because the skills are instructions the agent follows.
+      - name: Install the Matt Pocock skills
+        env:
+          SKILLS_COMMIT: bbadaa631c37af594e5a05c9cefacd9956136b18
+        run: |
+          git clone --quiet https://github.com/mattpocock/skills.git "$RUNNER_TEMP/pocock-skills"
+          git -C "$RUNNER_TEMP/pocock-skills" checkout --quiet "$SKILLS_COMMIT"
+          mkdir -p ~/.config/opencode/skills
+          cp -r "$RUNNER_TEMP/pocock-skills/skills/engineering" \
+            "$RUNNER_TEMP/pocock-skills/skills/productivity" ~/.config/opencode/skills/
+
+      # The two clones of REFERENCES.md: 4.6.3 for each `file:line`, and 4.7.2 for a bound that the
+      # newer release changed. Outside the workspace, because nothing in the repository may read them.
+      - name: Clone the Godot engine source
+        working-directory: ${{ steps.files.outputs.temp }}
+        run: |
+          git clone --quiet --filter=blob:none --sparse --depth 1 --branch 4.6.3-stable \
+            -c advice.detachedHead=false https://github.com/godotengine/godot.git godot-4.6.3
+          git -C godot-4.6.3 sparse-checkout set scene doc/classes modules servers core editor drivers
+          git clone --quiet --filter=blob:none --sparse --depth 1 --branch 4.7.2-stable \
+            -c advice.detachedHead=false https://github.com/godotengine/godot.git godot-4.7.2
+          git -C godot-4.7.2 sparse-checkout set scene modules servers core
+
+      # A question waits for an answer that never comes, so the config denies the question tool.
+      - name: Install OpenCode
+        run: |
+          npm install --global @opencode/cli@2.4.2
+          cat > ~/.config/opencode/opencode.json <<'JSON'
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "update": "disable",
+            "permissions": [{ "action": "question", "resource": "*", "effect": "deny" }]
+          }
+          JSON
+
+      # The harness and `pnpm ref:diff` then capture with VISUAL_SKIP_BUILD=1, with no build of their own.
+      - name: Build the web previewer
+        run: pnpm --filter @textscene/web-previewer build
+
+      - name: Prepare the issue
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          {
+            cat .github/claude-prepare/prompt.md
+            printf '\nIssue file: %s\n' "$RUNNER_TEMP/claude/issue.json"
+            printf 'Owner request file: %s\n' "$RUNNER_TEMP/claude/request.md"
+            printf 'Output directory: %s\n' "$RUNNER_TEMP/claude/out"
+            printf 'Godot 4.6.3 source: %s\n' "$RUNNER_TEMP/godot-4.6.3"
+            printf 'Godot 4.7.2 source: %s\n' "$RUNNER_TEMP/godot-4.7.2"
+          } > "$RUNNER_TEMP/claude/prompt.md"
+          opencode run --standalone --auto --model "$MODEL" "$(cat "$RUNNER_TEMP/claude/prompt.md")"
+
+      # The log then shows what the run cost and how much of its input came from the prompt cache.
+      - name: Report the cost and the cache use
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: opencode stats --days 0 --cost --models
+
+      # A refused model request ends the run without an error, so the missing brief is the signal.
+      - name: Check that the agent wrote a brief
+        run: |
+          if [ ! -s "$RUNNER_TEMP/claude/out/brief.md" ]; then
+            echo '::error::The agent wrote no brief.md. Read the "Prepare the issue" step for the cause.'
+            exit 1
+          fi
+
+      # 90 days, the longest a public repository keeps an artifact: the brief links to its evidence.
+      - id: artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: claude-brief
+          path: ${{ steps.files.outputs.out }}
+          if-no-files-found: error
+          retention-days: 90
+
+  post:
+    name: Post the brief
+    needs: prepare
+    if: ${{ !cancelled() && needs.prepare.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      ARTIFACT_URL: ${{ needs.prepare.outputs.artifact-url }}
+    steps:
+      - name: Report a failed run
+        if: needs.prepare.result != 'success'
+        run: gh issue comment "$ISSUE_NUMBER" --body "> *The preparation failed. [View the run]($RUN_URL).*"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.prepare.result == 'success'
+        with:
+          name: claude-brief
+          path: brief
+
+      # 60000 bytes: a GitHub comment holds at most 65536 characters.
+      - name: Post the brief
+        if: needs.prepare.result == 'success'
+        run: |
+          evidence_count=0
+          if [ -d brief/evidence ]; then
+            evidence_count="$(find brief/evidence -type f | wc -l)"
+          fi
+          {
+            printf '> *An AI wrote this brief. [View the run](%s).*\n' "$RUN_URL"
+            if [ "$evidence_count" -gt 0 ]; then
+              printf '> *Its evidence holds %s file(s). [Download them](%s).*\n' "$evidence_count" "$ARTIFACT_URL"
+            fi
+            printf '\n'
+            head -c 60000 brief/brief.md
+          } > comment.md
+          gh issue comment "$ISSUE_NUMBER" --body-file comment.md
+
+      # A label is a whole line that the list holds, so the agent's text never reaches a command
+      # as anything else. `needs-info` wins over `ready`, and each removes the other.
+      - name: Set the labels
+        if: needs.prepare.result == 'success'
+        run: |
+          printf '%s\n' bug enhancement ready needs-info \
+            goldens parser renderer linter core lsp vscode web scenes ci documentation > allowed.txt
+          touch brief/labels.txt
+          grep -Fxf allowed.txt brief/labels.txt | sort -u > labels.txt || true
+
+          state_to_clear=''
+          if grep -qx 'needs-info' labels.txt; then
+            sed -i '/^ready$/d' labels.txt
+            state_to_clear='ready'
+          elif grep -qx 'ready' labels.txt; then
+            state_to_clear='needs-info'
+          fi
+
+          if [ -s labels.txt ]; then
+            gh issue edit "$ISSUE_NUMBER" --add-label "$(paste -sd, labels.txt)"
+          fi
+          if [ -n "$state_to_clear" ]; then
+            gh issue edit "$ISSUE_NUMBER" --remove-label "$state_to_clear"
+          fi
+
+      - name: React to the mention with a thumbs up
+        if: needs.prepare.result == 'success'
+        continue-on-error: true
+        run: gh api --silent --method POST "repos/$GITHUB_REPOSITORY/$REACTION_TARGET/reactions" -f content=+1

@@ -1,13 +1,12 @@
 name: Claude review
 
-# Claude reviews a pull request with the built-in `/code-review` command at medium effort:
+# Claude reviews a pull request with the built-in `/code-review` command at high effort:
 # reviewer agents read the diff in parts, a verify pass drops a finding it cannot confirm, and
 # `--comment` posts the findings as inline comments. The command does not read REVIEW.md on its
 # own, so the appended system prompt makes REVIEW.md the bar.
 #
-# It authenticates with the `ANTHROPIC_API_KEY` secret, so a review spends API credit, not
-# subscription usage. While that secret is unset, it falls back to the subscription token in
-# `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`.
+# It authenticates with the `CLAUDE_CODE_OAUTH_TOKEN` secret from `claude setup-token`, so a
+# review spends subscription usage.
 #
 # A review spends the repository owner's credit, so only the owner starts one:
 # - The owner's own pull request gets one review when it is ready, not one per push.
@@ -85,16 +84,11 @@ jobs:
       - id: claude
         uses: anthropics/claude-code-action@acfe7992852970efb4fee683d63d628e3e52df67 # v1.0.286
         with:
-          # The job passes the subscription token only while the API key is unset, so the
-          # action gets one credential and its choice between two never matters.
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_code_oauth_token: ${{ secrets.ANTHROPIC_API_KEY == '' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
-          prompt: '/code-review medium --comment ${{ github.repository }}/pull/${{ env.PR_NUMBER }}'
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: '/code-review high --comment ${{ github.repository }}/pull/${{ env.PR_NUMBER }}'
           # The `opus` alias, because the action's default model is Sonnet. The alias names the
           # latest Opus of the pinned Claude Code, so a Dependabot update brings a newer one.
-          # Medium, not high: medium finds what REVIEW.md asks for, and high spends more turns
-          # to report the same findings. The action starts the inline-comment server only when
-          # `--allowedTools` names its tool.
+          # The action starts the inline-comment server only when `--allowedTools` names its tool.
           claude_args: |
             --model opus
             --effort medium
