@@ -92,16 +92,16 @@ export interface ParsedProperty {
   stored: ResolvedProperty;
 }
 
-/**
- * Hooks into the scanning loop for strict (linting) consumers. The observer is
- * purely additive: it never changes what the lenient loop parses or recovers.
- */
 /** The 0-based columns a heading spans on its first line, the end exclusive. */
 export interface HeadingColumns {
   start: number;
   end: number;
 }
 
+/**
+ * Hooks into the scanning loop for strict (linting) consumers. The observer is
+ * purely additive: it never changes what the lenient loop parses or recovers.
+ */
 export interface ParseObserver {
   /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;

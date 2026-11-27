@@ -55,7 +55,11 @@ export function isGodotBlank(line: string): boolean {
   return godotIndent(line) === line.length || line.trim().length === 0;
 }
 
-/** The length of the white space `str` starts with. */
+/**
+ * The length of the white space `str` starts with, Godot's or JavaScript's.
+ *
+ * @canonical Where the lenient reading starts a line
+ */
 export function leadingSpace(str: string): number {
   let at = 0;
   while (at < str.length && isSpaceCode(str.charCodeAt(at))) at++;
