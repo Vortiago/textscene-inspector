@@ -30,7 +30,7 @@ describe('a property before a heading on its line', () => {
 
   it('ends the value hover at the value, before the heading', () => {
     const valueAt = 'texture_filter = '.length;
-    expect(hoverAt(document, { line: LINE, character: valueAt })?.range.end).toEqual({
+    expect(hoverAt(document, { line: LINE, character: valueAt })?.range?.end).toEqual({
       line: LINE,
       character: valueAt + 1,
     });
@@ -38,7 +38,7 @@ describe('a property before a heading on its line', () => {
 
   it('hovers the key when a property of the heading follows on the line', () => {
     const shared = new LanguageDocument(TEXT.replace(HEADING, `${HEADING} position = Vector3(1, 2, 3)`));
-    expect(hoverAt(shared, { line: LINE, character: 2 })?.range.end.character).toBe('texture_filter'.length);
+    expect(hoverAt(shared, { line: LINE, character: 2 })?.range?.end.character).toBe('texture_filter'.length);
   });
 
   it('completes the key as it does with no heading after it', async () => {
