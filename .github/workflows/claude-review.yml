@@ -5,9 +5,8 @@ name: Claude review
 # `--comment` posts the findings as inline comments. The command does not read REVIEW.md on its
 # own, so the appended system prompt makes REVIEW.md the bar.
 #
-# It authenticates through workload identity federation, so a review spends API credit without
-# a stored API key or subscription token. GitHub signs an OIDC token for the run, and the action
-# exchanges it for a short-lived Anthropic token in the Default workspace.
+# It authenticates with the `CLAUDE_CODE_OAUTH_TOKEN` secret from `claude setup-token`, so a
+# review spends subscription usage.
 #
 # A review spends the repository owner's credit, so only the owner starts one:
 # - The owner's own pull request gets one review when it is ready, not one per push.
@@ -85,12 +84,7 @@ jobs:
       - id: claude
         uses: anthropics/claude-code-action@acfe7992852970efb4fee683d63d628e3e52df67 # v1.0.286
         with:
-          anthropic_federation_rule_id: fdrl_01LerZV3SooMij3Zw59Neude
-          anthropic_organization_id: 1ab71a0e-ff1e-4f63-9999-b3f0d685d4f1
-          anthropic_service_account_id: svac_017DSiKWH7yYdmMhKTpNb5Nv
-          anthropic_workspace_id: wrkspc_01JmuR8g6h7JStm7hFpxStdt
-          # Inline-comment classification requires a static API key, which federation replaces.
-          classify_inline_comments: 'false'
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: '/code-review high --comment ${{ github.repository }}/pull/${{ env.PR_NUMBER }}'
           # The `opus` alias, because the action's default model is Sonnet. The alias names the
           # latest Opus of the pinned Claude Code, so a Dependabot update brings a newer one.
