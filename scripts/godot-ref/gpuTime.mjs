@@ -9,14 +9,14 @@ export const GPU_TIME_WARMUP_FRAMES = 120;
 /** `--gpu-profile` turns on pass timestamps (rendering_server_default.cpp:356). Vsync adds a wait. */
 export const GPU_TIME_ARGV = ['--gpu-profile', '--disable-vsync'];
 
-/** True when the host has a screen to open the window on, so no virtual X server is needed. */
+/** True when the host has an X screen to open the window on. Godot 4.6 opens on X11 unless told Wayland. */
 export function hasHostDisplay(env, platform) {
   if (platform !== 'linux') return true;
-  return Boolean(env.DISPLAY || env.WAYLAND_DISPLAY);
+  return Boolean(env.DISPLAY);
 }
 
 /** Reads the file the bootstrap writes into the frame and pass spreads, the dearest pass first. */
-export function readGpuTime(text) {
+export function parseGpuTime(text) {
   const recorded = JSON.parse(text);
   if (recorded.frames.length === 0) {
     throw new Error(`expected GPU frame times from Godot, got ${recorded.frames.length} frames`);
@@ -89,7 +89,7 @@ func _record_gpu_time(source: Viewport) -> void:
 	file.store_string(JSON.stringify({
 		"adapter": RenderingServer.get_video_adapter_name(),
 		"driver": RenderingServer.get_current_rendering_driver_name(),
-		"size": [source.get_visible_rect().size.x, source.get_visible_rect().size.y],
+		"size": [source.get_texture().get_size().x, source.get_texture().get_size().y],
 		"frames": frames,
 		"passFrames": pass_frames,
 	}))

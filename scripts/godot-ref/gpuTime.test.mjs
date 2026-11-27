@@ -6,7 +6,7 @@ import {
   GPU_TIME_ARGV,
   gpuTimeScript,
   hasHostDisplay,
-  readGpuTime,
+  parseGpuTime,
 } from './gpuTime.mjs';
 
 describe('GPU_TIME_ARGV', () => {
@@ -21,14 +21,17 @@ describe('hasHostDisplay', () => {
     expect(hasHostDisplay({}, 'darwin')).toBe(true);
   });
 
-  it('finds one on Linux only through DISPLAY or WAYLAND_DISPLAY', () => {
+  it('finds one on Linux only through DISPLAY', () => {
     expect(hasHostDisplay({}, 'linux')).toBe(false);
     expect(hasHostDisplay({ DISPLAY: ':0' }, 'linux')).toBe(true);
-    expect(hasHostDisplay({ WAYLAND_DISPLAY: 'wayland-0' }, 'linux')).toBe(true);
+  });
+
+  it('finds none on Linux with only WAYLAND_DISPLAY, as Godot opens on X11 (edge case)', () => {
+    expect(hasHostDisplay({ WAYLAND_DISPLAY: 'wayland-0' }, 'linux')).toBe(false);
   });
 });
 
-describe('readGpuTime', () => {
+describe('parseGpuTime', () => {
   const recorded = {
     adapter: 'Intel(R) UHD Graphics 630',
     driver: 'vulkan',
@@ -52,17 +55,17 @@ describe('readGpuTime', () => {
   };
 
   it('gives the frame the median and the 10th and 90th percentiles, as textscene.profile does', () => {
-    expect(readGpuTime(JSON.stringify(recorded)).frame).toEqual({ medianMs: 6, lowMs: 2, highMs: 10 });
+    expect(parseGpuTime(JSON.stringify(recorded)).frame).toEqual({ medianMs: 6, lowMs: 2, highMs: 10 });
   });
 
   it('lists the passes by median, the dearest first', () => {
-    const { passes } = readGpuTime(JSON.stringify(recorded));
+    const { passes } = parseGpuTime(JSON.stringify(recorded));
     expect(passes.map((pass) => pass.name)).toEqual(['Render Opaque Pass', 'Render Shadows', 'Frame Begin']);
     expect(passes[0].spread).toEqual({ medianMs: 5, lowMs: 4, highMs: 6 });
   });
 
   it('keeps the adapter, the driver and the drawn size', () => {
-    const read = readGpuTime(JSON.stringify(recorded));
+    const read = parseGpuTime(JSON.stringify(recorded));
     expect(read.device).toEqual({
       adapter: 'Intel(R) UHD Graphics 630',
       driver: 'vulkan',
@@ -80,17 +83,17 @@ describe('readGpuTime', () => {
         ],
       ],
     };
-    expect(readGpuTime(JSON.stringify(twice)).passes[0].spread.medianMs).toBe(3);
+    expect(parseGpuTime(JSON.stringify(twice)).passes[0].spread.medianMs).toBe(3);
   });
 
   it('refuses a recording with no pass times, as a driver with no RenderingDevice gives (error case)', () => {
-    expect(() => readGpuTime(JSON.stringify({ ...recorded, driver: 'opengl3', passFrames: [] }))).toThrow(
+    expect(() => parseGpuTime(JSON.stringify({ ...recorded, driver: 'opengl3', passFrames: [] }))).toThrow(
       'expected pass times from a RenderingDevice, got none on the "opengl3" driver'
     );
   });
 
   it('refuses a recording with no frames, naming what it found', () => {
-    expect(() => readGpuTime(JSON.stringify({ ...recorded, frames: [] }))).toThrow(
+    expect(() => parseGpuTime(JSON.stringify({ ...recorded, frames: [] }))).toThrow(
       'expected GPU frame times from Godot, got 0 frames'
     );
   });
@@ -122,6 +125,11 @@ describe('gpuTimeScript', () => {
   it('records the asked frames after the warm-up frames', () => {
     expect(script).toContain('const GPU_TIME_FRAMES := 200');
     expect(script).toContain(`const GPU_TIME_WARMUP_FRAMES := ${GPU_TIME_WARMUP_FRAMES}`);
+  });
+
+  it('records the size of the drawn texture, not of the visible rect a stretch mode reports', () => {
+    expect(script).toContain('source.get_texture().get_size()');
+    expect(script).not.toContain('get_visible_rect');
   });
 
   it('times the viewport through the renderer and reads each pass from the device timestamps', () => {

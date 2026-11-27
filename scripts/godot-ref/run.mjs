@@ -26,7 +26,7 @@ import {
   GPU_TIME_ARGV,
   gpuTimeScript,
   hasHostDisplay,
-  readGpuTime,
+  parseGpuTime,
 } from './gpuTime.mjs';
 import { resolveProjectRoot } from './projectRoot.mjs';
 
@@ -1970,7 +1970,7 @@ async function renderInto(
 
 async function recordedGpuTime(gpuTimeOut, rendered) {
   if (!existsSync(gpuTimeOut)) throw new Error(missingGpuTimeMessage(rendered));
-  return readGpuTime(await readFile(gpuTimeOut, 'utf8'));
+  return parseGpuTime(await readFile(gpuTimeOut, 'utf8'));
 }
 
 /** The bootstrap records only after a 3D capture, so a 3D render with no file quit before it ended. */

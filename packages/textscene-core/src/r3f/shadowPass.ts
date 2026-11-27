@@ -209,18 +209,25 @@ function collected<Kind extends THREE.Light>(
 
 /** An omni light with a slot whose cube three's pass is about to draw. */
 function needsCopy(light: THREE.Light): light is OmniLight {
-  const { shadow } = light as THREE.Light & { shadow?: unknown };
-  return (
-    shadow instanceof AtlasOmniShadow && shadow.slot !== null && (shadow.autoUpdate || shadow.needsUpdate)
-  );
+  const shadow = slottedOmniShadow(light);
+  return shadow !== null && isRedrawn(shadow);
 }
 
 /** An omni light with a slot that this pass does not copy, so its slot keeps an earlier pass's map. */
 function keepsOmniSlot(light: THREE.Light): boolean {
+  const shadow = slottedOmniShadow(light);
+  return shadow !== null && !isRedrawn(shadow);
+}
+
+/** The light's omni shadow when it holds a slot, else null. */
+function slottedOmniShadow(light: THREE.Light): AtlasOmniShadow | null {
   const { shadow } = light as THREE.Light & { shadow?: unknown };
-  return (
-    shadow instanceof AtlasOmniShadow && shadow.slot !== null && !(shadow.autoUpdate || shadow.needsUpdate)
-  );
+  return shadow instanceof AtlasOmniShadow && shadow.slot !== null ? shadow : null;
+}
+
+/** True when three's pass draws this shadow again (r187 `WebGLShadowMap.js:170`). */
+function isRedrawn(shadow: THREE.LightShadow): boolean {
+  return shadow.autoUpdate || shadow.needsUpdate;
 }
 
 /**
