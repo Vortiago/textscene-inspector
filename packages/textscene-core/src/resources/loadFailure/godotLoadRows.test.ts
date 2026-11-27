@@ -2763,6 +2763,16 @@ Vector2(5, 5)
     failing: [{ path: 'res://missing.tres', kind: 'section Resource', line: 1 }],
     stop: null,
   },
+  {
+    row: 224,
+    reads:
+      'an unclosed heading whose string runs into the next heading stops inside it, which the previewer draws',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="A\n\n[node name="B" parent="." type="Node2D"]\nposition = Vector2(1, 2)\n',
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row224.tscn:7]',
+    lenientTree: 'Root[B(1.0, 2.0)]',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */

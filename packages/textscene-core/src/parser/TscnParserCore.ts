@@ -80,8 +80,8 @@ export interface ParsedProperty {
   line: number;
   /** The 0-based column the key starts at, past a heading's `]` where it follows one. */
   column: number;
-  /** Where the value's text starts, 0-based, present only when it starts on a line after its key's. */
-  valueStart?: { line: number; column: number };
+  /** The line and 0-based column the value's text starts at, a later line where it starts after its key's. */
+  valueStart: { line: number; column: number };
   /** The line the value ends on, a later line where the value starts after its key's line. */
   endLine: number;
   isMultiline: boolean;
@@ -169,7 +169,7 @@ export class TscnParserCore {
       skippedNewlines: number[];
       startLine: number;
       startColumn: number;
-      valueStart?: { line: number; column: number };
+      valueStart: { line: number; column: number };
       endLine: number;
       godotStartLine: number;
       scanState: ValueScanState;
@@ -249,7 +249,7 @@ export class TscnParserCore {
           value,
           line: pendingMultiline.startLine,
           column: pendingMultiline.startColumn,
-          ...(pendingMultiline.valueStart ? { valueStart: pendingMultiline.valueStart } : {}),
+          valueStart: pendingMultiline.valueStart,
           endLine: pendingMultiline.endLine,
           isMultiline: pendingMultiline.endLine > pendingMultiline.startLine,
           stored: resolved,
@@ -387,9 +387,11 @@ export class TscnParserCore {
         // An unclosed heading draws nothing, and the lines its tag read are no section's body.
         if (tag) {
           const stopLine = lineAndColumnOf(lineStarts, tag.stop, i).line;
-          // The stop line is the refused tag's unless the tag stopped at the `[` that opens the line.
+          // The lenient tree reads a heading on the stop line, wherever on it the tag stopped.
           const opensNextTag =
-            content[tag.stop] === '[' && tag.stop === lineStarts[stopLine]! + godotIndent(lines[stopLine]!);
+            (content[tag.stop] === '[' &&
+              tag.stop === lineStarts[stopLine]! + godotIndent(lines[stopLine]!)) ||
+            (stopLine > i && isSectionHeading(stripLineComment(lines[stopLine]!)));
           i = Math.max(i, opensNextTag ? stopLine - 1 : stopLine);
         }
         continue;
@@ -416,6 +418,7 @@ export class TscnParserCore {
             skippedNewlines: [],
             startLine: lineNumber,
             startColumn: column + leadingSpace(line),
+            valueStart: { line: lineNumber, column: column + valueOffset(line) },
             endLine: lineNumber,
             godotStartLine: godotLine,
             scanState,
@@ -436,6 +439,7 @@ export class TscnParserCore {
             value: property.value,
             line: lineNumber,
             column: column + leadingSpace(line),
+            valueStart: { line: lineNumber, column: column + valueOffset(line) },
             endLine: lineNumber,
             isMultiline: false,
             stored: resolved,
@@ -544,6 +548,12 @@ function lineStartsOf(content: string): number[] {
 /** The white space before a line's text, as `parseProperty` trims it. */
 function leadingSpace(line: string): number {
   return line.length - line.trimStart().length;
+}
+
+/** Where a property line's value starts: past its `=` and the white space `parseProperty` trims. */
+function valueOffset(line: string): number {
+  const afterEquals = line.indexOf('=') + 1;
+  return afterEquals + leadingSpace(line.slice(afterEquals));
 }
 
 /** The 0-based line and column of `offset`, searched forward from line `from`. */

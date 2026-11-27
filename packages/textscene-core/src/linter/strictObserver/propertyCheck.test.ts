@@ -11,6 +11,7 @@ function property(ownerType: string | undefined, key: string, value: string): Pa
     value,
     line: 4,
     column: 0,
+    valueStart: { line: 4, column: key.length + 3 },
     endLine: 4,
     isMultiline: value.includes('\n'),
     stored: { key, value },
@@ -45,10 +46,9 @@ describe('propertyRefusal', () => {
     });
   });
 
-  it('places the value past a key that starts after a heading', () => {
-    expect(propertyRefusal({ ...property('Node3D', 'visible', '"yes"'), column: 20 })).toMatchObject({
-      column: 20 + 'visible'.length + 3,
-    });
+  it('places the refusal where the value starts, past a key with no spaces around `=`', () => {
+    const tight = { ...property('Node3D', 'visible', '"yes"'), valueStart: { line: 4, column: 8 } };
+    expect(propertyRefusal(tight)).toMatchObject({ column: 8 });
   });
 
   it('skips a property with no typed owner', () => {

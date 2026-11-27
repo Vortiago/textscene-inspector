@@ -14,8 +14,6 @@ export function propertyRefusal({
   ownerType,
   key,
   value,
-  line,
-  column,
   valueStart,
   stored,
 }: ParsedProperty): ParseError | null {
@@ -36,11 +34,13 @@ export function propertyRefusal({
     lookupValue = stored.value;
   }
 
-  const validated = validator(lookupKey, lookupValue, valueStart?.line ?? line);
+  const validated = validator(lookupKey, lookupValue, valueStart.line);
   if (!validated) return null;
-  // The validator counts `key.length + 3` from column 0, so this counts from where the key or value starts.
-  const valueColumn = valueStart ? valueStart.column : column + key.length + 3;
-  const found: ParseError = { ...validated, column: validated.column - lookupKey.length - 3 + valueColumn };
+  // The validator places the value at `key.length + 3`, as in `key = value`. This moves it to the value.
+  const found: ParseError = {
+    ...validated,
+    column: validated.column - lookupKey.length - 3 + valueStart.column,
+  };
   const keyed: ParseError = { ...found, propertyKey: key };
   const error: ParseError =
     lookupKey === key

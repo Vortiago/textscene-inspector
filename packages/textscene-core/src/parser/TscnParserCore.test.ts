@@ -444,6 +444,7 @@ visible = true
         value: 'Vector3(1, 2, 3)',
         line: 4,
         column: 0,
+        valueStart: { line: 4, column: 7 },
         endLine: 4,
         isMultiline: false,
         stored: { key: 'size', value: 'Vector3(1, 2, 3)' },
@@ -456,6 +457,7 @@ visible = true
         value: '"first\nsecond"',
         line: 7,
         column: 0,
+        valueStart: { line: 7, column: 7 },
         endLine: 8,
         isMultiline: true,
         stored: { key: 'text', value: '"first\nsecond"' },
@@ -468,6 +470,7 @@ visible = true
         value: 'true',
         line: 9,
         column: 0,
+        valueStart: { line: 9, column: 10 },
         endLine: 9,
         isMultiline: false,
         stored: { key: 'visible', value: 'true' },
@@ -481,6 +484,14 @@ visible = true
       parser.parse(content, simpleCreator, { onProperty });
 
       expect(onProperty.mock.calls[0]![0]).toMatchObject({ column: 30, valueStart: { line: 2, column: 2 } });
+    });
+
+    it('gives the start of a value written with no spaces around `=`', () => {
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse('[node name="R" type="Node2D"]\nvisible=false\n', simpleCreator, { onProperty });
+
+      expect(onProperty.mock.calls[0]![0].valueStart).toEqual({ line: 2, column: 8 });
     });
 
     it('passes ownerType=undefined where the section names no type', () => {
@@ -503,6 +514,7 @@ visible = true
         value: '1',
         line: 2,
         column: 0,
+        valueStart: { line: 2, column: 9 },
         endLine: 2,
         isMultiline: false,
         stored: { key: 'config', value: '1' },
@@ -515,6 +527,7 @@ visible = true
         value: 'true',
         line: 5,
         column: 0,
+        valueStart: { line: 5, column: 10 },
         endLine: 5,
         isMultiline: false,
         stored: { key: 'visible', value: 'true' },
@@ -541,6 +554,7 @@ background_mode = 1
         value: '2',
         line: 4,
         column: 0,
+        valueStart: { line: 4, column: 16 },
         endLine: 4,
         isMultiline: false,
         stored: { key: 'radiance_size', value: '2' },
@@ -552,6 +566,7 @@ background_mode = 1
         value: '1',
         line: 7,
         column: 0,
+        valueStart: { line: 7, column: 18 },
         endLine: 7,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
@@ -590,6 +605,7 @@ background_mode = 1
         value: '1',
         line: 4,
         column: 0,
+        valueStart: { line: 4, column: 18 },
         endLine: 4,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
@@ -611,6 +627,7 @@ background_mode = 1
         value: '1',
         line: 2,
         column: 0,
+        valueStart: { line: 2, column: 18 },
         endLine: 2,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
@@ -634,6 +651,7 @@ frames = SubResource("sf")
         value: 'SubResource("sf")',
         line: 4,
         column: 0,
+        valueStart: { line: 4, column: 9 },
         endLine: 4,
         isMultiline: false,
         stored: { key: 'sprite_frames', value: 'SubResource("sf")' },
