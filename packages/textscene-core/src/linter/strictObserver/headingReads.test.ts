@@ -4,7 +4,7 @@ import { parseHeading } from '../../parser/utils.js';
 
 function readsOf(...headings: string[]) {
   const collector = headingReads();
-  headings.forEach((heading, index) => collector.read(parseHeading(heading)!, index + 1));
+  headings.forEach((heading, index) => collector.read(parseHeading(heading)!, index + 1, 1));
   return collector.reads;
 }
 
@@ -37,14 +37,17 @@ describe('headingReads', () => {
     expect(connection).toMatchObject({ fromIdTrail: undefined, toIdTrail: [1, 2] });
   });
 
-  it('collects the line of each editable heading that has no path', () => {
+  it('collects the place of each editable heading that has no path', () => {
     const reads = readsOf(
       '[node name="Root" type="Node3D"]',
       '[editable]',
       '[editable path="Inner"]',
       '[editable]'
     );
-    expect(reads.pathlessEditableLines).toEqual([2, 4]);
+    expect(reads.pathlessEditables).toEqual([
+      { line: 2, column: 1 },
+      { line: 4, column: 1 },
+    ]);
   });
 
   it('leaves binds undefined on a connection without binds', () => {

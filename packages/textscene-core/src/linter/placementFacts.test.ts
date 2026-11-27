@@ -24,6 +24,7 @@ function factsOf(...headings: [name: string, declaredParent?: string, ids?: Head
   const origins: NodeOrigin<RawNode>[] = headings.map(([name, declaredParent, ids], i) => ({
     node: node(name, declaredParent || undefined),
     line: i + 1,
+    column: 1,
     declaredParent,
     uniqueId: ids?.uniqueId ?? 0,
     idTrail: ids?.idTrail,

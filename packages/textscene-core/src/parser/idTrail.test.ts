@@ -14,7 +14,14 @@ function origin(
     rawProperties: {},
     ...(parts.instance ? { instance: parts.instance } : {}),
   };
-  return { node, line: 1, declaredParent: '.', uniqueId: parts.uniqueId ?? 0, idTrail: parts.idTrail };
+  return {
+    node,
+    line: 1,
+    column: 1,
+    declaredParent: '.',
+    uniqueId: parts.uniqueId ?? 0,
+    idTrail: parts.idTrail,
+  };
 }
 
 const placed = () => true;

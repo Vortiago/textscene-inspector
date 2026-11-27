@@ -46,7 +46,8 @@ function seat(document: LanguageDocument): DocumentSeating {
     .map((section) => {
       const heading = headingOf(section);
       const node = createRawNode(heading, rawPropertiesOf(section));
-      return { section, ...nodeOrigin(heading, node, section.headingLine) };
+      const place = { line: section.headingLine, column: section.headingColumns.start + 1 };
+      return { section, ...nodeOrigin(heading, node, place) };
     });
   const seating = seatScene(headings);
   const sectionByNode = new Map<RawNode, DocumentSection>();

@@ -13,7 +13,7 @@ const HEADINGS = 1000;
 const READS_PER_HEADING = 3;
 
 function origin(heading: TscnNode, parts: Partial<NodeOrigin<TscnNode>> = {}): NodeOrigin<TscnNode> {
-  return { node: heading, line: 1, declaredParent: heading.parent, uniqueId: 0, ...parts };
+  return { node: heading, line: 1, column: 1, declaredParent: heading.parent, uniqueId: 0, ...parts };
 }
 
 /** `origins`, each with its `uniqueId` behind a getter that counts the reads in `reads.count`. */

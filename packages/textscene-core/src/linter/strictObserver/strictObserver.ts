@@ -41,8 +41,9 @@ export function strictObserver(): StrictObserver {
     },
 
     onSectionStart: (heading, section, line, columns) => {
-      reads.read(heading, line);
-      lines.start(columns.start + 1);
+      const column = columns.start + 1;
+      reads.read(heading, line, column);
+      lines.start(column);
       if (section !== 'node') {
         owner = sectionOwnerOf(heading, section);
         return;
@@ -53,7 +54,7 @@ export function strictObserver(): StrictObserver {
       instanced.record(heading, isRoot);
       const context = {
         line,
-        column: columns.start + 1,
+        column,
         isRoot,
         owner: nodeOwner,
         hasInstancedAncestor: instanced.hasInstancedAncestor,

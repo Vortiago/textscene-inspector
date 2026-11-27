@@ -155,6 +155,7 @@ export class TscnParserCore {
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
     let currentHeadingLine = 0;
+    let currentHeadingColumn = 1;
     // Where the next pass starts on its line: past a heading's `]`, Godot reads the rest of the line as body.
     let resumeColumn = 0;
     // The newlines a string escapes so far, which Godot's line counter skips (variant_parser.cpp:386).
@@ -190,7 +191,9 @@ export class TscnParserCore {
       if (currentSection === 'node') {
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
-          origins.push(nodeOrigin(currentHeading, node, currentHeadingLine));
+          origins.push(
+            nodeOrigin(currentHeading, node, { line: currentHeadingLine, column: currentHeadingColumn })
+          );
           observer?.onSectionBuilt?.(node, currentHeadingLine);
         }
       } else if (currentSection === 'ext_resource') {
@@ -303,6 +306,7 @@ export class TscnParserCore {
       currentHeading = heading;
       currentSection = this.identifySection(heading);
       currentHeadingLine = line;
+      currentHeadingColumn = columns.start + 1;
       if (heading.type === 'gd_resource') headerResourceType = heading.attributes.type;
       const editablePath = heading.type === 'editable' ? heading.attributes.path : undefined;
       if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));

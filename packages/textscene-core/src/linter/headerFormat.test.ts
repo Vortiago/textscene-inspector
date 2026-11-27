@@ -7,26 +7,28 @@ import { isLegacyFormat, readHeaderFormat } from './headerFormat.js';
 
 describe('readHeaderFormat', () => {
   it('reads the version and the line off a plain header', () => {
-    expect(readHeaderFormat('[gd_scene format=3]\n')).toEqual({ format: 3, line: 1 });
+    expect(readHeaderFormat('[gd_scene format=3]\n')).toEqual({ format: 3, line: 1, column: 1 });
     expect(readHeaderFormat('[gd_resource type="Curve" format=2]\n')).toEqual({
       format: 2,
       line: 1,
+      column: 1,
     });
   });
 
   it('skips leading blank and comment lines to find the header', () => {
     // A scene may open with a `;` block and carry the header below it.
     const content = '; A comment\n;; another\n\n[gd_scene format=2]\n';
-    expect(readHeaderFormat(content)).toEqual({ format: 2, line: 4 });
+    expect(readHeaderFormat(content)).toEqual({ format: 2, line: 4, column: 1 });
   });
 
   it('reports no version when the header declares none', () => {
     // Absent is current, not oldest: the engine defaults it to FORMAT_VERSION
     // (resource_format_text.cpp:1147-1148).
-    expect(readHeaderFormat('[gd_scene]\n')).toEqual({ format: null, line: 1 });
+    expect(readHeaderFormat('[gd_scene]\n')).toEqual({ format: null, line: 1, column: 1 });
     expect(readHeaderFormat('[gd_scene load_steps=2 uid="uid://abc"]\n')).toEqual({
       format: null,
       line: 1,
+      column: 1,
     });
   });
 

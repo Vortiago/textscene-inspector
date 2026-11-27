@@ -52,10 +52,15 @@ export function createRawNode(heading: ParsedHeading, rawProperties: Record<stri
 }
 
 /** A heading's node beside the facts of the heading that `seatScene` reads. */
-export function nodeOrigin<N extends RawNode>(heading: ParsedHeading, node: N, line: number): NodeOrigin<N> {
+export function nodeOrigin<N extends RawNode>(
+  heading: ParsedHeading,
+  node: N,
+  { line, column }: { line: number; column: number }
+): NodeOrigin<N> {
   return {
     node,
     line,
+    column,
     declaredParent: heading.attributes.parent,
     idTrail: parseIdTrail(heading.attributes.parent_id_path),
     ownerIdTrail: parseIdTrail(heading.attributes.owner_uid_path),

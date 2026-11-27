@@ -15,6 +15,8 @@ export interface NodeOrigin<N extends RawNode> {
   readonly node: N;
   /** 1-based line of the node's own heading. */
   readonly line: number;
+  /** 1-based column of the heading's `[`, past another heading on its line. */
+  readonly column: number;
   /**
    * The heading's `parent=` as written, or undefined where it declares none. Not
    * `node.parent`, which both parsers leave unset for an empty one: `add_node_path`
@@ -207,6 +209,8 @@ export type SceneNode<N> = RawNode & { children: N[] };
 export interface ConnectionHeading {
   /** 1-based. */
   line: number;
+  /** 1-based column of the heading's `[`. */
+  column: number;
   signal: string | undefined;
   from: string | undefined;
   to: string | undefined;
@@ -257,8 +261,8 @@ export interface HeadingFacts {
   resolveConnectionEnd: ConnectionEndResolver<RawNode>;
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
-  /** The line of each `[editable]` heading that states no `path=`, which the loader refuses. */
-  pathlessEditableLines: readonly number[];
+  /** Where each `[editable]` heading that states no `path=` starts, which the loader refuses. */
+  pathlessEditables: readonly { line: number; column: number }[];
 }
 
 /** `node` skips a failed `ExtResource`, and each other place ends the load (resource_format_text.cpp:288). */

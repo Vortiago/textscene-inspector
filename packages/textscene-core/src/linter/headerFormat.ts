@@ -40,6 +40,8 @@ interface HeaderFormat {
   readonly format: number | null;
   /** 1-based line the header sits on. */
   readonly line: number;
+  /** 1-based column of the header's `[`. */
+  readonly column: number;
 }
 
 /**
@@ -55,7 +57,8 @@ export function readHeaderFormat(content: string): HeaderFormat | null {
   for (let line = 1; at < content.length; line++) {
     const newline = content.indexOf('\n', at);
     const end = newline === -1 ? content.length : newline;
-    const trimmed = content.slice(at, end).trim();
+    const written = content.slice(at, end);
+    const trimmed = written.trim();
     at = end + 1;
     if (trimmed === '' || trimmed.startsWith(';')) continue;
 
@@ -72,7 +75,7 @@ export function readHeaderFormat(content: string): HeaderFormat | null {
     // `int` (`resource_format_text.h:68`), so `format=2.0` truncates to format 2.
     // `1e999`, `inf` and `nan` read as non-finite, and this check folds them to `null`.
     const format = parsed !== null && Number.isFinite(parsed) ? Math.trunc(parsed) : null;
-    return { format, line };
+    return { format, line, column: written.indexOf('[') + 1 };
   }
   return null;
 }

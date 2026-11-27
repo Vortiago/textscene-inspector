@@ -23,7 +23,7 @@ function missingFieldDiagnostic(connection: ConnectionHeading): Diagnostic[] {
       CONNECTION_SUBJECT,
       `Connection heading is missing ${names}. Godot cannot load the file at all: the text loader ` +
         'refuses a connection that lacks one, so nothing in the file is read.',
-      { line: connection.line, column: 1 }
+      { line: connection.line, column: connection.column }
     ),
   ];
 }
@@ -54,7 +54,7 @@ function missingNodeDiagnostics(scene: StrictScene, connection: ConnectionHeadin
         CONNECTION_SUBJECT,
         `Connection ${field}="${path}" names no node in this file. Godot loads the scene and skips the ` +
           'connection, so the signal never reaches the method.',
-        { line: connection.line, column: 1 }
+        { line: connection.line, column: connection.column }
       ),
     ];
   });
