@@ -26,7 +26,7 @@ describe('LanguageDocument', () => {
 
   it('maps a property line back to its slot and section', () => {
     const document = new LanguageDocument(SCENE);
-    const location = document.propertyAt(LINE.meshProperty);
+    const location = document.propertyAt(LINE.meshProperty, 0);
     expect(location?.section.attributes.name).toBe('Mesh');
     expect(location?.property.storedKey).toBe('mesh');
   });
@@ -34,7 +34,7 @@ describe('LanguageDocument', () => {
   it('leaves a blank line between sections in no section', () => {
     const document = new LanguageDocument(SCENE);
     expect(document.sectionAt(2, 0)).toBeUndefined();
-    expect(document.propertyAt(2)).toBeUndefined();
+    expect(document.propertyAt(2, 0)).toBeUndefined();
   });
 
   it('spans a multiline value to its closing line', () => {
@@ -48,7 +48,7 @@ describe('LanguageDocument', () => {
       '',
     ].join('\n');
     const document = new LanguageDocument(text);
-    const property = document.propertyAt(2)?.property;
+    const property = document.propertyAt(2, 0)?.property;
     expect(property?.isMultiline).toBe(true);
     expect(property?.startLine).toBe(2);
     expect(property?.endLine).toBe(6);
@@ -56,7 +56,7 @@ describe('LanguageDocument', () => {
 
   it('spans a value that starts on the line after its key', () => {
     const text = ['[node name="Root" type="Node2D"]', 'position =', '', 'Vector2(1, 2)', ''].join('\n');
-    const property = new LanguageDocument(text).propertyAt(2)?.property;
+    const property = new LanguageDocument(text).propertyAt(2, 0)?.property;
     expect(property?.isMultiline).toBe(true);
     expect(property?.startLine).toBe(2);
     expect(property?.endLine).toBe(4);

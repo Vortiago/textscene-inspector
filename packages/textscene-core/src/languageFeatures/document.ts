@@ -13,7 +13,7 @@ import {
   type ParseObserver,
   type SectionType,
 } from '../parser/TscnParserCore.js';
-import { splitLines, stripLineComment, type ParsedHeading } from '../parser/utils.js';
+import { godotIndent, splitLines, stripLineComment, type ParsedHeading } from '../parser/utils.js';
 
 /** The four section tags a feature reads, and `other` for the rest (`gd_scene`, `connection`). */
 type SectionKind = 'node' | 'sub_resource' | 'ext_resource' | 'resource' | 'other';
@@ -55,6 +55,11 @@ export interface DocumentSection {
 export interface PropertyLocation {
   readonly section: DocumentSection;
   readonly property: PropertySlot;
+}
+
+/** Where a property starts on a one-based line: its key's column on its first line, else the line start. */
+function startColumnOn(property: PropertySlot, line: number): number {
+  return property.startLine === line ? property.startColumn : 0;
 }
 
 function toKind(section: SectionType): SectionKind {
@@ -157,14 +162,15 @@ export class LanguageDocument {
   private readonly sectionByLine: Map<number, DocumentSection>;
   /** The sections whose heading starts on each line, in order: a line can hold several. */
   private readonly headingsByLine: Map<number, DocumentSection[]>;
-  private readonly propertyByLine: Map<number, PropertyLocation>;
+  /** The properties on each line, in order: a heading between two puts both on one line. */
+  private readonly propertiesByLine: Map<number, PropertyLocation[]>;
 
   constructor(readonly text: string) {
     this.lines = splitLines(text);
     this.sections = scanSections(text, this.lines);
     this.sectionByLine = new Map();
     this.headingsByLine = new Map();
-    this.propertyByLine = new Map();
+    this.propertiesByLine = new Map();
     for (const section of this.sections) {
       const sharing = this.headingsByLine.get(section.headingLine);
       if (sharing) sharing.push(section);
@@ -174,7 +180,9 @@ export class LanguageDocument {
       }
       for (const property of section.properties) {
         for (let line = property.startLine; line <= property.endLine; line++) {
-          this.propertyByLine.set(line, { section, property });
+          const sharing = this.propertiesByLine.get(line);
+          if (sharing) sharing.push({ section, property });
+          else this.propertiesByLine.set(line, [{ section, property }]);
         }
       }
     }
@@ -184,10 +192,21 @@ export class LanguageDocument {
   sectionAt(line: number, character: number): DocumentSection | undefined {
     const section = this.sectionByLine.get(line);
     if (section?.headingLine !== line) return section;
-    // The column picks the last heading on the line that starts at or before it, else the first one.
+    // The last heading started at the column wins. Before them all, body text is the section before's.
     const onLine = this.headingsByLine.get(line)!;
     const started = onLine.filter((found) => found.headingColumns.start <= character);
+    if (started.length === 0 && this.holdsBodyBefore(onLine[0]!)) return this.sectionBefore(onLine[0]!);
     return started.at(-1) ?? onLine[0];
+  }
+
+  /** Whether text, not only an indent, comes before a heading on its line: the body of the section before. */
+  private holdsBodyBefore(section: DocumentSection): boolean {
+    const line = this.lines[section.headingLine - 1] ?? '';
+    return godotIndent(line) < section.headingColumns.start;
+  }
+
+  private sectionBefore(section: DocumentSection): DocumentSection | undefined {
+    return this.sections[this.sections.indexOf(section) - 1];
   }
 
   /** A heading's first line, blank outside its own columns and without a comment: each offset is a column. */
@@ -206,8 +225,11 @@ export class LanguageDocument {
     return character < end || end === (this.lines[line - 1]?.length ?? 0);
   }
 
-  /** The property a one-based line belongs to, with its section. */
-  propertyAt(line: number): PropertyLocation | undefined {
-    return this.propertyByLine.get(line);
+  /** The property at a one-based line and a zero-based column: the last started there, else the first. */
+  propertyAt(line: number, character: number): PropertyLocation | undefined {
+    const onLine = this.propertiesByLine.get(line);
+    if (!onLine) return undefined;
+    const started = onLine.filter(({ property }) => startColumnOn(property, line) <= character);
+    return started.at(-1) ?? onLine[0];
   }
 }

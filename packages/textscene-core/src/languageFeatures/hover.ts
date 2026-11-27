@@ -136,7 +136,7 @@ export function hoverAt(document: LanguageDocument, position: Position): Hover |
     return classHover(type.value, lineRange(position.line, type.span));
   }
 
-  const location = document.propertyAt(documentLine);
+  const location = document.propertyAt(documentLine, position.character);
   if (!location) return undefined;
 
   // A property's key sits on its first line, so a continuation line of a multiline value
@@ -148,6 +148,9 @@ export function hoverAt(document: LanguageDocument, position: Position): Hover |
   }
   if (location.property.isMultiline) return undefined;
   const value = propertyValueSpan(line, location.property.startColumn);
-  if (!value || !spanContains(value.span, position.character)) return undefined;
-  return valueHover(document, location, lineRange(position.line, value.span));
+  if (!value) return undefined;
+  // The stored value ends where Godot's reader ends it, before a heading that follows on the line.
+  const span = { start: value.span.start, end: value.span.start + location.property.value.length };
+  if (!spanContains(span, position.character)) return undefined;
+  return valueHover(document, location, lineRange(position.line, span));
 }

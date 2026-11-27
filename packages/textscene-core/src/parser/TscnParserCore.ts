@@ -363,11 +363,13 @@ export class TscnParserCore {
 
     // A key with no value at the end: Godot reads the end as its value (variant_parser.cpp:1953, :1638).
     const refuseValueAtEnd = (pending: { key: string; startLine: number; startColumn: number }) => {
-      const read = readVariant('');
-      if (!('error' in read)) return;
-      headings.refuse({ error: read.error, code: GodotError.ParseError, line: lines.length - skippedLines });
+      headings.refuse({
+        error: VALUE_AT_END,
+        code: GodotError.ParseError,
+        line: lines.length - skippedLines,
+      });
       observer?.onError?.({
-        message: `"${pending.key} =" has no value, and Godot stops at the end of the file: ${read.error}`,
+        message: `"${pending.key} =" has no value, and Godot stops at the end of the file: ${VALUE_AT_END}`,
         line: pending.startLine,
         column: pending.startColumn + 1,
         code: 'INVALID_PROPERTY_FORMAT',
@@ -619,6 +621,9 @@ export class TscnParserCore {
   }
 }
 
+/** `parse_value`'s message for the end of the file read as a value (variant_parser.cpp:1638). */
+const VALUE_AT_END = "Expected value, got 'EOF'";
+
 // The linter's `connection-missing-field` and `editable-missing-path` rules report these kinds.
 const RULE_REPORTED: ReadonlySet<string> = new Set(['connection', 'editable']);
 
@@ -642,7 +647,7 @@ const MAY_HOLD_HEADING = /[^\s,[(:{]\s*(?<!\b(?:Array|Dictionary))\[/;
 /** Where a heading opens after a complete value on its line, as Godot reads it, or null. */
 function headingAfterValue(value: string): number | null {
   if (!MAY_HOLD_HEADING.test(value)) return null;
-  const end = variantEnd(value);
+  const end = variantEnd(value, SECTION_READING);
   if (end === null) return null;
   const at = end + godotIndent(value.slice(end));
   return value[at] === '[' ? at : null;

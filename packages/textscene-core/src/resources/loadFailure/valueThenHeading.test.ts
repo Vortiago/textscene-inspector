@@ -22,10 +22,12 @@ const HEADING = '[node name="B" type="Node2D" parent="."]';
 
 const LOADS = 'loads Root[A, B(5.0, 5.0)]';
 
-/** A scene whose node A holds `property`, written over one or more lines. */
+/** A scene whose node A holds `property`, written over one or more lines, after a sub-resource with id 1. */
 const scene = (...property: string[]) =>
   [
     '[gd_scene format=3]',
+    '',
+    '[sub_resource type="Gradient" id=1]',
     '',
     '[node name="Root" type="Node2D"]',
     '',
@@ -44,6 +46,8 @@ const WRITTEN: Record<string, string> = {
       ])
     )
   ),
+  sub_resource_number: scene(`editor_description = SubResource( 1 ) ${HEADING}`),
+  sub_resource_string: scene(`editor_description = SubResource("1") ${HEADING}`),
   next_line: scene('editor_description =', `"a" ${HEADING}`),
   split: scene('editor_description = ["a",', `"b"] ${HEADING}`),
 };
@@ -51,8 +55,8 @@ const WRITTEN: Record<string, string> = {
 /** The line Godot 4.6.3 prints for each case, `@` for the file, measured with the load oracle. */
 const GODOT: Record<string, string> = {
   ...Object.fromEntries(Object.keys(WRITTEN).map((name) => [name, LOADS])),
-  node_path__space: 'Parse Error: Parse error. [Resource file @:6]',
-  node_path__none: 'Parse Error: Parse error. [Resource file @:6]',
+  node_path__space: 'Parse Error: Parse error. [Resource file @:8]',
+  node_path__none: 'Parse Error: Parse error. [Resource file @:8]',
 };
 
 const CASES = Object.entries(WRITTEN).map(([name, text]) => ({

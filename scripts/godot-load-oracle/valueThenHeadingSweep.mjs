@@ -20,10 +20,12 @@ const GAPS = { space: ' ', none: '' };
 
 const HEADING = '[node name="B" type="Node2D" parent="."]';
 
-/** A scene whose node A holds `property`, written over one or more lines. */
+/** A scene whose node A holds `property`, written over one or more lines, after a sub-resource with id 1. */
 const scene = (...property) =>
   [
     '[gd_scene format=3]',
+    '',
+    '[sub_resource type="Gradient" id=1]',
     '',
     '[node name="Root" type="Node2D"]',
     '',
@@ -41,6 +43,8 @@ const cases = [
     }))
   ),
   { file: 'next_line.tscn', text: scene('editor_description =', `"a" ${HEADING}`) },
+  { file: 'sub_resource_number.tscn', text: scene(`editor_description = SubResource( 1 ) ${HEADING}`) },
+  { file: 'sub_resource_string.tscn', text: scene(`editor_description = SubResource("1") ${HEADING}`) },
   { file: 'split.tscn', text: scene('editor_description = ["a",', `"b"] ${HEADING}`) },
 ];
 console.log(writeCaseFiles(process.argv[2], cases));

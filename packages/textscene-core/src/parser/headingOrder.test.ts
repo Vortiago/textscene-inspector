@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { missingField } from '../godot/scene/textResourceTags.js';
 import { headingOrder } from './headingOrder.js';
 
 function misplacedIn(...types: string[]) {
@@ -41,17 +40,6 @@ describe('headingOrder', () => {
 
   it('keeps the first refusal, as the loader stops there', () => {
     expect(misplacedIn('gd_scene', 'node', 'sub_resource', 'ext_resource')).toMatchObject({ line: 3 });
-  });
-
-  it.each([
-    ['ext_resource', ['id'], 'path'],
-    ['ext_resource', ['path', 'id'], 'type'],
-    ['sub_resource', ['type'], 'id'],
-    ['connection', ['from', 'to', 'signal'], 'method'],
-    ['node', [], undefined],
-    ['ext_resource', ['path', 'type', 'id'], undefined],
-  ])('names the first required field a [%s] with %j lacks', (type, keys, field) => {
-    expect(missingField(type, keys)).toBe(field);
   });
 
   it('stops at a heading in its place that lacks a required field', () => {

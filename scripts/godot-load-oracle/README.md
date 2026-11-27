@@ -31,4 +31,4 @@ Godot must be on the path. The oracle measures the rows of `packages/textscene-c
 
 `stringEscapeSweep.mjs <folder>` writes 60 cases into a new or empty folder: each of 30 string escapes in a heading name and in a body string. `stringEscapes.test.ts` holds Godot's result for each case.
 
-`valueThenHeadingSweep.mjs <folder>` writes 24 cases into a new or empty folder: a value of each of 11 kinds before a heading on its line, with and without a space between. Two more put the value on the line below its key, and over two lines. `valueThenHeading.test.ts` holds Godot's result for each case.
+`valueThenHeadingSweep.mjs <folder>` writes 26 cases into a new or empty folder: a value of each of 11 kinds before a heading on its line, with and without a space between. Two more read a `SubResource` by a number id and a string id. Two more put the value on the line below its key, and over two lines. `valueThenHeading.test.ts` holds Godot's result for each case.

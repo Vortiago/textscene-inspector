@@ -790,12 +790,12 @@ export function readVariant(text: string, reading: VariantReading = {}): Variant
 }
 
 /** The offset past the first value in `text`, where `parse_tag_assign_eof` returns, or null. */
-export function variantEnd(text: string): number | null {
+export function variantEnd(text: string, reading: VariantReading): number | null {
   const tokens = new Tokens(text);
   const first = tokens.next();
   if (first.kind === 'error') return null;
   try {
-    new ValueReader(tokens, {}).value(first);
+    new ValueReader(tokens, reading).value(first);
     return tokens.offset;
   } catch (error) {
     if (error instanceof ParseError) return null;
