@@ -29,6 +29,12 @@ describe('TscnParserCore', () => {
     expect(scene.nodes[0]?.rawProperties).toEqual({ 'metadata/a': '"x=y"', visible: 'false' });
   });
 
+  it('keeps an empty value empty before a heading after a control code Godot skips', () => {
+    const content = '[node name="Root" type="Node2D"]\nkey =\n\x01[node name="B" type="Node" parent="."]\n';
+    const { scene } = parser.parse(content, simpleCreator);
+    expect(scene.nodes[0]?.rawProperties).toEqual({ key: '' });
+  });
+
   describe('callback pattern', () => {
     it('should call node creator for each node heading', () => {
       const content = `

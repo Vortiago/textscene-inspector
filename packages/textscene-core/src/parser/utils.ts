@@ -352,7 +352,7 @@ const SECTION_HEADING_RE =
   /^\[(gd_scene|gd_resource|ext_resource|sub_resource|node|resource|connection|editable)\b/;
 
 export function isSectionHeading(line: string): boolean {
-  return SECTION_HEADING_RE.test(line.trim());
+  return SECTION_HEADING_RE.test(trimSpace(line));
 }
 
 /**

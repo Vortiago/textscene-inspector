@@ -11,6 +11,7 @@ import {
   godotIndent,
   leadingSpace,
   trimEndSpace,
+  isSectionHeading,
 } from './utils';
 
 describe('parseHeading', () => {
@@ -351,5 +352,15 @@ describe('trimEndSpace', () => {
 
   it('keeps the white space that starts a string', () => {
     expect(trimEndSpace(' \x01true')).toBe(' \x01true');
+  });
+});
+
+describe('isSectionHeading', () => {
+  it('opens a section after a code up to 32 that Godot skips, where trim keeps a control code', () => {
+    expect(isSectionHeading('\x01[node name="B" type="Node"]')).toBe(true);
+  });
+
+  it('opens no section at a bracket that names no section keyword', () => {
+    expect(isSectionHeading('[b]bold[/b]')).toBe(false);
   });
 });

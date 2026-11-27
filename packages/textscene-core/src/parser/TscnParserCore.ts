@@ -114,7 +114,7 @@ export interface HeadingColumns {
  * purely additive: it never changes what the lenient loop parses or recovers.
  */
 export interface ParseObserver {
-  /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
+  /** A line Godot refuses: INVALID_HEADING_FORMAT, INVALID_PROPERTY_FORMAT or MISSING_HEADING_FIELD. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;
   /** A heading parsed successfully and a new section begins. `columns` spans its text on its first line. */
   onSectionStart?(heading: ParsedHeading, section: SectionType, line: number, columns: HeadingColumns): void;
@@ -329,7 +329,8 @@ export class TscnParserCore {
       );
       const stopBefore = headings.stop();
       headings.read(heading.type, endLine, missing);
-      if (missing && headings.stop() !== stopBefore) reportMissingField(heading.type, missing, line, columns);
+      if (missing && headings.stop() !== stopBefore && !RULE_REPORTED.has(heading.type))
+        reportMissingField(heading.type, missing, line, columns);
       observer?.onSectionStart?.(heading, currentSection, line, columns);
     };
 
@@ -566,6 +567,9 @@ export class TscnParserCore {
     return 'none';
   }
 }
+
+// The linter's `connection-missing-field` and `editable-missing-path` rules report these kinds.
+const RULE_REPORTED: ReadonlySet<string> = new Set(['connection', 'editable']);
 
 /** The `type=` string a tag read before it stopped, or undefined where it read none. */
 function typeField(content: string, fields: readonly TagField[]): string | undefined {

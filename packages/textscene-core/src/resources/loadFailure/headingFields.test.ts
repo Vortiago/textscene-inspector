@@ -84,10 +84,11 @@ describe('a heading without a field Godot requires, as Godot 4.6.3 loads it', ()
     expect(() => parseTresFile(file.text)).toThrow(UnparsedTextError);
   });
 
-  it.each(CASES)('$name gives a diagnostic on the heading', ({ file }) => {
+  // The `connection-missing-field` and `editable-missing-path` rules report their kinds, once.
+  it.each(CASES)('$name gives one diagnostic, on the heading', ({ file }) => {
     const diagnostics = new Linter()
       .lint(file.text)
-      .filter(({ message }) => message.startsWith('Godot stops the load at a ['));
+      .filter(({ message }) => / with no '|heading is missing '/.test(message));
     expect(diagnostics.map(({ location }) => location?.line)).toEqual([file.headingLine]);
   });
 });
