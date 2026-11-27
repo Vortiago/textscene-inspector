@@ -180,9 +180,9 @@ export function renderingMethodFallbackMessage(requested, rendered) {
   );
 }
 
-/** The refusal for a Vulkan frame off lavapipe, or null. OpenGL (Xvfb software) and hostGpu frames pass. */
-export function renderingDeviceMessage(rendered, { hostGpu = false } = {}) {
-  if (hostGpu || !rendered || rendered.driver !== 'vulkan' || /llvmpipe/i.test(rendered.adapter)) return null;
+/** The refusal for a Vulkan frame off lavapipe, or null. OpenGL (Xvfb software) frames pass. */
+export function renderingDeviceMessage(rendered) {
+  if (!rendered || rendered.driver !== 'vulkan' || /llvmpipe/i.test(rendered.adapter)) return null;
   return (
     `Refusing to answer: Godot rendered on "${rendered.adapter}", not on lavapipe, the driver the ` +
     'comparison browser renders on. Install mesa-vulkan-drivers, which provides lavapipe.'
@@ -559,10 +559,15 @@ function refuseIgnoredByInGame(given) {
   }
 }
 
-/** Throws for a 2D mode, which records no time, and a probe, which would read the host-GPU picture. */
-function refuseUntimed({ mode, probes }) {
+/** Throws for a 2D mode or an OpenGL driver, which record no time, and a probe of the host-GPU picture. */
+function refuseUntimed({ mode, probes, renderingDriver }) {
   if (mode === '2d' || mode === '2d-root')
     throw new Error(`--gpu-time cannot take --mode ${mode}: it times a 3D render.`);
+  if (RENDERING_DRIVERS[renderingDriver] === 'gl_compatibility') {
+    throw new Error(
+      `--gpu-time cannot take --rendering-driver ${renderingDriver}: it has no RenderingDevice to time.`
+    );
+  }
   if (probes.length > 0) {
     throw new Error('--gpu-time cannot take --probe: the picture comes from the host GPU, not lavapipe.');
   }
@@ -1945,7 +1950,8 @@ async function renderInto(
     rendererReport
   );
   if (fallback) await refuse(fallback, { renderingMethodFallback: true });
-  const device = renderingDeviceMessage(rendererReport, { hostGpu });
+  // A timed run measures the host GPU, so any device passes.
+  const device = hostGpu ? null : renderingDeviceMessage(rendererReport);
   if (device) await refuse(device);
 
   const drift = existsSync(driftOut)

@@ -21,7 +21,12 @@ export function readGpuTime(text) {
   if (recorded.frames.length === 0) {
     throw new Error(`expected GPU frame times from Godot, got ${recorded.frames.length} frames`);
   }
-  const passes = Object.entries(recorded.passes)
+  if (recorded.passFrames.length === 0) {
+    throw new Error(
+      `expected pass times from a RenderingDevice, got none on the "${recorded.driver}" driver`
+    );
+  }
+  const passes = [...timesPerPass(recorded.passFrames)]
     .map(([name, times]) => ({ name, spread: spreadOfMs(times) }))
     .sort((a, b) => b.spread.medianMs - a.spread.medianMs);
   return {
@@ -29,6 +34,17 @@ export function readGpuTime(text) {
     frame: spreadOfMs(recorded.frames),
     passes,
   };
+}
+
+/** One time per pass and frame. A name stamped twice adds up (`rendering_server_default.cpp:176`). */
+function timesPerPass(passFrames) {
+  const times = new Map();
+  for (const stamps of passFrames) {
+    const frame = new Map();
+    for (const [name, ms] of stamps) frame.set(name, (frame.get(name) ?? 0) + ms);
+    for (const [name, ms] of frame) times.set(name, [...(times.get(name) ?? []), ms]);
+  }
+  return times;
 }
 
 /** The pass time `--gpu-profile`'s own print leaves out (`rendering_server_default.cpp:191`). */
@@ -60,7 +76,7 @@ func _record_gpu_time(source: Viewport) -> void:
 	for _i in GPU_TIME_WARMUP_FRAMES:
 		await RenderingServer.frame_post_draw
 	var frames: Array[float] = []
-	var passes := {}
+	var pass_frames := []
 	var last_captured := -1
 	while frames.size() < GPU_TIME_FRAMES:
 		await RenderingServer.frame_post_draw
@@ -68,26 +84,26 @@ func _record_gpu_time(source: Viewport) -> void:
 		# The device keeps one frame's timestamps, so a frame it has not replaced is not read twice.
 		if device != null and device.get_captured_timestamps_frame() != last_captured:
 			last_captured = device.get_captured_timestamps_frame()
-			_add_pass_times(device, passes)
+			pass_frames.append(_pass_stamps(device))
 	var file := FileAccess.open(GPU_TIME_OUT, FileAccess.WRITE)
 	file.store_string(JSON.stringify({
 		"adapter": RenderingServer.get_video_adapter_name(),
 		"driver": RenderingServer.get_current_rendering_driver_name(),
 		"size": [source.get_visible_rect().size.x, source.get_visible_rect().size.y],
 		"frames": frames,
-		"passes": passes,
+		"passFrames": pass_frames,
 	}))
 	file.close()
 
 # Each pass lasts from its timestamp to the next one, as Godot's own --gpu-profile print reads them.
-func _add_pass_times(device: RenderingDevice, passes: Dictionary) -> void:
+func _pass_stamps(device: RenderingDevice) -> Array:
+	var stamps := []
 	for i in device.get_captured_timestamps_count() - 1:
 		var pass_name := device.get_captured_timestamp_name(i)
 		if pass_name.begins_with("<") or pass_name.begins_with(">"):
 			continue
 		var ms := (device.get_captured_timestamp_gpu_time(i + 1) - device.get_captured_timestamp_gpu_time(i)) / 1000000.0
-		if not passes.has(pass_name):
-			passes[pass_name] = []
-		passes[pass_name].append(ms)
+		stamps.append([pass_name, ms])
+	return stamps
 `;
 }

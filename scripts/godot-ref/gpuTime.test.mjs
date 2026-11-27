@@ -34,7 +34,21 @@ describe('readGpuTime', () => {
     driver: 'vulkan',
     size: [1073, 1830],
     frames: [5, 1, 4, 2, 3, 10, 6, 7, 8, 9, 11],
-    passes: { 'Render Shadows': [2, 2, 2], 'Render Opaque Pass': [4, 6, 5], 'Frame Begin': [0.01] },
+    passFrames: [
+      [
+        ['Render Shadows', 2],
+        ['Render Opaque Pass', 4],
+        ['Frame Begin', 0.01],
+      ],
+      [
+        ['Render Shadows', 2],
+        ['Render Opaque Pass', 6],
+      ],
+      [
+        ['Render Shadows', 2],
+        ['Render Opaque Pass', 5],
+      ],
+    ],
   };
 
   it('gives the frame the median and the 10th and 90th percentiles, as textscene.profile does', () => {
@@ -54,6 +68,25 @@ describe('readGpuTime', () => {
       driver: 'vulkan',
       size: [1073, 1830],
     });
+  });
+
+  it('adds up a pass name stamped twice in one frame, as Godot’s own print does', () => {
+    const twice = {
+      ...recorded,
+      passFrames: [
+        [
+          ['Render Shadows', 1],
+          ['Render Shadows', 2],
+        ],
+      ],
+    };
+    expect(readGpuTime(JSON.stringify(twice)).passes[0].spread.medianMs).toBe(3);
+  });
+
+  it('refuses a recording with no pass times, as a driver with no RenderingDevice gives (error case)', () => {
+    expect(() => readGpuTime(JSON.stringify({ ...recorded, driver: 'opengl3', passFrames: [] }))).toThrow(
+      'expected pass times from a RenderingDevice, got none on the "opengl3" driver'
+    );
   });
 
   it('refuses a recording with no frames, naming what it found', () => {

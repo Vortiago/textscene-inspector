@@ -1294,9 +1294,9 @@ describe('--gpu-time measures Godot on the host GPU', () => {
     expect(bootstrap({ gpuTimeFrames: 0, gpuTimeOut: '' })).not.toContain('_record_gpu_time');
   });
 
-  it("accepts any GPU, since the time is the host GPU's own", () => {
-    expect(
-      renderingDeviceMessage({ driver: 'vulkan', adapter: 'Intel(R) UHD Graphics 630' }, { hostGpu: true })
-    ).toBe(null);
+  it('refuses an OpenGL driver, which has no RenderingDevice to time (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--gpu-time', '--rendering-driver', 'opengl3'])).toThrow(
+      '--gpu-time cannot take --rendering-driver opengl3'
+    );
   });
 });

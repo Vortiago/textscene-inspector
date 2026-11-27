@@ -127,16 +127,16 @@ export class DrawSources {
   private readonly clears = new Map<string, DrawSource>();
 
   of(step: StepKey, object: THREE.Object3D, material: THREE.Material): DrawSource {
-    return named(this.draws, step, nameOf(object), material.name || material.type);
+    return sourceFor(this.draws, step, nameOf(object), material.name || material.type);
   }
 
   /** A clear of the bound target, named by its texture, or `canvas` for the screen. */
   ofClear(step: StepKey, target: THREE.WebGLRenderTarget | null): DrawSource {
-    return named(this.clears, step, 'Clear', target ? target.texture.name || UNNAMED_TARGET : 'canvas');
+    return sourceFor(this.clears, step, 'Clear', target ? target.texture.name || UNNAMED_TARGET : 'canvas');
   }
 }
 
-function named(
+function sourceFor(
   sources: Map<string, DrawSource>,
   step: StepKey,
   object: string,

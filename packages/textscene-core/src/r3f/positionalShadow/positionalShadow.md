@@ -79,7 +79,7 @@ three calls `updateMatrices` before it binds and clears the atlas for the light
 
 The shadow pass lets only the first clear of the atlas through in a pass, and clears the whole
 atlas with it (`oneAtlasClear.ts`). Every slotted spot and area light draws in each pass, and the
-omni copies run after them, so the clear erases no slot that the lit draw reads. Godot clears each
+omni copies run after them. So the clear erases no slot that the lit draw reads. Godot clears each
 slot on its own (`render_forward_clustered.cpp:1570`), because it keeps the slot of a light whose
 shadow did not change. When an omni light keeps an earlier pass's slot, the pass does the same.
 
