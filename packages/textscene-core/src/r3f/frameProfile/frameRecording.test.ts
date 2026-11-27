@@ -426,6 +426,16 @@ describe('DrawSources', () => {
 
     expect(sources.of('Shadows', floor, material)).not.toBe(sources.of('Other', floor, material));
   });
+
+  it('tells a clear apart from an object named like one (edge case)', () => {
+    const sources = new DrawSources();
+    const material = new THREE.MeshBasicMaterial();
+    material.name = 'canvas';
+
+    expect(sources.ofClear('Other', null)).not.toBe(
+      sources.of('Other', named(new THREE.Mesh(), 'Clear'), material)
+    );
+  });
 });
 
 describe('addDrawGpuTime', () => {

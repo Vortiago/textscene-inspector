@@ -77,6 +77,22 @@ describe('the directional shadow atlas', () => {
   });
 });
 
+describe('isDirectionalShadowAtlas', () => {
+  it('is true for the atlas a holder draws into', () => {
+    expect(atlasModule.isDirectionalShadowAtlas(atlasModule.holdDirectionalShadowAtlas(aShadow()))).toBe(
+      true
+    );
+  });
+
+  it('is false for another target (error case)', () => {
+    expect(atlasModule.isDirectionalShadowAtlas(new THREE.WebGLRenderTarget(8, 8))).toBe(false);
+  });
+
+  it('is false for the canvas (edge case)', () => {
+    expect(atlasModule.isDirectionalShadowAtlas(null)).toBe(false);
+  });
+});
+
 describe('releaseDirectionalShadowAtlas', () => {
   it('frees the atlas when its last holder lets go', () => {
     const shadow = aShadow();

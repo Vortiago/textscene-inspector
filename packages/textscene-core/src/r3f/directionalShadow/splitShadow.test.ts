@@ -329,6 +329,13 @@ describe('DirectionalSplitShadow share of the atlas', () => {
     kept.dispose();
     atlas.removeEventListener('dispose', freed);
   });
+
+  it('updates its matrices without the atlas once disposed (error case)', () => {
+    const shadow = new DirectionalSplitShadow();
+    shadow.setSplits(1, WHOLE_ATLAS);
+    shadow.dispose();
+    expect(() => shadow.updateMatrices(new THREE.DirectionalLight())).not.toThrow();
+  });
 });
 
 /** three's own module source. Its exports map exposes `"./src/*"`. */

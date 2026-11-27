@@ -80,6 +80,13 @@ describe('OneAtlasClear', () => {
     expect(renderer.clear).toBe(own);
   });
 
+  it('leaves the renderer’s clear alone when it ends without a start (error case)', () => {
+    const { renderer } = clearingRenderer();
+    const own = renderer.clear;
+    new OneAtlasClear(renderer, isAtlas).end();
+    expect(renderer.clear).toBe(own);
+  });
+
   it('skips a later clear before a clear hook installed since the last pass sees it (edge case)', () => {
     const { renderer, bindAndClear } = clearingRenderer();
     const clears = new OneAtlasClear(renderer, isAtlas);

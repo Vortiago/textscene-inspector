@@ -6,7 +6,7 @@ export const GPU_TIME_DEFAULT_FRAMES = 300;
 /** Frames drawn before the recording, while the GPU clock and the pipeline caches settle. */
 export const GPU_TIME_WARMUP_FRAMES = 120;
 
-/** `--gpu-profile` turns on pass timestamps (rendering_server_default.cpp:356); vsync adds a wait. */
+/** `--gpu-profile` turns on pass timestamps (rendering_server_default.cpp:356). Vsync adds a wait. */
 export const GPU_TIME_ARGV = ['--gpu-profile', '--disable-vsync'];
 
 /** True when the host has a screen to open the window on, so no virtual X server is needed. */
@@ -46,7 +46,7 @@ export function formatGpuTime({ device, frame, passes }) {
   ].join('\n');
 }
 
-/** The bootstrap's recording, run after the capture with the picture settled; none when untimed. */
+/** The bootstrap's recording, run after the capture with the picture settled. Untimed, it is empty. */
 export function gpuTimeScript({ frames, out }) {
   if (frames === 0) return '';
   return `const GPU_TIME_FRAMES := ${frames}

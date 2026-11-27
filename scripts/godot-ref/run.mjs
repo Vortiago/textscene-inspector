@@ -334,17 +334,17 @@ const PREVIEW_GROUND_BOTTOM = [0.2, 0.169, 0.133];
  * Rejects NaN early. As `viewport_width=NaN` Godot produces nothing and never exits, so both
  * 300 s spawn timeouts elapse before an unrelated "produced no image".
  */
-function positiveInteger(flag, raw) {
-  const value = positiveNumber(flag, raw);
-  if (!Number.isInteger(value)) throw new Error(`${flag} needs a whole number, got "${raw}"`);
-  return value;
-}
-
 function positiveNumber(flag, raw) {
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(`${flag} needs a positive number, got "${raw}"`);
   }
+  return value;
+}
+
+function positiveInteger(flag, raw) {
+  const value = positiveNumber(flag, raw);
+  if (!Number.isInteger(value)) throw new Error(`${flag} needs a whole number, got "${raw}"`);
   return value;
 }
 
@@ -495,7 +495,7 @@ export function parseArgs(argv) {
         args.debugCollisions = true;
         break;
       case '--gpu-time':
-        // Godot's side of `textscene.profile()`, on the host GPU; an optional frame count follows.
+        // Godot's side of `textscene.profile()`, on the host GPU. An optional frame count follows.
         args.gpuTimeFrames = /^[\d.]+$/.test(argv[i + 1] ?? '')
           ? positiveInteger('--gpu-time', argv[++i])
           : GPU_TIME_DEFAULT_FRAMES;
@@ -517,6 +517,7 @@ export function parseArgs(argv) {
     }
   }
   if (args.mode === IN_GAME_MODE) refuseIgnoredByInGame(given);
+  if (args.gpuTimeFrames > 0) refuseUntimed(args);
 
   return args;
 }
@@ -555,6 +556,15 @@ export function parseCall(text) {
 function refuseIgnoredByInGame(given) {
   for (const [flag, reason] of IN_GAME_IGNORED) {
     if (given.has(flag)) throw new Error(`--mode ${IN_GAME_MODE} cannot take ${flag}: ${reason}.`);
+  }
+}
+
+/** Throws for a 2D mode, which records no time, and a probe, which would read the host-GPU picture. */
+function refuseUntimed({ mode, probes }) {
+  if (mode === '2d' || mode === '2d-root')
+    throw new Error(`--gpu-time cannot take --mode ${mode}: it times a 3D render.`);
+  if (probes.length > 0) {
+    throw new Error('--gpu-time cannot take --probe: the picture comes from the host GPU, not lavapipe.');
   }
 }
 
@@ -1950,12 +1960,16 @@ async function renderInto(
   return { workDir: work, out: resolve(out), mode: rendered, warnings, gpuTime };
 }
 
-/** The bootstrap records only after a 3D capture, so another kind of render has no file. */
 async function recordedGpuTime(gpuTimeOut, rendered) {
-  if (!existsSync(gpuTimeOut)) {
-    throw new Error(`--gpu-time expected a 3D render to time, got a "${rendered}" render with no recording`);
-  }
+  if (!existsSync(gpuTimeOut)) throw new Error(missingGpuTimeMessage(rendered));
   return readGpuTime(await readFile(gpuTimeOut, 'utf8'));
+}
+
+/** The bootstrap records only after a 3D capture, so a 3D render with no file quit before it ended. */
+export function missingGpuTimeMessage(rendered) {
+  return rendered === '3d'
+    ? '--gpu-time expected a recording, but Godot quit before it ended'
+    : `--gpu-time times only a 3D render, got a "${rendered}" render`;
 }
 
 async function main() {

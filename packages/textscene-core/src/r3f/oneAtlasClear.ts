@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 
-/** Lets one unscissored clear of an atlas through per pass. three clears before each light (r187 `:340`). */
+/** Lets one unscissored atlas clear through per pass. three clears per light (`WebGLShadowMap.js:340`). */
 export class OneAtlasClear {
   private clear: THREE.WebGLRenderer['clear'];
   private isCleared = false;

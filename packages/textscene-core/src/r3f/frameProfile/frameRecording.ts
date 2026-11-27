@@ -122,26 +122,33 @@ const UNNAMED_TARGET = 'unnamed target';
 
 /** One draw source per step, object and material, so a recording's sums key on identity. */
 export class DrawSources {
-  private readonly sources = new Map<string, DrawSource>();
+  private readonly draws = new Map<string, DrawSource>();
+  // Its own map, so a node named `Clear` never shares a clear's source.
+  private readonly clears = new Map<string, DrawSource>();
 
   of(step: StepKey, object: THREE.Object3D, material: THREE.Material): DrawSource {
-    return this.named(step, nameOf(object), material.name || material.type);
+    return named(this.draws, step, nameOf(object), material.name || material.type);
   }
 
   /** A clear of the bound target, named by its texture, or `canvas` for the screen. */
   ofClear(step: StepKey, target: THREE.WebGLRenderTarget | null): DrawSource {
-    return this.named(step, 'Clear', target ? target.texture.name || UNNAMED_TARGET : 'canvas');
+    return named(this.clears, step, 'Clear', target ? target.texture.name || UNNAMED_TARGET : 'canvas');
   }
+}
 
-  private named(step: StepKey, object: string, material: string): DrawSource {
-    const key = `${step}\n${object}\n${material}`;
-    let source = this.sources.get(key);
-    if (!source) {
-      source = { step, object, material };
-      this.sources.set(key, source);
-    }
-    return source;
+function named(
+  sources: Map<string, DrawSource>,
+  step: StepKey,
+  object: string,
+  material: string
+): DrawSource {
+  const key = `${step}\n${object}\n${material}`;
+  let source = sources.get(key);
+  if (!source) {
+    source = { step, object, material };
+    sources.set(key, source);
   }
+  return source;
 }
 
 /** Adds one call from `source` to each recording that times draws. */

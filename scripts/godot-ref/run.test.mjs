@@ -32,6 +32,7 @@ import {
   FRAME_MARGIN,
   godotSpawnPlan,
   importAssets,
+  missingGpuTimeMessage,
   PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
@@ -1220,6 +1221,31 @@ describe('--gpu-time measures Godot on the host GPU', () => {
 
   it('refuses the in-game mode, which it never times (error case)', () => {
     expect(() => parseArgs(['a.tscn', '--mode', 'in-game', '--gpu-time'])).toThrow('cannot take --gpu-time');
+  });
+
+  it('refuses a 2D mode, which it never times (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', '2d', '--gpu-time'])).toThrow(
+      '--gpu-time cannot take --mode 2d'
+    );
+    expect(() => parseArgs(['a.tscn', '--mode', '2d-root', '--gpu-time'])).toThrow(
+      '--gpu-time cannot take --mode 2d-root'
+    );
+  });
+
+  it('refuses a probe, which would read the host-GPU picture as a reference (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--gpu-time', '--probe', '1,2'])).toThrow(
+      '--gpu-time cannot take --probe'
+    );
+  });
+
+  it('names a 2D render that had nothing to time', () => {
+    expect(missingGpuTimeMessage('2d')).toBe('--gpu-time times only a 3D render, got a "2d" render');
+  });
+
+  it('names a 3D render that quit before the recording ended', () => {
+    expect(missingGpuTimeMessage('3d')).toBe(
+      '--gpu-time expected a recording, but Godot quit before it ended'
+    );
   });
 
   it('keeps the render pass running through the warm-up and the recorded frames', () => {
