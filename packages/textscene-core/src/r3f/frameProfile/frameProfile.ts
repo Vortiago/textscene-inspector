@@ -284,14 +284,18 @@ class Profile implements FrameProfile {
   }
 
   private readonly beginDraw = (object: THREE.Object3D, material: THREE.Material): void => {
-    if (!this.isTimingDraws || !this.isFrameOpen) return;
+    if (!this.timesThisDraw()) return;
     this.beginSource(this.drawSources.of(this.current, object, material));
   };
 
   private readonly beginClear = (): void => {
-    if (!this.isTimingDraws || !this.isFrameOpen) return;
+    if (!this.timesThisDraw()) return;
     this.beginSource(this.drawSources.ofClear(this.current, this.renderer.getRenderTarget()));
   };
+
+  private timesThisDraw(): boolean {
+    return this.isTimingDraws && this.isFrameOpen;
+  }
 
   private beginSource(draw: DrawSource): void {
     countDraw(this.recordings, draw);
@@ -299,7 +303,7 @@ class Profile implements FrameProfile {
   }
 
   private readonly endDraw = (): void => {
-    if (this.isTimingDraws && this.isFrameOpen) this.gpu?.switchTo(STEP_SEGMENTS.get(this.current)!);
+    if (this.timesThisDraw()) this.gpu?.switchTo(STEP_SEGMENTS.get(this.current)!);
   };
 
   /** Adds a frame's numbers to the published window and to each recording. */

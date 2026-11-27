@@ -23,7 +23,7 @@ import {
   formatGpuTime,
   GPU_TIME_DEFAULT_FRAMES,
   GPU_TIME_WARMUP_FRAMES,
-  gpuTimeArgv,
+  GPU_TIME_ARGV,
   gpuTimeScript,
   hasHostDisplay,
   readGpuTime,
@@ -962,8 +962,7 @@ func _render_3d(target: Node) -> void:
 	_place_camera(target)
 	await _converge(get_viewport())
 	_save_capture(get_viewport())
-	await _record_gpu_time(get_viewport())
-	_write_bounds(target)
+${gpuTimeFrames > 0 ? '\tawait _record_gpu_time(get_viewport())\n' : ''}	_write_bounds(target)
 
 func _save_capture(source: Viewport) -> void:
 	_viewport_image(source).save_png(OUT)
@@ -1604,7 +1603,7 @@ export function renderArgv(
     String(RENDER_QUIT_AFTER_FRAMES + timedFrames),
   ];
   if (debugCollisions) argv.push('--debug-collisions');
-  if (gpuTimeFrames > 0) argv.push(...gpuTimeArgv());
+  if (timedFrames > 0) argv.push(...GPU_TIME_ARGV);
   // main.cpp:2582 aborts on a driver its method does not offer, so the driver alone would abort
   // under the default `forward_plus`.
   if (renderingDriver) {

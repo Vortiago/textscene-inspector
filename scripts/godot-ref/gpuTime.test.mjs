@@ -3,15 +3,15 @@ import {
   GPU_TIME_DEFAULT_FRAMES,
   GPU_TIME_WARMUP_FRAMES,
   formatGpuTime,
-  gpuTimeArgv,
+  GPU_TIME_ARGV,
   gpuTimeScript,
   hasHostDisplay,
   readGpuTime,
 } from './gpuTime.mjs';
 
-describe('gpuTimeArgv', () => {
+describe('GPU_TIME_ARGV', () => {
   it("turns on Godot's pass timestamps and takes the display's vsync away", () => {
-    expect(gpuTimeArgv()).toEqual(['--gpu-profile', '--disable-vsync']);
+    expect(GPU_TIME_ARGV).toEqual(['--gpu-profile', '--disable-vsync']);
   });
 });
 
@@ -102,8 +102,8 @@ describe('gpuTimeScript', () => {
     expect(script).toMatch(/begins_with\("<"\) or name\.begins_with\(">"\)/);
   });
 
-  it('records nothing when no frames are asked for', () => {
-    expect(gpuTimeScript({ frames: 0, out: '' })).toContain('const GPU_TIME_FRAMES := 0');
+  it('adds no recorder when no frames are asked for', () => {
+    expect(gpuTimeScript({ frames: 0, out: '' })).toBe('');
   });
 
   it('defaults to enough frames for a stable median on a noisy GPU', () => {

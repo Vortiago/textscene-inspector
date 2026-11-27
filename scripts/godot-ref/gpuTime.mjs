@@ -1,3 +1,5 @@
+import { spreadOfMs } from '../../packages/textscene-core/src/r3f/frameProfile/gpuSpread.ts';
+
 /** Frames recorded: a laptop GPU's frame swings by several ms, so the median needs many. */
 export const GPU_TIME_DEFAULT_FRAMES = 300;
 
@@ -5,9 +7,7 @@ export const GPU_TIME_DEFAULT_FRAMES = 300;
 export const GPU_TIME_WARMUP_FRAMES = 120;
 
 /** `--gpu-profile` turns on pass timestamps (rendering_server_default.cpp:356); vsync adds a wait. */
-export function gpuTimeArgv() {
-  return ['--gpu-profile', '--disable-vsync'];
-}
+export const GPU_TIME_ARGV = ['--gpu-profile', '--disable-vsync'];
 
 /** True when the host has a screen to open the window on, so no virtual X server is needed. */
 export function hasHostDisplay(env, platform) {
@@ -22,20 +22,13 @@ export function readGpuTime(text) {
     throw new Error(`expected GPU frame times from Godot, got ${recorded.frames.length} frames`);
   }
   const passes = Object.entries(recorded.passes)
-    .map(([name, times]) => ({ name, spread: spreadOf(times) }))
+    .map(([name, times]) => ({ name, spread: spreadOfMs(times) }))
     .sort((a, b) => b.spread.medianMs - a.spread.medianMs);
   return {
     device: { adapter: recorded.adapter, driver: recorded.driver, size: recorded.size },
-    frame: spreadOf(recorded.frames),
+    frame: spreadOfMs(recorded.frames),
     passes,
   };
-}
-
-/** The median and the 10th and 90th percentiles of `ms`, as `frameRecording.ts` picks them. */
-function spreadOf(ms) {
-  const sorted = [...ms].sort((a, b) => a - b);
-  const at = (fraction) => sorted[Math.round(fraction * (sorted.length - 1))];
-  return { medianMs: at(0.5), lowMs: at(0.1), highMs: at(0.9) };
 }
 
 /** The pass time `--gpu-profile`'s own print leaves out (`rendering_server_default.cpp:191`). */
@@ -53,15 +46,14 @@ export function formatGpuTime({ device, frame, passes }) {
   ].join('\n');
 }
 
-/** The bootstrap's recording, run after the capture with the picture settled. */
+/** The bootstrap's recording, run after the capture with the picture settled; none when untimed. */
 export function gpuTimeScript({ frames, out }) {
+  if (frames === 0) return '';
   return `const GPU_TIME_FRAMES := ${frames}
 const GPU_TIME_WARMUP_FRAMES := ${GPU_TIME_WARMUP_FRAMES}
 const GPU_TIME_OUT := ${JSON.stringify(out)}
 
 func _record_gpu_time(source: Viewport) -> void:
-	if GPU_TIME_FRAMES == 0:
-		return
 	var viewport := source.get_viewport_rid()
 	RenderingServer.viewport_set_measure_render_time(viewport, true)
 	var device := RenderingServer.get_rendering_device()

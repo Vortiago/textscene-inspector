@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import type { DrawSource, DrawStats, FrameRecording, GpuSpread, StepKey } from './frameStats.js';
 import type { RecordedDevice } from './recordedDevice.js';
 import { add, NS_PER_MS, statsOf, WindowSums } from './windowSums.js';
+import { spreadOfMs } from './gpuSpread.js';
 
 export interface RecordOptions {
   /** 120 by default: two seconds at 60 frames a second. */
@@ -111,12 +112,9 @@ export class Recording {
   }
 }
 
-/** The median and the 10th and 90th percentiles of `ns`, in ms, or null for no frames. */
+/** The spread of `ns` in ms, or null for no frames. */
 function spreadOf(ns: readonly number[]): GpuSpread | null {
-  if (ns.length === 0) return null;
-  const sorted = [...ns].sort((a, b) => a - b);
-  const at = (fraction: number) => sorted[Math.round(fraction * (sorted.length - 1))]! / NS_PER_MS;
-  return { medianMs: at(0.5), lowMs: at(0.1), highMs: at(0.9) };
+  return spreadOfMs(ns.map((value) => value / NS_PER_MS));
 }
 
 /** One draw source per step, object and material, so a recording's sums key on identity. */

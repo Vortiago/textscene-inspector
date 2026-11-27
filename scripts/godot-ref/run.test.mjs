@@ -1248,6 +1248,10 @@ describe('--gpu-time measures Godot on the host GPU', () => {
     expect(script).toMatch(/_save_capture\(get_viewport\(\)\)\n\tawait _record_gpu_time\(get_viewport\(\)\)/);
   });
 
+  it('adds no recording to an untimed render (edge case)', () => {
+    expect(bootstrap({ gpuTimeFrames: 0, gpuTimeOut: '' })).not.toContain('_record_gpu_time');
+  });
+
   it("accepts any GPU, since the time is the host GPU's own", () => {
     expect(
       renderingDeviceMessage({ driver: 'vulkan', adapter: 'Intel(R) UHD Graphics 630' }, { hostGpu: true })
