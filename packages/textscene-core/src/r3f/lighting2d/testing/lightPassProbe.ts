@@ -16,7 +16,7 @@ export interface RecordedDraw {
   readonly drawn: readonly THREE.Mesh[];
 }
 
-function rendererOf(renderer: Rendered): THREE.WebGLRenderer {
+export function rendererOf(renderer: Rendered): THREE.WebGLRenderer {
   const root = (
     renderer.scene.instance as unknown as { __r3f: { root: { getState(): { gl: THREE.WebGLRenderer } } } }
   ).__r3f.root;
@@ -31,8 +31,12 @@ export function drawnMeshes(scene: THREE.Object3D, camera: THREE.Camera): THREE.
   return drawn;
 }
 
-/** Runs one frame and records each draw into an accumulation buffer. */
-export async function recordLightPass(renderer: Rendered): Promise<RecordedDraw[]> {
+/** The draws of each renderer's last frame that drew: a frame on unchanged inputs keeps its buffers. */
+// eslint-disable-next-line no-restricted-syntax -- each recorded frame rewrites its renderer's entry
+const lastDraws = new WeakMap<THREE.WebGLRenderer, RecordedDraw[]>();
+
+/** Runs one frame of `deltaSeconds` and answers the accumulation draws it made, none on kept buffers. */
+export async function recordFrameDraws(renderer: Rendered, deltaSeconds = 0): Promise<RecordedDraw[]> {
   const gl = rendererOf(renderer);
   const draws: RecordedDraw[] = [];
   let target: THREE.WebGLRenderTarget | null = null;
@@ -47,11 +51,18 @@ export async function recordLightPass(renderer: Rendered): Promise<RecordedDraw[
     }),
   ];
   try {
-    await renderer.advanceFrames(1, 0);
+    await renderer.advanceFrames(1, deltaSeconds);
   } finally {
     spies.forEach((spy) => spy.mockRestore());
   }
+  if (draws.length > 0) lastDraws.set(gl, draws);
   return draws;
+}
+
+/** Runs one frame and answers the draws that fill the buffers after it, in a scene of one light pass host. */
+export async function recordLightPass(renderer: Rendered): Promise<RecordedDraw[]> {
+  const draws = await recordFrameDraws(renderer);
+  return draws.length > 0 ? draws : (lastDraws.get(rendererOf(renderer)) ?? draws);
 }
 
 /** The uniforms the item named `name` bound, read back through its `onBeforeCompile`. */

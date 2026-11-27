@@ -15,6 +15,7 @@ import {
 } from './itemLightList.js';
 import { listWindow, windowScissor } from './lightListWindow.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import type { LightPassInputs } from './lightPassInputs.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 
 /** One light mesh the pass shows or hides per list. */
@@ -54,6 +55,7 @@ export interface AccumulationList {
 export interface LightAccumulationPass {
   gl: THREE.WebGLRenderer;
   scene: THREE.Scene;
+  /** Its world matrix current: the host refreshes it before the pass reads it. */
   camera: THREE.Camera;
   lists: readonly AccumulationList[];
   /** Every registered light mesh. Read each frame, so a mesh mounted since the last render counts. */
@@ -68,6 +70,8 @@ export interface LightAccumulationPass {
   readBufferSize: (out: THREE.Vector2) => void;
   /** The world rect each capped placement's items cover (`ItemLightCap.windows`). */
   windows: ReadonlyMap<string, Rect2>;
+  /** The inputs of the last drawn frame: a frame that matches them keeps the buffers. */
+  inputs: LightPassInputs;
 }
 
 /**
@@ -120,7 +124,7 @@ function renderLightsApart(apart: ApartAccumulation, passMeshes: ReadonlySet<Pas
   });
 }
 
-/** Draws every list's buffers once: a frame's work. */
+/** Draws every list's buffers, or nothing on a frame whose inputs match the last drawn frame's. */
 export function renderLightLists({
   gl,
   scene,
@@ -132,6 +136,7 @@ export function renderLightLists({
   resolution,
   readBufferSize,
   windows,
+  inputs,
 }: LightAccumulationPass): void {
   if (lists.length === 0) return;
   // The targets and the lookup are all in device pixels, because that is what `gl_FragCoord` is
@@ -154,27 +159,32 @@ export function renderLightLists({
   // `finally`, as in the SubViewport pass: a throw out of `gl.render` (a link failure, a lost
   // context) would leave the renderer on an accumulation buffer with most layers masked, and
   // r3f's main render would draw the scene into it: a black canvas, not one broken light.
+  const draw = () => {
+    try {
+      camera.layers.set(LIGHT_PASS_LAYER);
+      for (const list of lists) {
+        fitListTargets(list, windows, camera, resolution);
+        if (list.summed) {
+          showListMeshes(passMeshes, list);
+          // A list only Light Only items read keeps their buffer in attachment 0, seeded white.
+          const { plain } = list.summed.attachments;
+          render(
+            list.summed.target,
+            plain >= 0 ? [canvasModulate.r, canvasModulate.g, canvasModulate.b] : WHITE
+          );
+        }
+        if (list.apart) renderLightsApart(list.apart, passMeshes, render);
+      }
+    } finally {
+      gl.setRenderTarget(previousTarget);
+      camera.layers.mask = previousMask;
+      scene.matrixWorldAutoUpdate = previousAutoUpdate;
+    }
+  };
   beginStep(gl, '2D lights');
   try {
-    camera.layers.set(LIGHT_PASS_LAYER);
-    for (const list of lists) {
-      fitListTargets(list, windows, camera, resolution);
-      if (list.summed) {
-        showListMeshes(passMeshes, list);
-        // An ordinary buffer starts from the canvas modulate. A list only Light Only items read
-        // keeps that buffer in attachment 0, which starts from white.
-        const { plain } = list.summed.attachments;
-        render(
-          list.summed.target,
-          plain >= 0 ? [canvasModulate.r, canvasModulate.g, canvasModulate.b] : WHITE
-        );
-      }
-      if (list.apart) renderLightsApart(list.apart, passMeshes, render);
-    }
+    inputs.drawIfChanged({ camera, lists, passMeshes, canvasModulate, resolution, windows }, draw);
   } finally {
-    gl.setRenderTarget(previousTarget);
-    camera.layers.mask = previousMask;
-    scene.matrixWorldAutoUpdate = previousAutoUpdate;
     endStep(gl, '2D lights');
   }
 }

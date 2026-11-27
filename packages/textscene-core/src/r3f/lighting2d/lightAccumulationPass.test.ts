@@ -13,6 +13,7 @@ import {
   type PassMesh,
 } from './lightAccumulationPass';
 import { createSeedMaterial } from './lightSeedQuad';
+import { LightPassInputs } from './lightPassInputs';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
 import type { LightListEntry, ListAttachments, PassMeshRole } from './itemLightList';
 import type { Rect2 } from '../../godot/math/rect2';
@@ -125,8 +126,9 @@ function run(
     resolution: new THREE.Vector2(),
     readBufferSize: (out) => gl.getDrawingBufferSize(out),
     windows,
+    inputs: new LightPassInputs(),
   };
-  return { draws, camera, scene, run: () => renderLightLists(pass), getTarget: () => target };
+  return { draws, camera, scene, pass, run: () => renderLightLists(pass), getTarget: () => target };
 }
 
 const SHADOWED = (ordinal: number): LightListEntry => ({ ordinal, unshadowed: false });
@@ -251,5 +253,143 @@ describe('renderLightLists', () => {
     expect(pass.run).toThrow('context lost');
     expect(pass.getTarget()).toBeNull();
     expect(pass.camera.layers.mask).toBe(1);
+  });
+});
+
+describe('renderLightLists on a frame whose inputs match the last drawn frame', () => {
+  /** A light with a cookie and a colour, as a light quad's material holds them. */
+  function lightMesh(
+    name: string,
+    ordinal: number
+  ): PassMesh & { mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> } {
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uCookie: { value: new THREE.DataTexture() },
+        uColor: { value: new THREE.Vector3(1, 1, 1) },
+      },
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(), material);
+    mesh.name = name;
+    return { mesh, ordinal, role: 'lit' };
+  }
+
+  /** Draws one frame, then a second after `change`, and answers the second frame's draws. */
+  function secondFrameDraws(
+    change: (frame: ReturnType<typeof run>, light: ReturnType<typeof lightMesh>) => void,
+    light = lightMesh('a', 0)
+  ) {
+    const frame = run([list([SHADOWED(0)])], [light]);
+    frame.run();
+    const firstFrameDraws = frame.draws.length;
+    change(frame, light);
+    frame.run();
+    return frame.draws.length - firstFrameDraws;
+  }
+
+  it('keeps the buffers and draws nothing', () => {
+    expect(secondFrameDraws(() => {})).toBe(0);
+  });
+
+  it('draws again when the camera moves', () => {
+    expect(
+      secondFrameDraws(({ camera }) => (camera.position.set(0.25, 0, 0), camera.updateMatrixWorld()))
+    ).toBe(1);
+  });
+
+  it('draws again when a light moves', () => {
+    expect(secondFrameDraws((_, { mesh }) => mesh.position.set(0.25, 0, 0))).toBe(1);
+  });
+
+  it('draws again when a light is hidden through its parent', () => {
+    expect(
+      secondFrameDraws(({ scene }, { mesh }) => {
+        const parent = new THREE.Group();
+        scene.add(parent);
+        parent.add(mesh);
+        parent.visible = false;
+      })
+    ).toBe(1);
+  });
+
+  it("draws again when a light's uniform changes", () => {
+    expect(secondFrameDraws((_, { mesh }) => mesh.material.uniforms.uColor!.value.set(2, 1, 1))).toBe(1);
+  });
+
+  it("draws again when a light's cookie is refilled", () => {
+    expect(
+      secondFrameDraws((_, { mesh }) => {
+        (mesh.material.uniforms.uCookie!.value as THREE.Texture).needsUpdate = true;
+      })
+    ).toBe(1);
+  });
+
+  it("draws again when a light's blend mode changes", () => {
+    expect(
+      secondFrameDraws((_, { mesh }) => (mesh.material.blendEquation = THREE.ReverseSubtractEquation))
+    ).toBe(1);
+  });
+
+  it('draws again when the canvas modulate changes', () => {
+    expect(secondFrameDraws(({ pass }) => (pass.canvasModulate = { r: 1, g: 1, b: 1 }))).toBe(1);
+  });
+
+  it('draws again when the drawing buffer is resized', () => {
+    expect(
+      secondFrameDraws(({ pass }) => {
+        pass.readBufferSize = (out) => out.set(8, 4);
+      })
+    ).toBe(1);
+  });
+
+  it("draws again when a list's window moves", () => {
+    const light = lightMesh('a', 0);
+    const windows = new Map([['capped', { x: 0, y: 0, w: 1, h: 1 }]]);
+    const frame = run([list([SHADOWED(0)], { placementIds: ['capped'] })], [light], undefined, windows);
+    frame.run();
+    windows.set('capped', { x: 0, y: 0, w: 0.5, h: 1 });
+    frame.run();
+    expect(frame.draws).toHaveLength(2);
+  });
+
+  it('draws again when a light joins the pass', () => {
+    expect(secondFrameDraws(({ pass }) => (pass.passMeshes as Set<PassMesh>).add(lightMesh('b', 0)))).toBe(1);
+  });
+
+  it('draws again when the lists change', () => {
+    expect(secondFrameDraws(({ pass }) => (pass.lists = [list([SHADOWED(0)])]))).toBe(1);
+  });
+
+  it('draws again when a light starts to read a render target', () => {
+    expect(
+      secondFrameDraws((_, { mesh }) => {
+        mesh.material.uniforms.uCookie!.value = new THREE.WebGLRenderTarget(1, 1).texture;
+      })
+    ).toBe(1);
+  });
+
+  it('draws every frame while a light reads a render target, whose texels change with no version', () => {
+    const light = lightMesh('a', 0);
+    light.mesh.material.uniforms.uCookie!.value = new THREE.WebGLRenderTarget(1, 1).texture;
+    expect(secondFrameDraws(() => {}, light)).toBe(1);
+  });
+
+  it('draws again after a frame whose draw threw, as the buffers hold part of it', () => {
+    let throws = false;
+    const light = lightMesh('a', 0);
+    const frame = run([list([SHADOWED(0)])], [light], () => {
+      if (throws) throw new Error('context lost');
+    });
+    frame.run();
+    throws = true;
+    light.mesh.position.set(0.25, 0, 0);
+    expect(frame.run).toThrow('context lost');
+    throws = false;
+    light.mesh.position.set(0, 0, 0);
+    frame.run();
+    expect(frame.draws).toHaveLength(2);
+  });
+
+  it('draws again once the inputs are forgotten', () => {
+    expect(secondFrameDraws(({ pass }) => pass.inputs.forget())).toBe(1);
   });
 });
