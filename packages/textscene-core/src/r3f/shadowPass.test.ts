@@ -52,26 +52,31 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
   return { renderer: renderer as unknown as THREE.WebGLRenderer, threePass };
 }
 
-/** Runs a pass over `lights` as three binds and clears each map, and lists the clears that reach the GPU. */
+/** Runs a pass as three updates, binds, clears and draws each map: the clears, and each draw's scissor. */
 function clearingPass(lights: THREE.Light[]) {
   const { renderer, threePass } = fakeRenderer();
   let bound: THREE.RenderTarget | null = null;
+  let isScissored = false;
   vi.mocked(renderer.getRenderTarget).mockImplementation(() => bound as THREE.WebGLRenderTarget | null);
   const cleared: (THREE.RenderTarget | null)[] = [];
+  const drawsScissored: boolean[] = [];
   renderer.clear = () => void cleared.push(bound);
-  (renderer as { state: unknown }).state = { setScissorTest: () => {} };
+  (renderer as { state: unknown }).state = { setScissorTest: (on: boolean) => (isScissored = on) };
   threePass.mockImplementation((drawn: THREE.Light[]) => {
     for (const light of drawn) {
       const { shadow } = light as THREE.Light & { shadow: THREE.LightShadow };
       if (!shadow.autoUpdate && !shadow.needsUpdate) continue;
+      shadow.updateMatrices(light);
       bound = shadow.map;
+      isScissored = shadow.map!.scissorTest;
       renderer.clear();
+      drawsScissored.push(isScissored);
       shadow.needsUpdate = false;
     }
   });
   installShadowPass(renderer);
   runPass(renderer, lights);
-  return { cleared };
+  return { cleared, drawsScissored };
 }
 
 /** An omni light that holds a slot in the atlas, or none. */
@@ -236,6 +241,16 @@ describe('installShadowPass', () => {
     const [first, second] = [new SplitSunLight(), new SplitSunLight()];
     const { cleared } = clearingPass([first, second]);
     expect(cleared).toEqual([first.shadow.map]);
+  });
+
+  it('keeps each sun’s draws scissored to its share after the one whole clear', () => {
+    const { drawsScissored } = clearingPass([new SplitSunLight(), new SplitSunLight()]);
+    expect(drawsScissored).toEqual([true, true]);
+  });
+
+  it('keeps each spot light’s draws scissored to its slot after the one whole clear', () => {
+    const { drawsScissored } = clearingPass([spotLight(), spotLight()]);
+    expect(drawsScissored).toEqual([true, true]);
   });
 
   it('clears the positional atlas once in a pass that draws two spot lights', () => {
