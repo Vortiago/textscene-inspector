@@ -78,7 +78,14 @@ function banner(text: string): string | undefined {
   return sceneFailureOf(files, { scene: SCENE, reads: failing, parseStop })?.line;
 }
 
-describe.each([
+/** Each spacing around a property's `=`, and how far it moves the value from `key = value`. */
+const SPACINGS = [
+  { spacing: 'key = value', equals: ' = ', valueShift: 0 },
+  { spacing: 'key=value', equals: '=', valueShift: -2 },
+  { spacing: 'key =value', equals: ' =', valueShift: -1 },
+];
+
+const SCENES = [
   {
     scene: 'a property after a heading on its line',
     text: AFTER_BRACKET,
@@ -113,7 +120,28 @@ describe.each([
     extReference: range(6, 8, 24),
     bannerLine: 7,
   },
-])('each caller of the reader, on $scene', (row) => {
+];
+
+function shifted({ start, end }: Range, by: number): Range {
+  return {
+    start: { ...start, character: start.character + by },
+    end: { ...end, character: end.character + by },
+  };
+}
+
+const ROWS = SCENES.flatMap((scene) =>
+  SPACINGS.map(({ spacing, equals, valueShift }) => ({
+    ...scene,
+    spacing,
+    text: scene.text.replaceAll(' = ', equals),
+    /** The scene with one property changed, spaced as the row is. */
+    edited: (from: string, to: string) => scene.text.replace(from, to).replaceAll(' = ', equals),
+    lintColumn: { ...scene.lintColumn, column: scene.lintColumn.column + valueShift },
+    extReference: shifted(scene.extReference, valueShift),
+  }))
+);
+
+describe.each(ROWS)('each caller of the reader, on $scene, spaced $spacing', (row) => {
   const document = new LanguageDocument(row.text);
 
   it('hovers the key', () => {
@@ -146,17 +174,17 @@ describe.each([
   });
 
   it('refuses a value on the line after its key, where the value starts', () => {
-    const [diagnostic] = new Linter().lint(row.text.replace('visble = true', 'hframes =\n"x"'));
+    const [diagnostic] = new Linter().lint(row.edited('visble = true', 'hframes =\n"x"'));
     expect(diagnostic?.location).toEqual(row.laterValueColumn);
   });
 
   it('places a malformed property past the heading', () => {
-    const [diagnostic] = new Linter().lint(row.text.replace('visble = true', 'garbage'));
+    const [diagnostic] = new Linter().lint(row.edited('visble = true', 'garbage'));
     expect(diagnostic?.location).toEqual(row.malformedColumn);
   });
 
   it('places a refused value past the heading', () => {
-    const [diagnostic] = new Linter().lint(row.text.replace('visble = true', 'hframes = "x"'));
+    const [diagnostic] = new Linter().lint(row.edited('visble = true', 'hframes = "x"'));
     expect(diagnostic?.location).toEqual(row.lintColumn);
   });
 

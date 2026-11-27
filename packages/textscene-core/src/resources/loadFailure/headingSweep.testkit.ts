@@ -64,6 +64,32 @@ export function sweepFile(kind: HeadingKind, name: string, field: string): { pat
   return { path: `res://${kind}__${name}.tscn`, text };
 }
 
+/** How a heading that never closes opens, as the oracle's `headingSweepScene.mjs` writes it. */
+export const NEVER_CLOSED_OPENINGS = { bracket: '', string: ' x="a' };
+export type NeverClosedOpening = keyof typeof NEVER_CLOSED_OPENINGS;
+
+/** What follows a heading that never closes before the next heading. */
+export const NEVER_CLOSED_STOPS = ['heading', 'body', 'eof'] as const;
+export type NeverClosedStop = (typeof NEVER_CLOSED_STOPS)[number];
+
+const OPEN_MARK = '%open%';
+
+/** The sweep file with that kind of heading never closed, and only `stop` before the next heading. */
+export function sweepUnclosedFile(
+  kind: HeadingKind,
+  opening: NeverClosedOpening,
+  stop: NeverClosedStop
+): { path: string; text: string } {
+  const { path, text } = sweepFile(kind, `never_closed_${opening}_then_${stop}`, OPEN_MARK);
+  const lines = text.split('\n');
+  const at = lines.findIndex((line) => line.includes(` ${OPEN_MARK}]`));
+  lines[at] = lines[at]!.replace(` ${OPEN_MARK}]`, NEVER_CLOSED_OPENINGS[opening]);
+  let next = at + 1;
+  while (next < lines.length && !lines[next]!.startsWith('[')) next += 1;
+  const after = stop === 'eof' ? [''] : [...(stop === 'body' ? ['x = 1'] : []), '', ...lines.slice(next)];
+  return { path, text: [...lines.slice(0, at + 1), ...after].join('\n') };
+}
+
 /** A node as the Godot load oracle prints it: `Root[A(1.0, 2.0), B]`. */
 export function treeOf(node: TscnNode): string {
   const position = (node.properties as { position?: { x: number; y: number } }).position;

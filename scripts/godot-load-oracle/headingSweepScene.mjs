@@ -55,6 +55,24 @@ export function fileWithField(kind, field) {
 
 export const HEADING_KINDS = ['gd_resource', ...SCENE_HEADINGS];
 
+/** What follows a heading that never closes, and how it opens: no `]`, or a string with no closing quote. */
+export const NEVER_CLOSED_STOPS = ['heading', 'body', 'eof'];
+export const NEVER_CLOSED_OPENINGS = { bracket: '', string: ' x="a' };
+
+const OPEN_MARK = '%open%';
+
+/** The file of a heading kind with that heading never closed, and only `stop` before the next heading. */
+export function fileWithUnclosed(kind, opening, stop) {
+  const { extension, text } = fileWithField(kind, OPEN_MARK);
+  const lines = text.split('\n');
+  const at = lines.findIndex((line) => line.includes(` ${OPEN_MARK}]`));
+  lines[at] = lines[at].replace(` ${OPEN_MARK}]`, NEVER_CLOSED_OPENINGS[opening]);
+  let next = at + 1;
+  while (next < lines.length && !lines[next].startsWith('[')) next += 1;
+  const after = stop === 'eof' ? [''] : [...(stop === 'body' ? ['x = 1'] : []), '', ...lines.slice(next)];
+  return { extension, text: [...lines.slice(0, at + 1), ...after].join('\n') };
+}
+
 /** Writes each case beside the real resource the scene reads. */
 export function writeCases(out, cases) {
   return writeCaseFiles(
