@@ -1,7 +1,8 @@
 name: Claude
 
 # The owner mentions @claude on an issue, and OpenCode runs Opus to prepare it: an agent brief as
-# a comment, and the labels. A new issue can carry the mention in its title or body.
+# a comment, and the labels. A new issue can carry the mention in its title or body. The mention
+# gets an eyes reaction when the run starts and a thumbs up when the brief is posted.
 #
 # It authenticates with the `ANTHROPIC_API_KEY` secret, so a run spends API credit. OpenCode runs
 # the model because the Claude Code action gets "Credit balance is too low" on that credit.
@@ -20,9 +21,16 @@ on:
 permissions:
   contents: read
 
+env:
+  # The mention is a comment, or the issue itself when a new issue carries it.
+  REACTION_TARGET: >-
+    ${{ github.event.comment.id && format('issues/comments/{0}', github.event.comment.id) ||
+    format('issues/{0}', github.event.issue.number) }}
+
 jobs:
-  prepare:
-    name: Prepare
+  # Its own job, because a reaction needs write access and the agent's job holds a read-only token.
+  acknowledge:
+    name: Acknowledge
     if: >-
       github.event.sender.login == github.repository_owner &&
       !github.event.issue.pull_request &&
@@ -31,6 +39,21 @@ jobs:
        (github.event_name == 'issues' &&
         (contains(github.event.issue.body, '@claude') ||
          contains(github.event.issue.title, '@claude'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      issues: write
+    steps:
+      # The brief is the answer to the mention, so a failed reaction does not stop the run.
+      - name: React to the mention with eyes
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --silent --method POST "repos/$GITHUB_REPOSITORY/$REACTION_TARGET/reactions" -f content=eyes
+
+  prepare:
+    name: Prepare
+    needs: acknowledge
     # A later mention queues behind the active run. The group sits on the job, so a skipped run,
     # such as another comment, holds no place in the queue.
     concurrency:
@@ -181,3 +204,8 @@ jobs:
           if [ -n "$state_to_clear" ]; then
             gh issue edit "$ISSUE_NUMBER" --remove-label "$state_to_clear"
           fi
+
+      - name: React to the mention with a thumbs up
+        if: needs.prepare.result == 'success'
+        continue-on-error: true
+        run: gh api --silent --method POST "repos/$GITHUB_REPOSITORY/$REACTION_TARGET/reactions" -f content=+1
