@@ -106,11 +106,8 @@ export function boundAgain(geometry: THREE.BufferGeometry, commands: readonly Ca
   itemBox(geometry.boundingBox!, commands).getBoundingSphere(geometry.boundingSphere!);
 }
 
-/**
- * Writes the item rect of `commands` to `box`, which the caller owns.
- * @canonical The item rect of canvas shader commands as a box
- */
-export function itemBox(box: THREE.Box3, commands: readonly CanvasShaderCommand[]): THREE.Box3 {
+/** Writes the item rect of `commands` to `box`, which the caller owns. */
+function itemBox(box: THREE.Box3, commands: readonly CanvasShaderCommand[]): THREE.Box3 {
   box.makeEmpty();
   for (const command of commands) growItemBox(box, command);
   return box;
