@@ -84,6 +84,45 @@ export function isEscapedNewline(text: string, at: number): boolean {
   return backslashes % 2 === 1;
 }
 
+const UTF8_ENCODER = new TextEncoder();
+const UTF8_DECODER = new TextDecoder();
+
+/** A file's string: each escape one Latin-1 byte, all bytes read as UTF-8 (variant_parser.cpp:399-403). */
+class GodotFileString {
+  private readonly bytes: number[] = [];
+  /** Raw text not yet encoded, so a surrogate pair reaches the encoder whole. Cleared by `encodeRaw`. */
+  private raw = '';
+
+  addRaw(text: string): void {
+    this.raw += text;
+  }
+
+  /** NUL or past U+10FFFF is U+FFFD, and `ascii` writes past 0xFF as a space (ustring.cpp:199, :1707). */
+  addCode(code: number): void {
+    this.encodeRaw();
+    this.bytes.push(code > 0 && code <= 0xff ? code : 0x20);
+  }
+
+  read(): string {
+    this.encodeRaw();
+    const text = UTF8_DECODER.decode(Uint8Array.from(this.bytes), { stream: true });
+    // A sequence the end cuts off is one U+FFFD to TextDecoder, but one per byte to Godot (ustring.cpp:1847).
+    return UTF8_DECODER.decode() ? text + '�'.repeat(this.cutSequenceLength()) : text;
+  }
+
+  private encodeRaw(): void {
+    for (const byte of UTF8_ENCODER.encode(this.raw)) this.bytes.push(byte);
+    this.raw = '';
+  }
+
+  /** The bytes from the last lead byte on: the sequence the end cuts off, when TextDecoder holds one. */
+  private cutSequenceLength(): number {
+    let lead = this.bytes.length - 1;
+    while (this.bytes[lead]! < 0xc0) lead--;
+    return this.bytes.length - lead;
+  }
+}
+
 /** One token at a time over `text` from `at`, as `get_token` reads a stream, counting lines as it does. */
 export class Tokens {
   constructor(
@@ -175,7 +214,7 @@ export class Tokens {
   private quoted(): string {
     const plain = this.plainQuoted();
     if (plain !== null) return plain;
-    let text = '';
+    const text = new GodotFileString();
     let lead = 0;
     for (;;) {
       const c = this.char();
@@ -185,10 +224,15 @@ export class Tokens {
         if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
         // Only an unescaped newline counts (`variant_parser.cpp:387-389`).
         if (c === '\n') this.lineAt++;
-        text += c;
+        text.addRaw(c);
         continue;
       }
       const code = this.escaped();
+      if (typeof code === 'string') {
+        if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
+        text.addRaw(code);
+        continue;
+      }
       if ((code & 0xfffffc00) === 0xd800) {
         if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
         lead = code;
@@ -196,15 +240,15 @@ export class Tokens {
       }
       if ((code & 0xfffffc00) === 0xdc00) {
         if (!lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired trail surrogate');
-        text += String.fromCodePoint((lead << 10) + code - ((0xd800 << 10) + 0xdc00 - 0x10000));
+        text.addCode((lead << 10) + code - ((0xd800 << 10) + 0xdc00 - 0x10000));
         lead = 0;
         continue;
       }
       if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-      text += String.fromCodePoint(code);
+      text.addCode(code);
     }
     if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-    return text;
+    return text.read();
   }
 
   /** A string with no escape, sliced whole: most strings, read once per heading of every parse. */
@@ -212,16 +256,18 @@ export class Tokens {
     const close = this.text.indexOf('"', this.at);
     if (close === -1) return null;
     const body = this.text.slice(this.at, close);
-    if (body.includes('\\') || body.includes('\0')) return null;
+    // The UTF-8 re-read drops a leading BOM (ustring.cpp:1755), so such a string takes the slow path.
+    if (body.includes('\\') || body.includes('\0') || body.startsWith('\uFEFF')) return null;
     for (let at = body.indexOf('\n'); at !== -1; at = body.indexOf('\n', at + 1)) this.lineAt++;
     this.at = close + 1;
     return body;
   }
 
-  private escaped(): number {
+  /** The code an escape names, or the text of an escaped character Godot reads as written. */
+  private escaped(): number | string {
     const next = this.char();
     if (next === '' || next === '\0') throw new TokenError('Unterminated string');
-    if (next !== 'u' && next !== 'U') return ESCAPES[next] ?? next.codePointAt(0)!;
+    if (next !== 'u' && next !== 'U') return ESCAPES[next] ?? next;
     let code = 0;
     for (let i = 0; i < (next === 'U' ? 6 : 4); i++) {
       const digit = this.char();
@@ -742,7 +788,7 @@ export function readVariant(text: string, reading: VariantReading = {}): Variant
   }
 }
 
-/** `str_to_var`: the value, or null (Nil) where the text does not parse. */
+/** `str_to_var` with strings read as a file's: the value, or null (Nil) where the text does not parse. */
 export function strToVar(text: string, reading?: VariantReading): VariantValue {
   const read = readVariant(text, reading);
   return 'value' in read ? read.value : NIL_VALUE;

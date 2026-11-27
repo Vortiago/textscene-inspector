@@ -17,3 +17,7 @@ Godot must be on the path. The oracle measures the rows of `packages/textscene-c
 `headerLeadSweep.mjs <folder>` writes 26 cases into a new or empty folder: a scene and a resource, each with one kind of text before its header, such as a BOM, a body line or a comment. `headerLeads.test.ts` holds Godot's result for each case.
 
 `blankLineSweep.mjs <folder>` writes 32 cases into a new or empty folder: a tab or the code 1, 8 or 31 at eight places. The places are after a heading's `]`, alone on a body line, between a key and its value, before a key, around its `=`, and after a value on its key's line, on the next line or over several lines. Godot skips each one, and `blankLines.test.ts` holds that result.
+
+`emptyValueSweep.mjs <folder>` writes 8 cases into a new or empty folder: a `key =` with no value in a node and in a sub-resource, before a key or a heading, with or without a blank line between. `emptyValues.test.ts` holds Godot's result for each case.
+
+`stringEscapeSweep.mjs <folder>` writes 56 cases into a new or empty folder: each of 28 string escapes in a heading name and in a body string. `stringEscapes.test.ts` holds Godot's result for each case.

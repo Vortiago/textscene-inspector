@@ -39,9 +39,11 @@ describe('unquoteString', () => {
     expect(unquoteString('"a\\\\b"')).toBe('a\\b');
     expect(unquoteString('"say \\"hi\\""')).toBe('say "hi"');
   });
-  it('decodes \\uXXXX / \\UXXXXXX Unicode escapes', () => {
-    expect(unquoteString('"music \\u266a"')).toBe('music ♪'); // ♪
-    expect(unquoteString('"emoji \\U01F600"')).toBe('emoji \u{1F600}'); // 😀
+  // Godot writes an escaped code past 0xFF as a space, and reads the bytes up to it as UTF-8 (measured).
+  it('decodes \\uXXXX / \\UXXXXXX escapes as Godot reads them from a file', () => {
+    expect(unquoteString('"music \\u266a"')).toBe('music  ');
+    expect(unquoteString('"e \\u00C3\\u00A9"')).toBe('e é');
+    expect(unquoteString('"A \\u0041"')).toBe('A A');
   });
   // `variant_parser.cpp:299-300` and `:308-309`: `case 'b': res = 8` and
   // `case 'f': res = 12`; `:350-351` `default: res = next` passes any other
@@ -64,11 +66,13 @@ describe('unquoteString', () => {
   it('treats an escaped backslash before u as literal (\\\\u1234 → \\u1234)', () => {
     expect(unquoteString('"a\\\\u1234"')).toBe('a\\u1234');
   });
-  it('leaves a \\UXXXXXX escape past the Unicode maximum undecoded', () => {
-    // Six hex digits reach 0xFFFFFF; String.fromCodePoint throws above
-    // 0x10FFFF, and one such literal would abort the whole scene parse.
-    expect(unquoteString('"x \\U110000 y"')).toBe('x \\U110000 y');
-    expect(unquoteString('"x \\U10FFFF y"')).toBe('x \u{10FFFF} y');
+  it('reads a \\UXXXXXX escape past the Unicode maximum as a space, and throws nothing', () => {
+    expect(unquoteString('"x \\U110000 y"')).toBe('x   y');
+    expect(unquoteString('"x \\UFFFFFF y"')).toBe('x   y');
+  });
+
+  it('leaves text Godot refuses as written', () => {
+    expect(unquoteString('"a \\u12"')).toBe('a \\u12');
   });
   // `scanQuoted` decides where the string ends: in `"a\"` the last quote is escaped,
   // so the literal never closes and keeps its opening quote.

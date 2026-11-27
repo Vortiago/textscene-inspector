@@ -1,4 +1,6 @@
 import { stringArrayBodies } from '../godot/variant/variantParser';
+import { strToVar } from '../godot/variant/strToVar.js';
+import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 
 /** Zero-based character offsets on one line, `end` exclusive. */
 export interface ValueSpan {
@@ -84,7 +86,7 @@ export function trimEndSpace(str: string): string {
 /** `str` without the white space at either end, where `String.prototype.trim` keeps a control character. */
 function trimSpace(str: string): string {
   const trimmed = trimEndSpace(str);
-  return trimmed.slice(Math.min(leadingSpace(trimmed), trimmed.length));
+  return trimmed.slice(leadingSpace(trimmed));
 }
 
 /** `[A-Za-z0-9_]`: the characters a constructor name is built from. */
@@ -211,12 +213,7 @@ function stringLiteralBody(value: string): string | null {
   return isWholeString(bare) ? bare.slice(1, -1) : null;
 }
 
-/**
- * A heading value's content and the width of the quote on each side of it. A whole
- * string loses its quotes and decodes `\"`, both or neither: decoding an unclosed value
- * destroys the `\"` that keeps it re-parseable. Other escapes are a node parser's
- * business ({@link unquoteString}), and a structured value stays verbatim.
- */
+/** A heading value's content and quote width: only a whole string loses its quotes and decodes escapes. */
 function readHeadingValue(value: string): { content: string; quoteWidth: 0 | 1 } {
   // An opening quote and nothing else carries no content, and the empty string
   // is what says so: `name` has to stay falsy for the strict parser to go on
@@ -226,7 +223,7 @@ function readHeadingValue(value: string): { content: string; quoteWidth: 0 | 1 }
   // string ends.
   if (!isWholeString(value)) return { content: value, quoteWidth: 0 };
   const inner = value.slice(1, -1);
-  return { content: inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner, quoteWidth: 1 };
+  return { content: decodeEscapes(inner), quoteWidth: 1 };
 }
 
 /**
@@ -425,34 +422,24 @@ export function isIncompleteState(state: ValueScanState): boolean {
   return state.inString || state.depth > 0;
 }
 
-/** The escapes the tokenizer maps to a control character (`variant_parser.cpp:299-312`). */
-const ESCAPE_MAP: Record<string, string> = {
-  b: '\b',
-  t: '\t',
-  n: '\n',
-  f: '\f',
-  r: '\r',
-};
-
-/**
- * A string's text with its escapes decoded as the tokenizer does: `\b \t \n \f \r`,
- * `\uXXXX` and `\UXXXXXX`, and any other escaped character to itself
- * (`variant_parser.cpp:350-351`).
- */
+/** A string's text, decoded as the tokenizer reads it from a file. Text Godot refuses stays as written. */
 function decodeEscapes(text: string): string {
   if (!text.includes('\\')) return text;
-  // One left-to-right pass, so `\\u1234` is `\` plus literal `u1234`. A `\u` without
-  // four hex digits stays as written: the tokenizer's `case 'u'` errors there rather
-  // than passing the character through.
-  return text.replace(/\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|[^uU])/g, (_match, seq: string) => {
-    if (seq[0] === 'u' || seq[0] === 'U') {
-      const code = parseInt(seq.slice(1), 16);
-      // `\UXXXXXX` accepts six hex digits, past the Unicode maximum, and a
-      // literal beyond it would throw and abort the whole scene parse.
-      return code <= 0x10ffff ? String.fromCodePoint(code) : `\\${seq}`;
-    }
-    return ESCAPE_MAP[seq] ?? seq;
-  });
+  const read = strToVar(`"${escapeBareQuotes(text)}"`);
+  return read.type === VARIANT_TYPE.STRING ? read.value : text;
+}
+
+/** `text` with each quote no backslash escapes escaped, so the tokenizer reads it whole as one string. */
+function escapeBareQuotes(text: string): string {
+  if (!text.includes('"')) return text;
+  let escaped = '';
+  let backslashes = 0;
+  for (const c of text) {
+    if (c === '"' && backslashes % 2 === 0) escaped += '\\';
+    escaped += c;
+    backslashes = c === '\\' ? backslashes + 1 : 0;
+  }
+  return escaped;
 }
 
 /**

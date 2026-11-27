@@ -41,6 +41,23 @@ describe('strToVar', () => {
     expect(roundTrip('NodePath("a/b:c")')).toBe('NodePath("a/b:c")');
   });
 
+  it('keeps a character past U+FFFF whole in a string with an escape', () => {
+    expect(strToVar('"😀\\n"')).toEqual({ type: T.STRING, value: '😀\n' });
+    expect(strToVar('"\\😀"')).toEqual({ type: T.STRING, value: '😀' });
+  });
+
+  // `append_utf8` reads each byte of a sequence the end cuts off as its own U+FFFD (ustring.cpp:1847).
+  it('reads each byte of a UTF-8 sequence the string end cuts off as one U+FFFD', () => {
+    expect(strToVar('"\\u00E2\\u0082"')).toEqual({ type: T.STRING, value: '��' });
+    expect(strToVar('"\\u00F0\\u009F\\u0098"')).toEqual({ type: T.STRING, value: '�'.repeat(3) });
+    expect(strToVar('"\\u00E2\\u0082x"')).toEqual({ type: T.STRING, value: '�x' });
+  });
+
+  it('drops a BOM that opens a string, as the UTF-8 re-read does', () => {
+    expect(strToVar('"﻿a"')).toEqual({ type: T.STRING, value: 'a' });
+    expect(strToVar('"﻿a\\n"')).toEqual({ type: T.STRING, value: 'a\n' });
+  });
+
   it('writes a dictionary with its keys sorted, numbers before strings', () => {
     expect(roundTrip('{"b": 1, "a": 2, 3: 4}')).toBe('{\n3: 4,\n"a": 2,\n"b": 1\n}');
   });

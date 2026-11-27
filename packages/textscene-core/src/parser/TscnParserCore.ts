@@ -34,7 +34,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { HEADER_READING, readTag, SECTION_READING, type TagField } from '../godot/variant/tagReader.js';
-import { strToVar } from '../godot/variant/strToVar.js';
+import { readVariant, strToVar } from '../godot/variant/strToVar.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import {
@@ -342,6 +342,24 @@ export class TscnParserCore {
         code: 'MISSING_HEADING_FIELD',
       });
 
+    // Godot reads the next token as the value, so a key or heading stops it (resource_format_text.cpp:291).
+    const refuseAwaitedValue = (
+      key: string,
+      line: string,
+      at: { line: number; column: number; godotLine: number }
+    ) => {
+      const indent = leadingSpace(line);
+      const read = readVariant(line.slice(indent));
+      if (!('error' in read)) return;
+      headings.refuse({ error: read.error, code: GodotError.ParseError, line: at.godotLine });
+      observer?.onError?.({
+        message: `Godot reads this line as the value of "${key} =" and stops: ${read.error}`,
+        line: at.line,
+        column: at.column + indent + 1,
+        code: 'INVALID_PROPERTY_FORMAT',
+      });
+    };
+
     // After a heading with no body, plain `parse_tag` refuses text (resource_format_text.cpp:40, :1185).
     const refuseBody = (line: string, lineNumber: number, godotLine: number, column: number) => {
       headings.refuse({ error: "Expected '['", code: GodotError.ParseError, line: godotLine });
@@ -369,6 +387,8 @@ export class TscnParserCore {
       if (pendingMultiline) {
         const awaitsValue = pendingMultiline.lines.length === 0;
         if (isSectionHeading(line) || (awaitsValue && opensKey(line))) {
+          if (awaitsValue && !headings.isStopped())
+            refuseAwaitedValue(pendingMultiline.key, line, { line: lineNumber, column, godotLine });
           // The lenient path keeps the next key, so an empty value stays empty.
           storePending();
         } else if (awaitsValue && isGodotBlank(line)) {
