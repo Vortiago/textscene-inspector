@@ -274,17 +274,29 @@ class Profile implements FrameProfile {
     const recording = new Recording(options);
     this.starting.push(recording);
     if (recording.timesDraws) {
-      this.unhookDraws ??= timeEachDraw(this.renderer, this.beginDraw, this.endDraw);
+      this.unhookDraws ??= timeEachDraw(this.renderer, {
+        beginDraw: this.beginDraw,
+        beginClear: this.beginClear,
+        end: this.endDraw,
+      });
     }
     return recording.result;
   }
 
   private readonly beginDraw = (object: THREE.Object3D, material: THREE.Material): void => {
     if (!this.isTimingDraws || !this.isFrameOpen) return;
-    const draw = this.drawSources.of(this.current, object, material);
+    this.beginSource(this.drawSources.of(this.current, object, material));
+  };
+
+  private readonly beginClear = (): void => {
+    if (!this.isTimingDraws || !this.isFrameOpen) return;
+    this.beginSource(this.drawSources.ofClear(this.current, this.renderer.getRenderTarget()));
+  };
+
+  private beginSource(draw: DrawSource): void {
     countDraw(this.recordings, draw);
     this.gpu?.switchTo({ step: this.current, draw });
-  };
+  }
 
   private readonly endDraw = (): void => {
     if (this.isTimingDraws && this.isFrameOpen) this.gpu?.switchTo(STEP_SEGMENTS.get(this.current)!);

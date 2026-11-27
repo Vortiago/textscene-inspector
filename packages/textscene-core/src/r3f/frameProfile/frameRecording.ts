@@ -124,12 +124,19 @@ export class DrawSources {
   private readonly sources = new Map<string, DrawSource>();
 
   of(step: StepKey, object: THREE.Object3D, material: THREE.Material): DrawSource {
-    const objectName = nameOf(object);
-    const materialName = material.name || material.type;
-    const key = `${step}\n${objectName}\n${materialName}`;
+    return this.named(step, nameOf(object), material.name || material.type);
+  }
+
+  /** A clear of the bound target, named by its texture, or `canvas` for the screen. */
+  ofClear(step: StepKey, target: THREE.WebGLRenderTarget | null): DrawSource {
+    return this.named(step, 'Clear', target?.texture.name || 'canvas');
+  }
+
+  private named(step: StepKey, object: string, material: string): DrawSource {
+    const key = `${step}\n${object}\n${material}`;
     let source = this.sources.get(key);
     if (!source) {
-      source = { step, object: objectName, material: materialName };
+      source = { step, object, material };
       this.sources.set(key, source);
     }
     return source;
@@ -146,25 +153,39 @@ export function addDrawGpuTime(recordings: readonly Recording[], source: DrawSou
   for (const recording of recordings) if (recording.timesDraws) add(recording.drawGpuNs, source, ns);
 }
 
-/** Brackets each draw, shadows too, at `renderBufferDirect` (r187 `WebGLRenderer.js:2182`). */
-export function timeEachDraw(
-  renderer: THREE.WebGLRenderer,
-  begin: (object: THREE.Object3D, material: THREE.Material) => void,
-  end: () => void
-): () => void {
+/** What `timeEachDraw` calls around each draw and each clear. */
+export interface DrawBrackets {
+  beginDraw: (object: THREE.Object3D, material: THREE.Material) => void;
+  beginClear: () => void;
+  end: () => void;
+}
+
+/** Brackets each draw at `renderBufferDirect` (r187 `WebGLRenderer.js:2182`) and each clear at `clear`. */
+export function timeEachDraw(renderer: THREE.WebGLRenderer, brackets: DrawBrackets): () => void {
   const draw = renderer.renderBufferDirect;
-  const timed: typeof draw = (camera, scene, geometry, material, object, group) => {
-    begin(object, material);
+  const clear = renderer.clear;
+  const timedDraw: typeof draw = (camera, scene, geometry, material, object, group) => {
+    brackets.beginDraw(object, material);
     try {
       draw.call(renderer, camera, scene, geometry, material, object, group);
     } finally {
-      end();
+      brackets.end();
     }
   };
-  renderer.renderBufferDirect = timed;
+  const timedClear: typeof clear = (color, depth, stencil) => {
+    brackets.beginClear();
+    try {
+      clear.call(renderer, color, depth, stencil);
+    } finally {
+      brackets.end();
+    }
+  };
+  renderer.renderBufferDirect = timedDraw;
+  renderer.clear = timedClear;
   return () => {
-    // A hook installed over this one calls it, so it stays: its `begin` and `end` gate themselves.
-    if (renderer.renderBufferDirect === timed) renderer.renderBufferDirect = draw;
+    // A hook installed over this one calls it, so it stays: its brackets gate themselves.
+    if (renderer.renderBufferDirect === timedDraw) renderer.renderBufferDirect = draw;
+    if (renderer.clear === timedClear) renderer.clear = clear;
   };
 }
 
