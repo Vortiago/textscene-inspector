@@ -46,6 +46,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
+      # A repository variable names another model, so a change of model needs no pull request.
+      MODEL: ${{ vars.CLAUDE_PREPARE_MODEL || 'anthropic/claude-opus-5-5#high' }}
     steps:
       # The whole history, so that the agent can read the log and bisect.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -98,8 +100,13 @@ jobs:
             printf 'Owner request file: %s\n' "$RUNNER_TEMP/claude/request.md"
             printf 'Output directory: %s\n' "$RUNNER_TEMP/claude/out"
           } > "$RUNNER_TEMP/claude/prompt.md"
-          opencode run --standalone --auto --model anthropic/claude-opus-5-5 \
-            "$(cat "$RUNNER_TEMP/claude/prompt.md")"
+          opencode run --standalone --auto --model "$MODEL" "$(cat "$RUNNER_TEMP/claude/prompt.md")"
+
+      # The log then shows what the run cost and how much of its input came from the prompt cache.
+      - name: Report the cost and the cache use
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: opencode stats --days 0 --cost --models
 
       # A refused model request ends the run without an error, so the missing brief is the signal.
       - name: Check that the agent wrote a brief
