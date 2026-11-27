@@ -1648,7 +1648,7 @@ export const SPAWN_BACKSTOP_MS = (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S + 30) *
  */
 export function godotSpawnPlan(
   args,
-  { display, screen = null, groupTimeout = true, firstServer = null, hostGpu = false, hostDisplay = false }
+  { display, screen = null, groupTimeout = true, firstServer = null, onHostGpu = false, hasDisplay = false }
 ) {
   // Only the root-window arm and the game size the X screen, as a smaller one clips the window they capture.
   const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
@@ -1656,7 +1656,7 @@ export function godotSpawnPlan(
   const serverArgs = firstServer === null ? [] : ['-n', String(firstServer)];
   const xvfb = ['xvfb-run', '-a', ...serverArgs, ...screenArgs];
   // A GPU timing opens its window on the host's screen, where the GPU and its vsync live.
-  const virtualDisplay = display && !(hostGpu && hostDisplay);
+  const virtualDisplay = display && !(onHostGpu && hasDisplay);
   const engine = virtualDisplay ? [...xvfb, 'godot', ...args] : ['godot', ...args];
   // `spawnSync` signals only the `xvfb-run` wrapper, and the orphaned `godot` and `Xvfb` render
   // on and hold the display lock. `timeout` signals the whole group (coreutils `timeout.c` calls
@@ -1668,7 +1668,7 @@ export function godotSpawnPlan(
     command: argv[0],
     argv: argv.slice(1),
     timeoutMs: SPAWN_BACKSTOP_MS,
-    env: hostGpu ? { ...process.env } : { ...process.env, ...LAVAPIPE_LOADER_ENV },
+    env: onHostGpu ? { ...process.env } : { ...process.env, ...LAVAPIPE_LOADER_ENV },
   };
 }
 
@@ -1714,13 +1714,13 @@ function stallReason(result) {
     : `failed: ${result.error.message}`;
 }
 
-function runGodot(args, { display, screen = null, hostGpu = false }) {
+function runGodot(args, { display, screen = null, onHostGpu = false }) {
   const plan = godotSpawnPlan(args, {
     display,
     screen,
     groupTimeout: hasGroupTimeout(),
-    hostGpu,
-    hostDisplay: hasHostDisplay(process.env, process.platform),
+    onHostGpu,
+    hasDisplay: hasHostDisplay(process.env, process.platform),
   });
   const result = spawnSync(plan.command, plan.argv, {
     encoding: 'utf8',
@@ -1843,7 +1843,7 @@ async function renderInto(
   const driftOut = join(work, '__ref_root_only.json');
   const rendererOut = join(work, '__ref_renderer.json');
   const gpuTimeOut = join(work, '__ref_gpu_time.json');
-  const hostGpu = gpuTimeFrames > 0;
+  const onHostGpu = gpuTimeFrames > 0;
   const rootWindow = mode === ROOT_WINDOW_MODE;
   const inGame = mode === IN_GAME_MODE;
 
@@ -1911,7 +1911,7 @@ async function renderInto(
 
   const render = runGodot(renderArgv(work, { renderingDriver, debugCollisions, gpuTimeFrames }), {
     display: true,
-    hostGpu,
+    onHostGpu,
     screen: rootWindow ? canvas2DSize : inGame ? windowSize : null,
   });
   if (!existsSync(resolve(out))) {
@@ -1951,7 +1951,7 @@ async function renderInto(
   );
   if (fallback) await refuse(fallback, { renderingMethodFallback: true });
   // A timed run measures the host GPU, so any device passes.
-  const device = hostGpu ? null : renderingDeviceMessage(rendererReport);
+  const device = onHostGpu ? null : renderingDeviceMessage(rendererReport);
   if (device) await refuse(device);
 
   const drift = existsSync(driftOut)
@@ -1962,7 +1962,7 @@ async function renderInto(
 
   // Both streams: `xvfb-run` hands the engine's `printerr` on through its stdout.
   const warnings = harnessWarnings(`${render.stdout}\n${render.stderr}`);
-  const gpuTime = hostGpu ? await recordedGpuTime(gpuTimeOut, rendered) : null;
+  const gpuTime = onHostGpu ? await recordedGpuTime(gpuTimeOut, rendered) : null;
   const resized = gpuTime && gpuTimeSizeMessage(gpuTime.device.size, { width, height });
   if (resized) throw new Error(resized);
   return { workDir: work, out: resolve(out), mode: rendered, warnings, gpuTime };

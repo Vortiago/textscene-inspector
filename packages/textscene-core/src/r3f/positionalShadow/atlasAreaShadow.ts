@@ -89,10 +89,7 @@ export class AtlasAreaShadow extends AreaShadowBase implements ParaboloidShadow 
     drawIntoAtlasSlot(this, slot, this.slotViewport);
   }
 
-  /**
-   * three calls this before it binds and clears the atlas (r187 `WebGLShadowMap.js:291`). The camera takes
-   * the light's pose, the clear stays in the slot, and the casters are those in the light's volume.
-   */
+  /** Sets the pose, the slot scissor and the casters before three draws (r187 `WebGLShadowMap.js:291`). */
   override updateMatrices(light: THREE.Object3D): void {
     this.fitCamera(light);
     (this._frustum as AreaShadowVolume).enclose(this.bounds(), this.camera.matrixWorld);

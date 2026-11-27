@@ -1270,20 +1270,24 @@ describe('--gpu-time measures Godot on the host GPU', () => {
   });
 
   it('leaves the Vulkan loader to pick the host GPU', () => {
-    const plan = godotSpawnPlan([], { display: true, hostGpu: true, hostDisplay: true });
+    const plan = godotSpawnPlan([], { display: true, onHostGpu: true, hasDisplay: true });
     expect(plan.env.VK_LOADER_DRIVERS_SELECT).toBe(process.env.VK_LOADER_DRIVERS_SELECT);
   });
 
   it('opens the window on the host screen when there is one', () => {
-    const plan = godotSpawnPlan(['--path', '/tmp/work'], { display: true, hostGpu: true, hostDisplay: true });
+    const plan = godotSpawnPlan(['--path', '/tmp/work'], {
+      display: true,
+      onHostGpu: true,
+      hasDisplay: true,
+    });
     expect(plan.argv).not.toContain('xvfb-run');
   });
 
   it('falls back to a virtual X server on a host with no screen', () => {
     const plan = godotSpawnPlan(['--path', '/tmp/work'], {
       display: true,
-      hostGpu: true,
-      hostDisplay: false,
+      onHostGpu: true,
+      hasDisplay: false,
     });
     expect(plan.argv).toContain('xvfb-run');
   });
