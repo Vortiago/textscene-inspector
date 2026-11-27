@@ -82,6 +82,8 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
+    outputs:
+      artifact-url: ${{ steps.artifact.outputs.artifact-url }}
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -101,14 +103,15 @@ jobs:
       - name: Install gh
         run: apt-get update && apt-get install -y --no-install-recommends gh
 
-      # Through `env`, never in the script text: the request is text a shell would run. The output
-      # is the directory as the container sees it, which `runner.temp` does not give.
+      # Through `env`, never in the script text: the request is text a shell would run. The outputs
+      # are the directories as the container sees them, which `runner.temp` does not give.
       - name: Write the issue and the request
         id: files
         env:
           REQUEST: ${{ github.event.comment.body || github.event.issue.body }}
         run: |
           mkdir -p "$RUNNER_TEMP/claude/out"
+          echo "temp=$RUNNER_TEMP" >> "$GITHUB_OUTPUT"
           echo "out=$RUNNER_TEMP/claude/out" >> "$GITHUB_OUTPUT"
           gh issue view "$ISSUE_NUMBER" --json number,title,body,author,labels,comments \
             > "$RUNNER_TEMP/claude/issue.json"
@@ -124,6 +127,18 @@ jobs:
           mkdir -p ~/.config/opencode/skills
           cp -r "$RUNNER_TEMP/pocock-skills/skills/engineering" \
             "$RUNNER_TEMP/pocock-skills/skills/productivity" ~/.config/opencode/skills/
+
+      # The two clones of REFERENCES.md: 4.6.3 for each `file:line`, and 4.7.2 for a bound that the
+      # newer release changed. Outside the workspace, because nothing in the repository may read them.
+      - name: Clone the Godot engine source
+        working-directory: ${{ steps.files.outputs.temp }}
+        run: |
+          git clone --quiet --filter=blob:none --sparse --depth 1 --branch 4.6.3-stable \
+            -c advice.detachedHead=false https://github.com/godotengine/godot.git godot-4.6.3
+          git -C godot-4.6.3 sparse-checkout set scene doc/classes modules servers core editor drivers
+          git clone --quiet --filter=blob:none --sparse --depth 1 --branch 4.7.2-stable \
+            -c advice.detachedHead=false https://github.com/godotengine/godot.git godot-4.7.2
+          git -C godot-4.7.2 sparse-checkout set scene modules servers core
 
       # A question waits for an answer that never comes, so the config denies the question tool.
       - name: Install OpenCode
@@ -150,6 +165,8 @@ jobs:
             printf '\nIssue file: %s\n' "$RUNNER_TEMP/claude/issue.json"
             printf 'Owner request file: %s\n' "$RUNNER_TEMP/claude/request.md"
             printf 'Output directory: %s\n' "$RUNNER_TEMP/claude/out"
+            printf 'Godot 4.6.3 source: %s\n' "$RUNNER_TEMP/godot-4.6.3"
+            printf 'Godot 4.7.2 source: %s\n' "$RUNNER_TEMP/godot-4.7.2"
           } > "$RUNNER_TEMP/claude/prompt.md"
           opencode run --standalone --auto --model "$MODEL" "$(cat "$RUNNER_TEMP/claude/prompt.md")"
 
@@ -167,12 +184,14 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      # 90 days, the longest a public repository keeps an artifact: the brief links to its evidence.
+      - id: artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: claude-brief
           path: ${{ steps.files.outputs.out }}
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 90
 
   post:
     name: Post the brief
@@ -187,6 +206,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      ARTIFACT_URL: ${{ needs.prepare.outputs.artifact-url }}
     steps:
       - name: Report a failed run
         if: needs.prepare.result != 'success'
@@ -202,8 +222,16 @@ jobs:
       - name: Post the brief
         if: needs.prepare.result == 'success'
         run: |
+          evidence_count=0
+          if [ -d brief/evidence ]; then
+            evidence_count="$(find brief/evidence -type f | wc -l)"
+          fi
           {
-            printf '> *An AI wrote this brief. [View the run](%s).*\n\n' "$RUN_URL"
+            printf '> *An AI wrote this brief. [View the run](%s).*\n' "$RUN_URL"
+            if [ "$evidence_count" -gt 0 ]; then
+              printf '> *Its evidence holds %s file(s). [Download them](%s).*\n' "$evidence_count" "$ARTIFACT_URL"
+            fi
+            printf '\n'
             head -c 60000 brief/brief.md
           } > comment.md
           gh issue comment "$ISSUE_NUMBER" --body-file comment.md
