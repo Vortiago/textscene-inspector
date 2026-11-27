@@ -347,14 +347,14 @@
     }
   },
   "dungeon-translated": {
-    "drawCalls": 632,
+    "drawCalls": 611,
     "steps": {
       "2D lights": {
         "drawCalls": 289,
         "runs": 1
       },
       "Scene draw": {
-        "drawCalls": 342,
+        "drawCalls": 321,
         "runs": 1
       },
       "Canvas copy": {

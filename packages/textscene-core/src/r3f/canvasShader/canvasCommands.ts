@@ -85,16 +85,25 @@ export type CanvasShaderCommand =
 /** Scratch of one corner, overwritten by the next. */
 const corner = new THREE.Vector3();
 
+// The camera culls by these bounds, as Godot culls an off-view item rect (`renderer_canvas_cull.cpp:259`).
 /**
- * Bounds `object` by the item rect of `commands` in a new box, which a canvas group's region reads.
+ * Bounds `object` by the item rect of `commands`, which a canvas group's region reads.
  * @canonical Bound a canvas shader batch by its item rect
  */
 export function boundByItem(
   object: THREE.Object3D & { geometry: THREE.BufferGeometry },
   commands: readonly CanvasShaderCommand[]
-): THREE.Box3 {
+): void {
   setGeometryBoxBound(object, true);
-  return (object.geometry.boundingBox = itemBox(new THREE.Box3(), commands));
+  object.geometry.boundingBox = new THREE.Box3();
+  object.geometry.boundingSphere = new THREE.Sphere();
+  object.frustumCulled = true;
+  boundAgain(object.geometry, commands);
+}
+
+/** Writes the item rect of `commands` to the box and the sphere `boundByItem` gave `geometry`. */
+export function boundAgain(geometry: THREE.BufferGeometry, commands: readonly CanvasShaderCommand[]): void {
+  itemBox(geometry.boundingBox!, commands).getBoundingSphere(geometry.boundingSphere!);
 }
 
 /**

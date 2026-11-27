@@ -59,7 +59,7 @@ import { warnOnce } from '../../utils/warnOnce';
 import { decalAtlasTexture } from '../../nodes/3d/decal/decalAtlas';
 import type { CanvasLightRows } from '../lighting2d/lightRows';
 import { canvasTransformInto } from '../node2dTransform';
-import { boundByItem, itemBox, type CanvasShaderCommand } from './canvasCommands';
+import { boundAgain, boundByItem, type CanvasShaderCommand } from './canvasCommands';
 import { canvasDataOf, type CanvasColors, type CanvasItemFrame } from './canvasFrameBlocks';
 import { canvasLightsOf, nextCanvasLightsOf } from './canvasFrameLights';
 
@@ -306,9 +306,8 @@ function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch
   const count = layout.length;
   const geometry = quadBatchGeometry(Array.from({ length: count }, () => new ArrayBuffer(INSTANCE_BYTES)));
   const object = new THREE.Mesh(geometry, variant.draw.material);
-  object.frustumCulled = false;
   // Bounded by the layout until the first source, so a clip group reads the rects at once.
-  const box = boundByItem(object, layout);
+  boundByItem(object, layout);
   let regions: readonly CanvasRectCommand[] = [];
   return {
     object,
@@ -316,7 +315,7 @@ function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch
       if (run.kind !== 'rect') return;
       regions = run.commands.map(rectRegionOf);
       // The batch owns its quads, so each source writes the one box: AnimatedSprite2D sets one a frame.
-      itemBox(box, run.commands);
+      boundAgain(geometry, run.commands);
     },
     writeColors: (item, lights) =>
       writeBatchRecords(geometry, item, regions.length, (record, index) => {
@@ -357,7 +356,7 @@ function meshBatch(variantOf: (variant: CanvasVariant) => BoundVariant, command:
     setRun: (run) => {
       if (run.kind !== 'mesh' || run.command.kind !== 'multimesh') return;
       constants.instances = run.command.instances;
-      itemBox(object.geometry.boundingBox!, [run.command]);
+      boundAgain(object.geometry, [run.command]);
     },
     // `canvas_item_add_mesh`'s white modulate times the item's (`renderer_canvas_render_rd.cpp:2764-2855`).
     writeColors: (item, lights) => {

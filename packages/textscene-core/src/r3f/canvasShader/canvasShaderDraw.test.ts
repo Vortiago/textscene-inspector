@@ -145,10 +145,24 @@ describe('canvasShaderDraw', () => {
     expect(geometry.boundingBox).toBe(box);
   });
 
-  it('draws batches that frustum culling never skips', () => {
-    const { object } = drawOf([RECT_COMMAND, meshCommand()]);
+  /** Whether a camera of the 64 by 32 view around the origin draws each batch of `object` at `x`. */
+  function drawnAt(object: THREE.Object3D, x: number): boolean[] {
+    const camera = new THREE.OrthographicCamera(-32, 32, 16, -16);
+    camera.updateMatrixWorld();
+    object.position.x = x;
+    object.updateMatrixWorld(true);
+    const frustum = new THREE.Frustum().setFromProjectionMatrix(
+      new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+    );
+    return object.children.map((batch) => batch.frustumCulled && frustum.intersectsObject(batch));
+  }
 
-    expect(object.children.map((batch) => batch.frustumCulled)).toEqual([false, false]);
+  it('draws a batch whose item rect meets the view', () => {
+    expect(drawnAt(drawOf([RECT_COMMAND, meshCommand()]).object, 0)).toEqual([true, true]);
+  });
+
+  it("culls a batch whose item rect misses the view, as Godot culls the item's rect", () => {
+    expect(drawnAt(drawOf([RECT_COMMAND, meshCommand()]).object, 1000)).toEqual([false, false]);
   });
 
   it('throws when the draw reads no canvas transform uniform', () => {
