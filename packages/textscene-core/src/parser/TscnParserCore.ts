@@ -94,11 +94,17 @@ export interface ParsedProperty {
  * Hooks into the scanning loop for strict (linting) consumers. The observer is
  * purely additive: it never changes what the lenient loop parses or recovers.
  */
+/** The 0-based columns a heading spans on its first line, the end exclusive. */
+export interface HeadingColumns {
+  start: number;
+  end: number;
+}
+
 export interface ParseObserver {
   /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;
-  /** A heading parsed successfully and a new section begins. */
-  onSectionStart?(heading: ParsedHeading, section: SectionType, line: number): void;
+  /** A heading parsed successfully and a new section begins. `columns` spans its text on its first line. */
+  onSectionStart?(heading: ParsedHeading, section: SectionType, line: number, columns: HeadingColumns): void;
   /** A property value completed. */
   onProperty?(property: ParsedProperty): void;
   /**
@@ -286,6 +292,7 @@ export class TscnParserCore {
     const openSection = (
       heading: ParsedHeading,
       line: number,
+      columns: HeadingColumns,
       endLine: number,
       fields: readonly TagField[]
     ) => {
@@ -298,7 +305,7 @@ export class TscnParserCore {
       addFieldValues(fields, heading.type, headings.previous());
       // Godot judges a tag once it has read the `]`, so a refusal names the line it ends on.
       headings.read(heading.type, endLine);
-      observer?.onSectionStart?.(heading, currentSection, line);
+      observer?.onSectionStart?.(heading, currentSection, line, columns);
     };
 
     for (let i = 0; i < lines.length; i++) {
@@ -343,14 +350,13 @@ export class TscnParserCore {
         }
       }
 
-      // A comment-only line is already whitespace: `stripLineComment` above is
-      // the single place a `;` is understood.
-      if (isEmpty(line)) {
-        continue;
-      }
-
       const indent = godotIndent(line);
-      const opensTag = line[indent] === '[';
+      // Godot reads the header from the first token, so any text before it, a BOM too, is a refused tag.
+      const readsHeader = headings.previous() === null && !headings.isStopped();
+      // A comment-only line is already blank: `stripLineComment` above is the one place a `;` is read.
+      if (readsHeader ? indent === line.length : isEmpty(line)) continue;
+
+      const opensTag = readsHeader || line[indent] === '[';
       if (opensTag) {
         const reading = headings.previous() === null ? HEADER_READING : SECTION_READING;
         const tag = readTag(content, lineStarts[i]! + column + indent, godotLine, reading);
@@ -358,7 +364,14 @@ export class TscnParserCore {
           const end = lineAndColumnOf(lineStarts, tag.end, i);
           finalizeSection();
           skippedLines = end.line + 1 - tag.endLine;
-          openSection(parseHeading(headingText(lines, i, column, end))!, lineNumber, tag.endLine, tag.fields);
+          const columns = { start: column + indent, end: end.line === i ? end.column : column + line.length };
+          openSection(
+            parseHeading(headingText(lines, i, column, end))!,
+            lineNumber,
+            columns,
+            tag.endLine,
+            tag.fields
+          );
           // Text after the `]` is the section's body, so the next pass reads the rest of that line.
           const hasRest = !isEmpty(lines[end.line]!.slice(end.column));
           resumeColumn = hasRest ? end.column : 0;
@@ -382,7 +395,13 @@ export class TscnParserCore {
           headerResourceType = typeField(content, tag.fields);
         // The lenient path draws what it can of a heading Godot refuses.
         if (isHeading(line)) {
-          openSection(parseHeading(line)!, lineNumber, godotLine, []);
+          openSection(
+            parseHeading(line)!,
+            lineNumber,
+            { start: column + indent, end: column + line.length },
+            godotLine,
+            []
+          );
           continue;
         }
         // An unclosed heading draws nothing, and the lines its tag read are no section's body.

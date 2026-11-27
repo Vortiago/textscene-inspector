@@ -247,7 +247,7 @@ export async function completionsAt(
   const line = document.lines[position.line];
   if (line === undefined) return [];
   const documentLine = position.line + 1;
-  const section = document.sectionAt(documentLine);
+  const section = document.sectionAt(documentLine, position.character);
   if (!section) return [];
   if (document.isInHeading(documentLine, position.character)) {
     return headingItems(document, section, document.headingText(section), position, context);

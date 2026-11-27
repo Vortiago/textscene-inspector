@@ -119,7 +119,7 @@ function declarationIdAt(
 
 /** The reference or declaration a zero-based position touches, or undefined. */
 export function referenceAt(document: LanguageDocument, position: Position): ResourceReference | undefined {
-  const section = document.sectionAt(position.line + 1);
+  const section = document.sectionAt(position.line + 1, position.character);
   if (section && document.isInHeading(position.line + 1, position.character)) {
     const declared = declarationIdAt(section, document.headingText(section), position.character);
     if (declared) return declared;

@@ -18,7 +18,7 @@ describe('LanguageDocument', () => {
 
   it('reads a property as written and as the engine stores it', () => {
     const document = new LanguageDocument(SCENE);
-    const section = document.sectionAt(LINE.meshNode);
+    const section = document.sectionAt(LINE.meshNode, 0);
     expect(section?.attributes.type).toBe('MeshInstance3D');
     expect(section?.properties.map((property) => property.key)).toEqual(['mesh', 'skeleton']);
     expect(section?.properties[0]?.value).toBe('SubResource("BoxMesh_1")');
@@ -33,7 +33,7 @@ describe('LanguageDocument', () => {
 
   it('leaves a blank line between sections in no section', () => {
     const document = new LanguageDocument(SCENE);
-    expect(document.sectionAt(2)).toBeUndefined();
+    expect(document.sectionAt(2, 0)).toBeUndefined();
     expect(document.propertyAt(2)).toBeUndefined();
   });
 
@@ -65,14 +65,14 @@ describe('LanguageDocument', () => {
   it('ends a fold on the last line with content', () => {
     const document = new LanguageDocument(SCENE);
     // The two nodes are one blank line apart, and the file ends with a newline.
-    expect(document.sectionAt(LINE.rootNode)?.endLine).toBe(LINE.rootProperty);
-    expect(document.sectionAt(LINE.meshNode)?.endLine).toBe(LINE.skeletonProperty);
+    expect(document.sectionAt(LINE.rootNode, 0)?.endLine).toBe(LINE.rootProperty);
+    expect(document.sectionAt(LINE.meshNode, 0)?.endLine).toBe(LINE.skeletonProperty);
   });
 
   it('names the class each body belongs to', () => {
     const document = new LanguageDocument(SCENE);
-    expect(document.sectionAt(LINE.meshNode)?.ownerType).toBe('MeshInstance3D');
-    expect(document.sectionAt(LINE.subMesh)?.ownerType).toBe('BoxMesh');
+    expect(document.sectionAt(LINE.meshNode, 0)?.ownerType).toBe('MeshInstance3D');
+    expect(document.sectionAt(LINE.subMesh, 0)?.ownerType).toBe('BoxMesh');
   });
 
   it('carries the header class onto a .tres resource body', () => {
@@ -80,8 +80,8 @@ describe('LanguageDocument', () => {
       '\n'
     );
     const document = new LanguageDocument(text);
-    expect(document.sectionAt(3)?.tag).toBe('resource');
-    expect(document.sectionAt(3)?.ownerType).toBe('Environment');
+    expect(document.sectionAt(3, 0)?.tag).toBe('resource');
+    expect(document.sectionAt(3, 0)?.ownerType).toBe('Environment');
   });
 
   it('reads a heading line up to the property after its `]`', () => {

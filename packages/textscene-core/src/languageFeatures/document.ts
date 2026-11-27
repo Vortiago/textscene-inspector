@@ -7,7 +7,12 @@
  * convention. Every range a feature returns is zero-based. See `types.ts`.
  */
 
-import { TscnParserCore, type ParseObserver, type SectionType } from '../parser/TscnParserCore.js';
+import {
+  TscnParserCore,
+  type HeadingColumns,
+  type ParseObserver,
+  type SectionType,
+} from '../parser/TscnParserCore.js';
 import { splitLines, stripLineComment, type ParsedHeading } from '../parser/utils.js';
 
 /** The four section tags a feature reads, and `other` for the rest (`gd_scene`, `connection`). */
@@ -34,6 +39,8 @@ export interface DocumentSection {
   /** The heading's tag, for example `node`. */
   readonly tag: string;
   readonly headingLine: number;
+  /** The columns the heading spans on its first line, so a second heading on that line reads alone. */
+  readonly headingColumns: HeadingColumns;
   readonly endLine: number;
   readonly attributes: Readonly<Record<string, string>>;
   /**
@@ -67,6 +74,7 @@ function ownerTypeOf(heading: ParsedHeading, resourceHeaderType: string | undefi
 /** A heading as the scan meets it, before the next heading fixes where its body ends. */
 interface ScannedHeading {
   readonly line: number;
+  readonly columns: HeadingColumns;
   readonly tag: string;
   readonly kind: SectionKind;
   readonly ownerType?: string;
@@ -90,10 +98,11 @@ function scanHeadings(text: string): ScannedHeading[] {
   let resourceHeaderType: string | undefined;
 
   const observer: ParseObserver = {
-    onSectionStart(heading: ParsedHeading, section: SectionType, line: number) {
+    onSectionStart(heading: ParsedHeading, section: SectionType, line: number, columns: HeadingColumns) {
       if (heading.type === 'gd_resource') resourceHeaderType = heading.attributes.type;
       headings.push({
         line,
+        columns,
         tag: heading.type,
         kind: toKind(section),
         ownerType: ownerTypeOf(heading, resourceHeaderType),
@@ -128,6 +137,7 @@ function scanSections(text: string, lines: readonly string[]): DocumentSection[]
       kind: heading.kind,
       tag: heading.tag,
       headingLine: heading.line,
+      headingColumns: heading.columns,
       endLine: lastContentLine(lines, heading.line, lastLine),
       attributes: heading.attributes,
       ...(heading.ownerType !== undefined ? { ownerType: heading.ownerType } : {}),
@@ -163,23 +173,30 @@ export class LanguageDocument {
     }
   }
 
-  /** The section a one-based line belongs to, or undefined outside every heading. */
-  sectionAt(line: number): DocumentSection | undefined {
-    return this.sectionByLine.get(line);
+  /** The section a one-based line and a zero-based column belong to, or undefined outside every heading. */
+  sectionAt(line: number, character: number): DocumentSection | undefined {
+    const section = this.sectionByLine.get(line);
+    if (section?.headingLine !== line) return section;
+    // A line can hold several headings: the column picks the last one that starts at or before it.
+    const started = this.sections.filter(
+      (found) => found.headingLine === line && found.headingColumns.start <= character
+    );
+    return started.at(-1) ?? section;
   }
 
-  /** A heading's first line without a comment or the property after its `]`, so the heading reads alone. */
+  /** A heading's first line, blank outside its own columns and without a comment: each offset is a column. */
   headingText(section: DocumentSection): string {
     const line = this.lines[section.headingLine - 1] ?? '';
-    const property = this.propertyByLine.get(section.headingLine)?.property;
-    const heading = property?.startLine === section.headingLine ? line.slice(0, property.startColumn) : line;
-    return stripLineComment(heading).trimEnd();
+    const { start, end } = section.headingColumns;
+    return stripLineComment(' '.repeat(start) + line.slice(start, end)).trimEnd();
   }
 
   /** Whether a one-based line and a zero-based column fall in a heading, not in a property after its `]`. */
   isInHeading(line: number, character: number): boolean {
-    if (this.sectionByLine.get(line)?.headingLine !== line) return false;
-    const property = this.propertyByLine.get(line)?.property;
+    const section = this.sectionAt(line, character);
+    if (section?.headingLine !== line) return false;
+    const location = this.propertyByLine.get(line);
+    const property = location?.section === section ? location.property : undefined;
     return !(property && property.startLine === line && character >= property.startColumn);
   }
 

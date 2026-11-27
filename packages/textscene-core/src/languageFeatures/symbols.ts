@@ -46,7 +46,10 @@ function toSymbol(document: LanguageDocument, node: SeatedSection): DocumentSymb
     detail: type,
     kind: symbolKindOf(type),
     range: linesRange(document, line, subtreeEnd(node) - 1),
-    selectionRange: lineRange(line, { start: 0, end: document.headingText(node.section).length }),
+    selectionRange: lineRange(line, {
+      start: node.section.headingColumns.start,
+      end: document.headingText(node.section).length,
+    }),
     children: namedSymbols(document, node.children),
   };
 }

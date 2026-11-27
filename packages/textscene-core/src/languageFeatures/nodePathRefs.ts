@@ -106,7 +106,7 @@ export function nodePathReferenceAt(
   document: LanguageDocument,
   position: Position
 ): NodePathReference | undefined {
-  const section = document.sectionAt(position.line + 1);
+  const section = document.sectionAt(position.line + 1, position.character);
   if (section?.headingLine !== position.line + 1) return undefined;
   return referencesOnHeading(section, document.headingText(section)).find(({ range }) =>
     lineRangeContains(range, position.character)
@@ -124,7 +124,7 @@ export function nodeNameRange(document: LanguageDocument, section: DocumentSecti
 export function nodeAt(document: LanguageDocument, position: Position): DocumentSection | undefined {
   const reference = nodePathReferenceAt(document, position);
   if (reference) return nodeOfReference(document, reference);
-  const section = document.sectionAt(position.line + 1);
+  const section = document.sectionAt(position.line + 1, position.character);
   if (section?.tag !== 'node' || section.headingLine !== position.line + 1) return undefined;
   const name = nodeNameRange(document, section);
   return name && lineRangeContains(name, position.character) ? section : undefined;

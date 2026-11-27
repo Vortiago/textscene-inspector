@@ -48,6 +48,20 @@ texture = SubResource("a")
 [connection signal="ready" from="S" to="." method="f"]
 `;
 
+const ON_ONE_LINE = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://gone.png" id="1"]
+
+[sub_resource type="AtlasTexture" id="a"] [sub_resource type="AtlasTexture" id="b"] atlas = ExtResource("1")
+
+[node name="Root" type="Node2D"]
+
+[node name="S" type="Sprite2D" parent="."] [node name="T" type="Sprite3D" parent="."] visble = true
+texture = SubResource("a")
+
+[connection signal="ready" from="S" to="." method="f"]
+`;
+
 const SCENE = 'res://main.tscn';
 const WHOLE: Range = { start: { line: 0, character: 0 }, end: { line: 20, character: 0 } };
 
@@ -100,6 +114,8 @@ const SCENES = [
     nodeSelection: range(8, 0, 42),
     extReference: range(4, 50, 66),
     bannerLine: 5,
+    bodyNode: 'S',
+    tree: [['S', true]],
   },
   {
     scene: 'headings over several lines with a comment inside',
@@ -119,6 +135,28 @@ const SCENES = [
     nodeSelection: range(10, 0, 14),
     extReference: range(6, 8, 24),
     bannerLine: 7,
+    bodyNode: 'S',
+    tree: [['S', true]],
+  },
+  {
+    scene: 'two headings on one line',
+    text: ON_ONE_LINE,
+    keyRange: range(8, 86, 92),
+    typeHover: '**Sprite2D**',
+    idHighlight: [range(4, 38, 39)],
+    lintColumn: { line: 9, column: 96 },
+    malformedColumn: { line: 9, column: 87 },
+    laterValueColumn: { line: 10, column: 0 },
+    typeRange: range(8, 21, 28),
+    folds: [{ startLine: 8, endLine: 9 }],
+    nodeSelection: range(8, 0, 42),
+    extReference: range(4, 92, 108),
+    bannerLine: 5,
+    bodyNode: 'T',
+    tree: [
+      ['S', false],
+      ['T', true],
+    ],
   },
 ];
 
@@ -198,7 +236,7 @@ describe.each(ROWS)('each caller of the reader, on $scene, spaced $spacing', (ro
   });
 
   it('names the node a body line belongs to', () => {
-    expect(nodePathAt(document, at(row.text, 'texture'))).toBe('S');
+    expect(nodePathAt(document, at(row.text, 'texture'))).toBe(row.bodyNode);
   });
 
   it('goes to the declaration of a reference', () => {
@@ -228,6 +266,6 @@ describe.each(ROWS)('each caller of the reader, on $scene, spaced $spacing', (ro
 
   it('builds the tree with the body after the heading', () => {
     const [root] = new TscnParser().parse(row.text).nodes;
-    expect(root?.children.map((child) => [child.name, 'texture' in child.properties])).toEqual([['S', true]]);
+    expect(root?.children.map((child) => [child.name, 'texture' in child.properties])).toEqual(row.tree);
   });
 });

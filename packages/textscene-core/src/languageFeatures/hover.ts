@@ -127,7 +127,7 @@ export function hoverAt(document: LanguageDocument, position: Position): Hover |
   const line = document.lines[position.line];
   if (line === undefined) return undefined;
   const documentLine = position.line + 1;
-  const section = document.sectionAt(documentLine);
+  const section = document.sectionAt(documentLine, position.character);
   if (!section) return undefined;
 
   if (document.isInHeading(documentLine, position.character)) {

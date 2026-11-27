@@ -592,7 +592,8 @@ background_mode = 1
         2,
         expect.objectContaining({ type: 'resource' }),
         'resource',
-        3
+        3,
+        expect.anything()
       );
     });
 
@@ -666,6 +667,19 @@ frames = SubResource("sf")
       });
     });
 
+    it('gives each heading on one line its own columns', () => {
+      const onSectionStart = vi.fn<NonNullable<ParseObserver['onSectionStart']>>();
+
+      parser.parse('[node name="R" type="Node2D"] [node name="C" parent="."]\n', simpleCreator, {
+        onSectionStart,
+      });
+
+      expect(onSectionStart.mock.calls.map((call) => call[3])).toEqual([
+        { start: 0, end: 29 },
+        { start: 30, end: 56 },
+      ]);
+    });
+
     it('fires onSectionStart for each section with its kind and line', () => {
       const content = `[gd_scene load_steps=2 format=3]
 
@@ -684,21 +698,30 @@ frames = SubResource("sf")
         1,
         expect.objectContaining({ type: 'gd_scene' }),
         'none',
-        1
+        1,
+        expect.anything()
       );
       expect(onSectionStart).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({ type: 'ext_resource' }),
         'ext_resource',
-        3
+        3,
+        expect.anything()
       );
       expect(onSectionStart).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({ type: 'sub_resource' }),
         'sub_resource',
-        5
+        5,
+        expect.anything()
       );
-      expect(onSectionStart).toHaveBeenNthCalledWith(4, expect.objectContaining({ type: 'node' }), 'node', 7);
+      expect(onSectionStart).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({ type: 'node' }),
+        'node',
+        7,
+        expect.anything()
+      );
     });
 
     describe('onSectionBuilt', () => {

@@ -10,7 +10,7 @@ import type { Position } from './types.js';
  * any other line and on a node Godot does not seat in the tree.
  */
 export function nodePathAt(document: LanguageDocument, position: Position): string | undefined {
-  const section = document.sectionAt(position.line + 1);
+  const section = document.sectionAt(position.line + 1, position.character);
   if (section?.kind !== 'node') return undefined;
   const path = seatedNodePaths(document).get(section);
   return path === undefined ? undefined : spelledNodePath(path);
