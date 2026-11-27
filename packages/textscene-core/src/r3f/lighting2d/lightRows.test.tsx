@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { decalAtlasRect, updateDecalAtlas } from '../../nodes/3d/decal/decalAtlas';
 import type { CanvasLightView } from '../canvasShader/canvasFrameLights';
 import type { DirectionalLightTerm, LightTerm, PointLightTerm } from './CanvasLight2D';
-import { LightTermRow, useLightRowSource } from './lightRows';
+import { useLightRowSource, type OwnedLightRow } from './lightRows';
 
 const SHADOW = {
   enabled: false,
@@ -53,8 +53,12 @@ const VIEW: CanvasLightView = {
   canvasTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
 };
 
-function mountedRow(term: LightTerm, at = new THREE.Vector3()): LightTermRow {
-  const source = new LightTermRow(term);
+function ownedRow(term: LightTerm): OwnedLightRow {
+  return renderHook(() => useLightRowSource(term)).result.current;
+}
+
+function mountedRow(term: LightTerm, at = new THREE.Vector3()): OwnedLightRow {
+  const source = ownedRow(term);
   const origin = new THREE.Object3D();
   origin.position.copy(at);
   origin.updateMatrixWorld();
@@ -62,9 +66,9 @@ function mountedRow(term: LightTerm, at = new THREE.Vector3()): LightTermRow {
   return source;
 }
 
-describe('LightTermRow', () => {
+describe('the row of a light term', () => {
   it('lists no row before its origin mounts', () => {
-    expect(new LightTermRow(directionalTerm()).listedRow(VIEW)).toBeNull();
+    expect(ownedRow(directionalTerm()).listedRow(VIEW)).toBeNull();
   });
 
   it("lists the light's row once its origin mounts", () => {
@@ -85,7 +89,7 @@ describe('LightTermRow', () => {
 
   it('builds the row again once the light moves', () => {
     const origin = new THREE.Object3D();
-    const source = new LightTermRow(pointTerm());
+    const source = ownedRow(pointTerm());
     source.setOrigin(origin);
     const first = source.listedRow(VIEW);
     origin.position.x = 4;

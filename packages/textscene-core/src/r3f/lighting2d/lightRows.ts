@@ -33,9 +33,14 @@ export interface LightRowSource {
   listedRow(view: CanvasLightView): CanvasLightRow | null;
 }
 
-// The light's component owns it: it sets the term each render, and the origin by ref.
+/** The row source a light's component owns: it sets the term each render, and the origin by ref. */
+export interface OwnedLightRow extends LightRowSource {
+  term: LightTerm;
+  readonly setOrigin: (origin: THREE.Object3D | null) => void;
+}
+
 /** A light's row built from its term, again only when the light, its canvas or the view moves. */
-export class LightTermRow implements LightRowSource {
+class LightTermRow implements OwnedLightRow {
   /** Written by the light's component on each render. */
   term: LightTerm;
   /** Written only by `setOrigin`, the ref of the object at the light's node. */
@@ -149,7 +154,7 @@ function sameKey(a: Float64Array, b: Float64Array): boolean {
 
 // It holds a point light's texture in the light atlas while it lights (`renderer_canvas_cull.cpp:2134`).
 /** The row source of a light whose term is `term`, the same object for the light's life. */
-export function useLightRowSource(term: LightTerm): LightTermRow {
+export function useLightRowSource(term: LightTerm): OwnedLightRow {
   const source = useRef<LightTermRow | null>(null);
   source.current ??= new LightTermRow(term);
   source.current.term = term;

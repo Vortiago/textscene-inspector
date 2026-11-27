@@ -175,20 +175,6 @@ export const NO_ITEM_LIGHTS: ItemLightBits = Object.freeze({
   lights: Object.freeze([0, 0, 0, 0]) as unknown as readonly [number, number, number, number],
 });
 
-/** The bits of an item that takes the lights at `indices` of `light_array`, in order. */
-export function itemLightBits(indices: readonly number[]): ItemLightBits {
-  if (indices.length > MAX_POSITIONAL_LIGHTS_PER_ITEM)
-    throw new Error(
-      `expected at most ${MAX_POSITIONAL_LIGHTS_PER_ITEM} lights on an item, got ${indices.length}`
-    );
-  if (indices.length === 0) return NO_ITEM_LIGHTS;
-  const lights: [number, number, number, number] = [0, 0, 0, 0];
-  indices.forEach((index, count) => {
-    lights[count >> 2] = (lights[count >> 2]! | (index << ((count & 3) * 8))) >>> 0;
-  });
-  return { flags: indices.length, lights };
-}
-
 export function sameLightBits(a: ItemLightBits, b: ItemLightBits): boolean {
   return a.flags === b.flags && a.lights.every((word, index) => word === b.lights[index]);
 }
@@ -227,12 +213,14 @@ export function bindCanvasLightsEachDraw(draw: CanvasDraw, framesOf: LightsFrame
 
 /** The bits of an item that takes the positional lights `ordinals`, in Godot's loop order, in `frame`. */
 export function itemLightBitsIn(frame: CanvasLightsFrame, ordinals: readonly number[]): ItemLightBits {
-  const indices: number[] = [];
+  const lights: [number, number, number, number] = [0, 0, 0, 0];
+  let count = 0;
   for (const ordinal of ordinals) {
     const index = frame.indexOf.get(ordinal);
     if (index === undefined || index < frame.directionalCount) continue;
-    indices.push(index);
-    if (indices.length === MAX_POSITIONAL_LIGHTS_PER_ITEM) break;
+    lights[count >> 2] = (lights[count >> 2]! | (index << ((count & 3) * 8))) >>> 0;
+    count += 1;
+    if (count === MAX_POSITIONAL_LIGHTS_PER_ITEM) break;
   }
-  return itemLightBits(indices);
+  return count === 0 ? NO_ITEM_LIGHTS : { flags: count, lights };
 }
