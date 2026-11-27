@@ -87,6 +87,7 @@ describe.each([
     idHighlight: [range(4, 38, 39)],
     lintColumn: { line: 9, column: 53 },
     malformedColumn: { line: 9, column: 44 },
+    laterValueColumn: { line: 10, column: 0 },
     typeRange: range(8, 21, 28),
     folds: [{ startLine: 8, endLine: 9 }],
     nodeSelection: range(8, 0, 42),
@@ -102,6 +103,7 @@ describe.each([
     idHighlight: [],
     lintColumn: { line: 13, column: 10 },
     malformedColumn: { line: 13, column: 1 },
+    laterValueColumn: { line: 14, column: 0 },
     typeRange: undefined,
     folds: [
       { startLine: 4, endLine: 6 },
@@ -141,6 +143,11 @@ describe.each([
     const typo = new LanguageDocument(row.text.replace('Sprite2D', 'Sprit2D'));
     const action = codeActions(typo, WHOLE).find((found) => found.title.includes('Sprit2D'));
     expect(action?.edit[0]?.range).toEqual(row.typeRange);
+  });
+
+  it('refuses a value on the line after its key, where the value starts', () => {
+    const [diagnostic] = new Linter().lint(row.text.replace('visble = true', 'hframes =\n"x"'));
+    expect(diagnostic?.location).toEqual(row.laterValueColumn);
   });
 
   it('places a malformed property past the heading', () => {
