@@ -4,10 +4,16 @@ import { join } from 'node:path';
 import { ENTRY, WEBVIEW_DIR } from './paths.mjs';
 import { reportGzipBudget } from './gzipBudget.mjs';
 
-// Growth inside the ceiling is invisible in a PASS line, so the report reads it against the last measure.
+// The report reads growth against the last measure, not the failing budget.
 const MEASURED_GZ = 1_798_797;
-// A change that outgrows it, with no shrink found, raises it by its measured growth (ADR-0090).
-const BUDGET_GZ = 1_798_797;
+// Standing headroom above the last measure, so a small fix does not churn the budget (ADR-0090).
+export const WEBVIEW_HEADROOM_GZ = 200 * 1024;
+const BUDGET_GZ = MEASURED_GZ + WEBVIEW_HEADROOM_GZ;
+
+/** The last measured size and the failing budget, measured plus the standing headroom. */
+export function webviewCeiling() {
+  return { measured: MEASURED_GZ, budget: BUDGET_GZ };
+}
 
 /** The scripts of `files` beside the entry, each one more request a closed load holds (ADR-0090). */
 export function findExtraScripts(files) {
@@ -39,7 +45,6 @@ export function checkWebviewBudget(enforce) {
   const script = readFileSync(entryPath);
 
   const size = { gz: gzipSync(script).length, raw: script.length };
-  const ceiling = { measured: MEASURED_GZ, budget: BUDGET_GZ };
-  if (reportGzipBudget('VS Code webview script', size, ceiling, enforce)) return 'over-budget';
+  if (reportGzipBudget('VS Code webview script', size, webviewCeiling(), enforce)) return 'over-budget';
   return 'ok';
 }

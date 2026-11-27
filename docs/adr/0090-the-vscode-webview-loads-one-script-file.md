@@ -1,6 +1,6 @@
 # The VS Code webview loads one script file
 
-- Status: Accepted.
+- Status: Accepted. Budget headroom amended (below).
 - Related: ADR-0042 (the procedural-texture worker, which the script starts from a `blob:` URL).
 - Amends: ADR-0055 (the webview bundle ceiling).
 
@@ -26,9 +26,12 @@ ended at its 30 s load deadline (#2075).
 `dist/webview/webview.js`. A preview closed during its load then holds at most two places.
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
-script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 1,798,797 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
-split build. A change that outgrows the ceiling, with no shrink found, raises it by its measured growth:
+script is over its gzipped budget (`scripts/check-bundle-size/webviewBudget.mjs`). The budget is
+the last measured size plus a standing headroom of 200 KB (`WEBVIEW_HEADROOM_GZ`), so a small fix
+does not churn the budget; the report still prints the growth against the last measure. The last
+measured size is 1,798,797 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint
+closure of the split build. A change that outgrows the last measure is still recorded here by its
+measured growth:
 the editor camera node (ADR-0091) added 1,820 B, the panels that read the scene through node
 handles added 1,413 B, the Scene tree on node handles added 409 B, its review fixes added 685 B,
 the inspector on node handles added 5,525 B, its review fixes added 266 B,
@@ -42,6 +45,13 @@ added 278 B, and a 2D pan and zoom with no scene render, the scene-render count 
 the browser cannot turn into a text selection added 109 B, and the 2D light pass that keeps its
 buffers while its inputs hold (ADR-0095) added 668 B, and its review fixes added 374 B, and the
 AnimationTree dominant-clip playhead guard added 10 B.
+
+> **Amendment (budget headroom):** the failing budget is the last measured size plus 200 KB of
+> standing headroom, not the last measured size itself. Before, every growth, a 10 B guard
+> included, raised the ceiling one measurement at a time, so small fixes churned
+> `webviewBudget.mjs`. The last measured size still moves per change and the report prints the
+> growth against it, so a real growth trend stays visible; only the pass/fail line moves 200 KB
+> ahead of it.
 
 ## Consequences
 

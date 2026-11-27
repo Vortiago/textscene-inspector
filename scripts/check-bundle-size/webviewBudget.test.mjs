@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { findExtraScripts } from './webviewBudget.mjs';
+import { findExtraScripts, webviewCeiling, WEBVIEW_HEADROOM_GZ } from './webviewBudget.mjs';
+
+describe('webviewCeiling', () => {
+  it('fails 200 KB above the last measured size, not at it', () => {
+    const ceiling = webviewCeiling();
+    expect(ceiling.budget - ceiling.measured).toBe(WEBVIEW_HEADROOM_GZ);
+    expect(WEBVIEW_HEADROOM_GZ).toBe(200 * 1024);
+  });
+});
 
 describe('findExtraScripts', () => {
   it('passes a build of the entry, its stylesheet and their source maps', () => {
