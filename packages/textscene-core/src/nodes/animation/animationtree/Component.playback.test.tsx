@@ -329,16 +329,19 @@ describe('AnimationTree — playing readout', () => {
   }
 
   it('reports no playhead while playing when the dominant clip has no action', async () => {
+    const driver = makeDriver();
     const renderer = await mountTree(
-      makeDriver(),
+      driver,
       makeTreeNode({ tree_root: 'SubResource("tree_ghost")', parameters: { 'mix/blend_amount': '0.75' } })
     );
     const calls: unknown[][] = [];
     await ReactThreeTestRenderer.act(async () => transport.play());
-    // Move the clock past the throttle window each frame, so a `?? 0` fallback would report.
+    // Move the clock past the throttle window each frame, so any report would commit.
     await frame(renderer, 0.25, calls);
     vi.spyOn(Date, 'now').mockReturnValue(1_000_100);
     await frame(renderer, 0.25, calls);
+    // The lighter `left` clip still reaches the ensure-playing arm and drives the pose.
+    expect(moverX(driver.object)).not.toBe(0);
     expect(calls).toEqual([]);
     await renderer.unmount();
   });
