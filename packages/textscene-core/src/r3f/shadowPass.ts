@@ -98,7 +98,6 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
   const copy = new OmniShadowCopy();
   const sunAtlasClear = new OneAtlasClear(renderer, isDirectionalShadowAtlas);
   const positionalAtlasClear = new OneAtlasClear(renderer, (target) => target === positionalShadowAtlas());
-  // The omni copies run after the slot draws. Godot runs them first (`render_forward_clustered.cpp:2722`).
   shadowMap.render = (lights, scene, camera) => {
     const draws = passDraws(shadowMap);
     const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
@@ -121,7 +120,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
       positionalAtlasClear.end();
       sunAtlasClear.end();
     }
-    // After the slot draws, whose one whole clear would erase a copy.
+    // After the slot draws, whose clear erases a copy. Godot copies first: render_forward_clustered.cpp:2722.
     copyOmniShadows(renderer, copy, copied);
     if (isTimed) endStep(renderer, 'Shadows');
     if (isReading) {

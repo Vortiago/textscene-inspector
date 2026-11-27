@@ -394,9 +394,12 @@ describe('timeEachDraw', () => {
     renderer.clear = () => {};
     const remove = timeEachDraw(renderer, { beginDraw: () => {}, beginClear: () => {}, end: () => {} });
     const over: THREE.WebGLRenderer['renderBufferDirect'] = () => {};
+    const overClear: THREE.WebGLRenderer['clear'] = () => {};
     renderer.renderBufferDirect = over;
+    renderer.clear = overClear;
     remove();
     expect(renderer.renderBufferDirect).toBe(over);
+    expect(renderer.clear).toBe(overClear);
   });
 });
 

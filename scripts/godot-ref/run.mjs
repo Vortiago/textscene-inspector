@@ -126,7 +126,7 @@ const IN_GAME_IGNORED = [
   ['--emit-bounds', 'the mode places no camera from bounds', (o) => o.boundsOut != null],
   ['--width', 'the window is the size the project sets', (o) => o.width !== DEFAULT_WIDTH],
   ['--height', 'the window is the size the project sets', (o) => o.height !== DEFAULT_HEIGHT],
-  ['--gpu-time', 'the bootstrap times only a 3D render', (o) => o.gpuTimeFrames > 0],
+  ['--gpu-time', 'the bootstrap times only its 3D capture, not the game', (o) => o.gpuTimeFrames > 0],
 ];
 
 /**
