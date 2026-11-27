@@ -94,7 +94,9 @@ const cases = {
     backslash +
     '\nb"\n\n[ext_resource type="Resource" path="res://gone.tres" id="1"]\n',
 };
-writeCaseFiles(
-  process.argv[2],
-  Object.entries(cases).map(([name, text]) => ({ file: `${name}.tscn`, text }))
+console.log(
+  writeCaseFiles(
+    process.argv[2],
+    Object.entries(cases).map(([name, text]) => ({ file: `${name}.tscn`, text }))
+  )
 );

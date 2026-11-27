@@ -40,7 +40,7 @@ function isSpaceCode(code: number): boolean {
 }
 
 /** The length of the white space `str` starts with. */
-function leadingSpace(str: string): number {
+export function leadingSpace(str: string): number {
   let at = 0;
   while (at < str.length && isSpaceCode(str.charCodeAt(at))) at++;
   return at;

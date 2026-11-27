@@ -366,6 +366,14 @@ garbage-line-without-equals
       expect(observed.origins).toEqual(bare.origins);
     });
 
+    it('places a refused heading at its `[`, past a control character Godot skips', () => {
+      const onError = vi.fn<NonNullable<ParseObserver['onError']>>();
+
+      parser.parse('[gd_scene format=3]\n\x01[node name=]\n', simpleCreator, { onError });
+
+      expect(onError.mock.calls[0]![0]).toMatchObject({ code: 'INVALID_HEADING_FORMAT', line: 2, column: 2 });
+    });
+
     it('fires onError with INVALID_HEADING_FORMAT and line number for a malformed heading', () => {
       const content = `[gd_scene format=3]
 

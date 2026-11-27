@@ -27,6 +27,7 @@ import {
   isIncompleteState,
   INITIAL_SCAN_STATE,
   stripLineComment,
+  leadingSpace,
   splitLines,
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
@@ -373,7 +374,7 @@ export class TscnParserCore {
         observer?.onError?.({
           message: `Invalid heading format: "${line.trim()}"`,
           line: lineNumber,
-          column: column + leadingSpace(line) + 1,
+          column: column + indent + 1,
           code: 'INVALID_HEADING_FORMAT',
         });
         // A header refused past its line still names its type, so the file reads as a resource.
@@ -543,11 +544,6 @@ function lineStartsOf(content: string): number[] {
   const starts = [0];
   for (let at = content.indexOf('\n'); at !== -1; at = content.indexOf('\n', at + 1)) starts.push(at + 1);
   return starts;
-}
-
-/** The white space before a line's text, as `parseProperty` trims it. */
-function leadingSpace(line: string): number {
-  return line.length - line.trimStart().length;
 }
 
 /** Where a property line's value starts: past its `=` and the white space `parseProperty` trims. */

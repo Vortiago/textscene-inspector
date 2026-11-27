@@ -22,4 +22,4 @@ const cases = HEADING_KINDS.flatMap((kind) =>
     ...fileWithField(kind, `x=${text}`),
   }))
 );
-writeCases(process.argv[2], cases);
+console.log(writeCases(process.argv[2], cases));

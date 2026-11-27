@@ -27,4 +27,4 @@ const cases = Object.entries(codes).flatMap(([codeName, code]) =>
     ];
   })
 );
-writeCaseFiles(process.argv[2], cases);
+console.log(writeCaseFiles(process.argv[2], cases));

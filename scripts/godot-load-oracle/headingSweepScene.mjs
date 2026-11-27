@@ -57,7 +57,7 @@ export const HEADING_KINDS = ['gd_resource', ...SCENE_HEADINGS];
 
 /** Writes each case beside the real resource the scene reads. */
 export function writeCases(out, cases) {
-  writeCaseFiles(
+  return writeCaseFiles(
     out,
     [REAL_RESOURCE, ...cases].map(({ name, extension, text }) => ({ file: `${name}.${extension}`, text }))
   );
