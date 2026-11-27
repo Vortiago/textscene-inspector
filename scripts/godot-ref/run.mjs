@@ -1963,6 +1963,8 @@ async function renderInto(
   // Both streams: `xvfb-run` hands the engine's `printerr` on through its stdout.
   const warnings = harnessWarnings(`${render.stdout}\n${render.stderr}`);
   const gpuTime = hostGpu ? await recordedGpuTime(gpuTimeOut, rendered) : null;
+  const resized = gpuTime && gpuTimeSizeMessage(gpuTime.device.size, { width, height });
+  if (resized) throw new Error(resized);
   return { workDir: work, out: resolve(out), mode: rendered, warnings, gpuTime };
 }
 
@@ -1974,8 +1976,18 @@ async function recordedGpuTime(gpuTimeOut, rendered) {
 /** The bootstrap records only after a 3D capture, so a 3D render with no file quit before it ended. */
 export function missingGpuTimeMessage(rendered) {
   return rendered === '3d'
-    ? '--gpu-time expected a recording, but Godot quit before it ended'
+    ? '--gpu-time expected a recording, but Godot quit before it ended. ' +
+        'A window that is hidden, minimised or on another workspace draws no frames.'
     : `--gpu-time times only a 3D render, got a "${rendered}" render`;
+}
+
+/** The refusal for a window the screen resized, or null: the time is for the size Godot drew. */
+export function gpuTimeSizeMessage([drawnWidth, drawnHeight], { width, height }) {
+  if (drawnWidth === width && drawnHeight === height) return null;
+  return (
+    `--gpu-time asked for ${width} x ${height}, but Godot drew ${drawnWidth} x ${drawnHeight}. ` +
+    'The window may not fit the screen.'
+  );
 }
 
 async function main() {

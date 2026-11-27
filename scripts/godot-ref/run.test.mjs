@@ -31,6 +31,7 @@ import {
   FOG_JITTER_CYCLE_FRAMES,
   FRAME_MARGIN,
   godotSpawnPlan,
+  gpuTimeSizeMessage,
   importAssets,
   missingGpuTimeMessage,
   PARTICLES_PROCESS_DEFAULT,
@@ -1242,9 +1243,17 @@ describe('--gpu-time measures Godot on the host GPU', () => {
     expect(missingGpuTimeMessage('2d')).toBe('--gpu-time times only a 3D render, got a "2d" render');
   });
 
-  it('names a 3D render that quit before the recording ended', () => {
-    expect(missingGpuTimeMessage('3d')).toBe(
-      '--gpu-time expected a recording, but Godot quit before it ended'
+  it('names a 3D render that quit before the recording ended, and the hidden window that causes it', () => {
+    expect(missingGpuTimeMessage('3d')).toMatch(/Godot quit before it ended\. A window that is hidden/);
+  });
+
+  it('accepts a recording at the asked size', () => {
+    expect(gpuTimeSizeMessage([1073, 1830], { width: 1073, height: 1830 })).toBeNull();
+  });
+
+  it('refuses a recording the screen resized (error case)', () => {
+    expect(gpuTimeSizeMessage([1073, 1050], { width: 1073, height: 1830 })).toBe(
+      '--gpu-time asked for 1073 x 1830, but Godot drew 1073 x 1050. The window may not fit the screen.'
     );
   });
 

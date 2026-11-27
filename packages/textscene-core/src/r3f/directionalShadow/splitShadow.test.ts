@@ -311,11 +311,31 @@ describe('DirectionalSplitShadow.updateMatrices', () => {
 });
 
 describe('DirectionalSplitShadow share of the atlas', () => {
-  it('leaves the atlas unscissored, so three’s first clear in a pass clears it whole', () => {
+  it('scissors the atlas to its light’s share, as a viewport does not clip a wide point', () => {
     const shadow = new DirectionalSplitShadow();
     shadow.setSplits(4, SECOND_OF_TWO);
     shadow.updateMatrices(new THREE.DirectionalLight());
-    expect(shadow.map!.scissorTest).toBe(false);
+    expect(shadow.map!.scissor.toArray()).toEqual([2048, 0, 2048, 4096]);
+    expect(shadow.map!.scissorTest).toBe(true);
+  });
+
+  it('moves the scissor to each light’s share in turn, as three draws one light after another', () => {
+    const [first, second] = [new DirectionalSplitShadow(), new DirectionalSplitShadow()];
+    first.setSplits(1, WHOLE_ATLAS);
+    second.setSplits(2, QUARTER);
+    first.updateMatrices(new THREE.DirectionalLight());
+    expect(first.map!.scissor.toArray()).toEqual([0, 0, 4096, 4096]);
+    second.updateMatrices(new THREE.DirectionalLight());
+    expect(second.map!.scissor.toArray()).toEqual([2048, 2048, 2048, 2048]);
+  });
+
+  it('scales the scissor with a map size three shrank to fit the GPU (edge case)', () => {
+    // three shrinks `mapSize` when the atlas exceeds `MAX_TEXTURE_SIZE` (r187 `WebGLShadowMap.js:180-198`).
+    const shadow = new DirectionalSplitShadow();
+    shadow.setSplits(4, SECOND_OF_TWO);
+    shadow.mapSize.set(512, 1024);
+    shadow.updateMatrices(new THREE.DirectionalLight());
+    expect(shadow.map!.scissor.toArray()).toEqual([1024, 0, 1024, 2048]);
   });
 
   it('lets go of the atlas on dispose without freeing it for the shadows that still draw', () => {
@@ -330,7 +350,7 @@ describe('DirectionalSplitShadow share of the atlas', () => {
     atlas.removeEventListener('dispose', freed);
   });
 
-  it('updates its matrices without the atlas once disposed (error case)', () => {
+  it('scissors nothing once disposed (error case)', () => {
     const shadow = new DirectionalSplitShadow();
     shadow.setSplits(1, WHOLE_ATLAS);
     shadow.dispose();
