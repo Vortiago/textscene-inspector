@@ -618,6 +618,13 @@ function dropSection(ini, name) {
 
 const WINDOW_MODE_SETTING = /^window\/size\/mode\s*=/;
 
+/** The size the project asks for. A timed run pins the window to it, so a stretch cannot resize the frame. */
+export function projectSize({ rootWindow, inGame, onHostGpu, width, height, canvas2DSize }) {
+  if (rootWindow) return { ...canvas2DSize, pinWindowToViewport: true };
+  if (inGame) return { ...canvas2DSize, inGame: true };
+  return { width, height, pinWindowToViewport: onHostGpu };
+}
+
 /** The generated `project.godot`. `inGame` keeps the default environment and the window settings. */
 export function projectConfig(
   sourceIni,
@@ -1855,15 +1862,10 @@ async function renderInto(
   const stage = async () => {
     await rm(work, { recursive: true, force: true });
     await cp(root, work, { recursive: true, dereference: true });
-    // Root-window arm: window pinned to the viewport. Game: the project's window. Others: width x height.
     await writeFile(
       join(work, 'project.godot'),
       projectConfig(sourceIni, {
-        ...(rootWindow
-          ? { ...canvas2DSize, pinWindowToViewport: true }
-          : inGame
-            ? { ...canvas2DSize, inGame: true }
-            : { width, height }),
+        ...projectSize({ rootWindow, inGame, onHostGpu, width, height, canvas2DSize }),
         // Only a game runs an autoload (main.cpp:4397), with no `@tool` exception. The game view runs none.
         runScripts: !previews && !inGame,
       })
@@ -1975,6 +1977,7 @@ async function recordedGpuTime(gpuTimeOut, rendered) {
 
 /** The bootstrap records only after a 3D capture, so a 3D render with no file quit before it ended. */
 export function missingGpuTimeMessage(rendered) {
+  if (rendered === null) return '--gpu-time expected a recording, but Godot wrote no render mode';
   return rendered === '3d'
     ? '--gpu-time expected a recording, but Godot quit before it ended. ' +
         'A window that is hidden, minimised or on another workspace draws no frames.'

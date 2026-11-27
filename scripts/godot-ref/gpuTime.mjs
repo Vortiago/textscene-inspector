@@ -36,13 +36,14 @@ export function parseGpuTime(text) {
   };
 }
 
-/** One time per pass and frame. A name stamped twice adds up (`rendering_server_default.cpp:176`). */
+/** One time per pass and frame. Two stamps add up, none counts 0 (`rendering_server_default.cpp:176-193`). */
 function timesPerPass(passFrames) {
-  const times = new Map();
+  const names = new Set(passFrames.flatMap((stamps) => stamps.map(([name]) => name)));
+  const times = new Map([...names].map((name) => [name, []]));
   for (const stamps of passFrames) {
-    const frame = new Map();
-    for (const [name, ms] of stamps) frame.set(name, (frame.get(name) ?? 0) + ms);
-    for (const [name, ms] of frame) times.set(name, [...(times.get(name) ?? []), ms]);
+    const frame = new Map([...names].map((name) => [name, 0]));
+    for (const [name, ms] of stamps) frame.set(name, frame.get(name) + ms);
+    for (const [name, ms] of frame) times.get(name).push(ms);
   }
   return times;
 }
