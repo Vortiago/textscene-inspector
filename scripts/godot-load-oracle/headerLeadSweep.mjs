@@ -8,6 +8,8 @@ export const LEADS = {
   blank_lines: '\n\n',
   tab: '\t',
   code_1: '\x01',
+  nul: '\0',
+  nul_line: '\0\n',
   body_line: 'x = 1\n',
   word: 'garbage\n',
   number: '1\n',

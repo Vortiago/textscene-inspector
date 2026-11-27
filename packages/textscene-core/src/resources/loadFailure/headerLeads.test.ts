@@ -10,6 +10,8 @@ const LEADS = {
   blank_lines: '\n\n',
   tab: '\t',
   code_1: '\x01',
+  nul: '\0',
+  nul_line: '\0\n',
   body_line: 'x = 1\n',
   word: 'garbage\n',
   number: '1\n',
@@ -34,6 +36,9 @@ const GODOT: Record<Lead, string | Record<Extension, string>> = {
   blank_lines: { tscn: 'loads Root[A(1.0, 2.0)]', tres: 'loads' },
   tab: { tscn: 'loads Root[A(1.0, 2.0)]', tres: 'loads' },
   code_1: { tscn: 'loads Root[A(1.0, 2.0)]', tres: 'loads' },
+  // A NUL ends Godot's stream, so the header tag reads no `[`.
+  nul: '@:1 - Parse Error: .',
+  nul_line: '@:1 - Parse Error: .',
   body_line: REFUSED,
   word: REFUSED,
   number: REFUSED,

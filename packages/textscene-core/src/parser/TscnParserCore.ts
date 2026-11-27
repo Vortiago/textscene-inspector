@@ -41,6 +41,7 @@ import { refusesToInstantiate } from './instantiateRefusal.js';
 import * as logger from '../logger.js';
 import { nodeOrigin } from './rawNode.js';
 import { simplifiedNodePath } from '../godot/string/nodePath.js';
+import { GodotError } from '../godot/variant/parseError.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
@@ -353,9 +354,9 @@ export class TscnParserCore {
         }
       }
 
-      const indent = godotIndent(line);
       // Godot reads the header from the first token, so any text before it, a BOM too, is a refused tag.
       const readsHeader = headings.previous() === null && !headings.isStopped();
+      const indent = readsHeader ? headerIndent(line) : godotIndent(line);
       // A comment-only line is already blank: `stripLineComment` above is the one place a `;` is read.
       if (readsHeader ? indent === line.length : isGodotBlank(line)) continue;
 
@@ -386,6 +387,9 @@ export class TscnParserCore {
         if (tag) {
           addFieldValues(tag.fields, tag.name ?? '', headings.previous());
           headings.refuse({ error: tag.error, code: tag.code, line: tag.line });
+        } else if (readsHeader) {
+          // `open` prints the empty message of a header that meets the end (resource_format_text.cpp:1131).
+          headings.refuse({ error: '', code: GodotError.FileEof, line: godotLine });
         }
         observer?.onError?.({
           message: `Invalid heading format: "${line.trim()}"`,
@@ -519,6 +523,13 @@ function typeField(content: string, fields: readonly TagField[]): string | undef
   const field = fields.find(({ key }) => key === 'type');
   const value = field && strToVar(content.slice(field.start, field.end));
   return value?.type === VARIANT_TYPE.STRING ? value.value : undefined;
+}
+
+/** Where the header tag starts: a NUL before it ends the stream (measured), but a body line skips one. */
+function headerIndent(line: string): number {
+  const nul = line.indexOf('\0');
+  const indent = godotIndent(line);
+  return nul === -1 ? indent : Math.min(nul, indent);
 }
 
 /** True when line `at` ends on an odd run of backslashes with nothing, not even `\r`, before its `\n`. */
