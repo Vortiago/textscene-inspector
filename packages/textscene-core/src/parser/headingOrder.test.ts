@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { headingOrder, missingField } from './headingOrder.js';
+import { missingField } from '../godot/scene/textResourceTags.js';
+import { headingOrder } from './headingOrder.js';
 
 function misplacedIn(...types: string[]) {
   const order = headingOrder();

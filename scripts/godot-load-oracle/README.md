@@ -16,8 +16,19 @@ Godot must be on the path. The oracle measures the rows of `packages/textscene-c
 
 `headerLeadSweep.mjs <folder>` writes 26 cases into a new or empty folder: a scene and a resource, each with one kind of text before its header, such as a BOM, a body line or a comment. `headerLeads.test.ts` holds Godot's result for each case.
 
-`blankLineSweep.mjs <folder>` writes 32 cases into a new or empty folder: a tab or the code 1, 8 or 31 at eight places. The places are after a heading's `]`, alone on a body line, between a key and its value, before a key, around its `=`, and after a value on its key's line, on the next line or over several lines. Godot skips each one, and `blankLines.test.ts` holds that result.
+`blankLineSweep.mjs <folder>` writes 32 cases into a new or empty folder: a tab or the code 1, 8 or 31 at eight places. Godot skips each one, and `blankLines.test.ts` holds that result. The places are:
 
-`emptyValueSweep.mjs <folder>` writes 8 cases into a new or empty folder: a `key =` with no value in a node and in a sub-resource, before a key or a heading, with or without a blank line between. `emptyValues.test.ts` holds Godot's result for each case.
+- after a heading's `]`
+- alone on a body line
+- between a key and its value
+- before a key
+- around its `=`
+- after a value on its key's line
+- after a value on the next line
+- after a value over several lines
 
-`stringEscapeSweep.mjs <folder>` writes 56 cases into a new or empty folder: each of 28 string escapes in a heading name and in a body string. `stringEscapes.test.ts` holds Godot's result for each case.
+`emptyValueSweep.mjs <folder>` writes 21 cases into a new or empty folder: a `key =` with no value in a node, in a sub-resource and in a last sub-resource. Its next line is a key, a heading, a `]` or the end of the file, with or without a blank line between. `emptyValues.test.ts` holds Godot's result for each case.
+
+`stringEscapeSweep.mjs <folder>` writes 60 cases into a new or empty folder: each of 30 string escapes in a heading name and in a body string. `stringEscapes.test.ts` holds Godot's result for each case.
+
+`valueThenHeadingSweep.mjs <folder>` writes 24 cases into a new or empty folder: a value of each of 11 kinds before a heading on its line, with and without a space between. Two more put the value on the line below its key, and over two lines. `valueThenHeading.test.ts` holds Godot's result for each case.

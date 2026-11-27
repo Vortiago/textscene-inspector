@@ -30,22 +30,6 @@ export interface IncompleteHeading {
 /** Where the loader stops at a heading: refused for its place, for a missing field, or unparsed. */
 export type HeadingStop = MisplacedHeading | IncompleteHeading | UnparsedHeading;
 
-/** Required fields by heading, in check order (resource_format_text.cpp:311-331, :392, :466-560, :1155). */
-const REQUIRED_FIELDS: ReadonlyMap<string, readonly string[]> = new Map(
-  Object.entries({
-    gd_resource: ['type'],
-    ext_resource: ['path', 'type', 'id'],
-    sub_resource: ['type', 'id'],
-    connection: ['from', 'to', 'signal', 'method'],
-    editable: ['path'],
-  })
-);
-
-/** The first field the loader requires of a `type` heading that `keys` lacks, or undefined. */
-export function missingField(type: string, keys: readonly string[]): string | undefined {
-  return REQUIRED_FIELDS.get(type)?.find((field) => !keys.includes(field));
-}
-
 /** The headings the loader takes next: `[ext_resource]`, then `[sub_resource]`, then the main tag. */
 type Phase = 'ext_resource' | 'sub_resource' | 'node' | 'resource';
 

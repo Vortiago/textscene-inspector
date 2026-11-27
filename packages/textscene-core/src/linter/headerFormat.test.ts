@@ -21,6 +21,18 @@ describe('readHeaderFormat', () => {
     expect(readHeaderFormat(content)).toEqual({ format: 2, line: 4, column: 1 });
   });
 
+  it.each([
+    ['a comment', '[gd_scene format=2] ; note\n'],
+    ['several lines', '[gd_scene\nformat=2]\n'],
+    ['text after its `]`', '[gd_scene format=2] x = 1\n'],
+  ])('reads a header with %s, as the tag reader does', (_shape, content) => {
+    expect(readHeaderFormat(content)).toEqual({ format: 2, line: 1, column: 1 });
+  });
+
+  it('reads a quoted version as its number, as the `int` it fills reads a String', () => {
+    expect(readHeaderFormat('[gd_scene format="2"]\n')?.format).toBe(2);
+  });
+
   it('reports no version when the header declares none', () => {
     // Absent is current, not oldest: the engine defaults it to FORMAT_VERSION
     // (resource_format_text.cpp:1147-1148).
@@ -32,9 +44,14 @@ describe('readHeaderFormat', () => {
     });
   });
 
-  it('reports no version for text no number grammar reads', () => {
-    expect(readHeaderFormat('[gd_scene format=abc]\n')?.format).toBeNull();
-    expect(readHeaderFormat('[gd_scene format=]\n')?.format).toBeNull();
+  it('reads no header where Godot refuses the format value', () => {
+    expect([readHeaderFormat('[gd_scene format=abc]\n'), readHeaderFormat('[gd_scene format=]\n')]).toEqual([
+      null,
+      null,
+    ]);
+  });
+
+  it('reports no version for a number that overflows', () => {
     // Digits and an exponent, but it overflows: a grammar cannot catch this,
     // so the finite check is on the parsed result.
     expect(readHeaderFormat('[gd_scene format=1e999]\n')?.format).toBeNull();

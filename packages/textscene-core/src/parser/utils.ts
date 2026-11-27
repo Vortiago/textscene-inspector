@@ -1,6 +1,7 @@
 import { stringArrayBodies } from '../godot/variant/variantParser';
 import { strToVar } from '../godot/variant/strToVar.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
+import { isTokenGap } from '../godot/variant/tokenGap.js';
 
 /** Zero-based character offsets on one line, `end` exclusive. */
 export interface ValueSpan {
@@ -23,7 +24,7 @@ interface SpannedHeading extends ParsedHeading {
 
 /** A code up to 32 or a `\s` space, split on so the lenient reading keeps the node. A body NUL loads. */
 function isSpaceCode(code: number): boolean {
-  if (code <= 32) return true;
+  if (isTokenGap(code)) return true;
   // Godot rejects this tail: a heading key is `[A-Za-z_][A-Za-z0-9_]*`
   // (variant_parser.cpp:493), and an NBSP is neither whitespace (`cchar <= 32`) nor
   // an identifier character, so it raises "Unexpected character" (:508).
@@ -48,7 +49,7 @@ function isSpaceCode(code: number): boolean {
  */
 export function godotIndent(line: string): number {
   let at = 0;
-  while (at < line.length && line.charCodeAt(at) <= 32) at++;
+  while (at < line.length && isTokenGap(line.charCodeAt(at))) at++;
   return at;
 }
 

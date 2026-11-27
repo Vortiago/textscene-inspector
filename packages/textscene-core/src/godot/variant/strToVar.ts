@@ -10,6 +10,7 @@ import {
 } from './variantValue.js';
 import { DEFAULT_COLOR, htmlColor } from '../math/color.js';
 import { GodotError, ParseError } from './parseError.js';
+import { isTokenGap } from './tokenGap.js';
 
 const T = VARIANT_TYPE;
 
@@ -187,7 +188,7 @@ export class Tokens {
       }
       if (c === '"') return { kind: 'string', text: this.quoted() };
       if (c === '\n') this.lineAt++;
-      if (c.charCodeAt(0) <= 32) continue;
+      if (isTokenGap(c.charCodeAt(0))) continue;
       return this.word(c);
     }
   }
@@ -784,6 +785,20 @@ export function readVariant(text: string, reading: VariantReading = {}): Variant
     return { value: new ValueReader(tokens, reading).value(first) };
   } catch (error) {
     if (error instanceof ParseError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** The offset past the first value in `text`, where `parse_tag_assign_eof` returns, or null. */
+export function variantEnd(text: string): number | null {
+  const tokens = new Tokens(text);
+  const first = tokens.next();
+  if (first.kind === 'error') return null;
+  try {
+    new ValueReader(tokens, {}).value(first);
+    return tokens.offset;
+  } catch (error) {
+    if (error instanceof ParseError) return null;
     throw error;
   }
 }

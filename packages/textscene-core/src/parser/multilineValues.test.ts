@@ -81,3 +81,27 @@ Volume; Two"
     expect(props.text).toBe('Field Notes\nVolume; Two');
   });
 });
+
+describe('a heading after a value that ends on a later line', () => {
+  const sceneWith = (value: string) =>
+    new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="."]
+editor_description = ${value} [node name="B" type="Node2D" parent="."]
+position = Vector2(5, 5)
+`);
+
+  it('opens the heading after a value on the line below its key', () => {
+    const scene = sceneWith('\n"x"');
+    expect(find(scene.nodes, 'A')!.rawProperties['editor_description']).toBe('"x"');
+    expect((find(scene.nodes, 'B')!.properties as Node2DProperties).position).toEqual({ x: 5, y: 5 });
+  });
+
+  it('opens the heading after a value that closes over several lines', () => {
+    const scene = sceneWith('[1,\n2]');
+    expect(find(scene.nodes, 'A')!.rawProperties['editor_description']).toBe('[1,\n2]');
+    expect((find(scene.nodes, 'B')!.properties as Node2DProperties).position).toEqual({ x: 5, y: 5 });
+  });
+});

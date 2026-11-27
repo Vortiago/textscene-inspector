@@ -5,7 +5,8 @@
  * the lenient skip-and-continue recovery.
  */
 
-import { headingOrder, missingField } from './headingOrder.js';
+import { headingOrder } from './headingOrder.js';
+import { hasBody, missingField } from '../godot/scene/textResourceTags.js';
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/classdb/deprecated.js';
 import type {
   TscnScene,
@@ -34,7 +35,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { HEADER_READING, readTag, SECTION_READING, type TagField } from '../godot/variant/tagReader.js';
-import { readVariant, strToVar } from '../godot/variant/strToVar.js';
+import { readVariant, strToVar, variantEnd } from '../godot/variant/strToVar.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import {
@@ -360,6 +361,19 @@ export class TscnParserCore {
       });
     };
 
+    // A key with no value at the end: Godot reads the end as its value (variant_parser.cpp:1953, :1638).
+    const refuseValueAtEnd = (pending: { key: string; startLine: number; startColumn: number }) => {
+      const read = readVariant('');
+      if (!('error' in read)) return;
+      headings.refuse({ error: read.error, code: GodotError.ParseError, line: lines.length - skippedLines });
+      observer?.onError?.({
+        message: `"${pending.key} =" has no value, and Godot stops at the end of the file: ${read.error}`,
+        line: pending.startLine,
+        column: pending.startColumn + 1,
+        code: 'INVALID_PROPERTY_FORMAT',
+      });
+    };
+
     // After a heading with no body, plain `parse_tag` refuses text (resource_format_text.cpp:40, :1185).
     const refuseBody = (line: string, lineNumber: number, godotLine: number, column: number) => {
       headings.refuse({ error: "Expected '['", code: GodotError.ParseError, line: godotLine });
@@ -410,7 +424,15 @@ export class TscnParserCore {
             pendingMultiline.skippedNewlines.push(pendingMultiline.joinedLength);
             skippedLines++;
           }
-          if (!isIncompleteState(pendingMultiline.scanState)) storePending();
+          if (!isIncompleteState(pendingMultiline.scanState)) {
+            const headingAt = headingInLastChunk(pendingMultiline.lines);
+            if (headingAt !== null) {
+              pendingMultiline.lines[pendingMultiline.lines.length - 1] = chunk.slice(0, headingAt);
+              resumeColumn = column + indent + headingAt;
+              i--;
+            }
+            storePending();
+          }
           continue;
         }
       }
@@ -493,8 +515,8 @@ export class TscnParserCore {
         }
         continue;
       }
-      const property = parseProperty(line);
-      if (!property) {
+      const written = parseProperty(line);
+      if (!written) {
         observer?.onError?.({
           message: `Invalid property format: "${line.trim()}"`,
           line: lineNumber,
@@ -502,6 +524,14 @@ export class TscnParserCore {
           code: 'INVALID_PROPERTY_FORMAT',
         });
         continue;
+      }
+
+      const headingAt = headingAfterValue(written.value);
+      const property =
+        headingAt === null ? written : { ...written, value: trimEndSpace(written.value.slice(0, headingAt)) };
+      if (headingAt !== null) {
+        resumeColumn = column + valueOffset(line) + headingAt;
+        i--;
       }
 
       if (currentHeading) {
@@ -545,6 +575,7 @@ export class TscnParserCore {
       }
     }
 
+    if (pendingMultiline?.lines.length === 0 && !headings.isStopped()) refuseValueAtEnd(pendingMultiline);
     storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
@@ -605,7 +636,29 @@ function headerIndent(line: string): number {
   return nul === -1 ? indent : Math.min(nul, indent);
 }
 
+/** A `[` after a token that can end a value, not a typed `Array[` or `Dictionary[`. */
+const MAY_HOLD_HEADING = /[^\s,[(:{]\s*(?<!\b(?:Array|Dictionary))\[/;
+
+/** Where a heading opens after a complete value on its line, as Godot reads it, or null. */
+function headingAfterValue(value: string): number | null {
+  if (!MAY_HOLD_HEADING.test(value)) return null;
+  const end = variantEnd(value);
+  if (end === null) return null;
+  const at = end + godotIndent(value.slice(end));
+  return value[at] === '[' ? at : null;
+}
+
+/** Where a heading opens in the last of the lines of a complete value, as Godot reads it, or null. */
+function headingInLastChunk(lines: readonly string[]): number | null {
+  const last = lines[lines.length - 1]!;
+  if (!last.includes('[')) return null;
+  const joined = lines.join('\n');
+  const at = headingAfterValue(joined);
+  const lastStart = joined.length - last.length;
+  return at !== null && at >= lastStart ? at - lastStart : null;
+}
+
 /** Whether Godot refuses a body after a heading of `type`. Null, before any heading, is not one. */
 function readsNoBody(type: string | null): boolean {
-  return type !== null && type !== 'node' && type !== 'sub_resource' && type !== 'resource';
+  return type !== null && !hasBody(type);
 }

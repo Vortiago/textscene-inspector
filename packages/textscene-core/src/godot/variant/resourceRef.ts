@@ -5,6 +5,8 @@
  * character `<= 32` before a token (`:415-417`), so `SubResource ( "id" )` loads like the tight form.
  */
 
+import { isTokenGap } from './tokenGap.js';
+
 const WS = '\\s*';
 
 /**
@@ -258,7 +260,7 @@ export function valueReadsAt(text: string): ValueReadAt[] {
 /** The offset of the first token after the `(` of the call at `start`, as `get_token` skips `<= 32`. */
 function argumentAt(text: string, start: number): number {
   let at = text.indexOf('(', start) + 1;
-  while (at < text.length && text.charCodeAt(at) <= 32) at++;
+  while (at < text.length && isTokenGap(text.charCodeAt(at))) at++;
   return at;
 }
 
