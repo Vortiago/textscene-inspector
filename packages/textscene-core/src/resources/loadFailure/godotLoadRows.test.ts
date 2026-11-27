@@ -2792,6 +2792,15 @@ Vector2(5, 5)
     stop: 'Parse Error: Parse error. [Resource file res://row226.tscn:6]',
     lenientTree: 'Root[C(1.0, 2.0)]',
   },
+  {
+    row: 227,
+    reads: 'a refused heading that stops at a heading later on its own line, which the previewer draws',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="A" type= [node name="B" parent="." type="Node2D"]\nposition = Vector2(1, 2)\n',
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row227.tscn:5]',
+    lenientTree: 'Root[B(1.0, 2.0)]',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */

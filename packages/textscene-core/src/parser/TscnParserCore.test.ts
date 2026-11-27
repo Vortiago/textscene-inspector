@@ -518,7 +518,6 @@ visible = true
 
     it('passes ownerType=undefined where the section names no type', () => {
       const content = `[gd_scene format=3]
-config = 1
 
 [node name="Root" index="0"]
 visible = true
@@ -527,33 +526,29 @@ visible = true
 
       parser.parse(content, simpleCreator, { onProperty });
 
-      expect(onProperty).toHaveBeenCalledTimes(2);
-      // gd_scene body property: section 'none', no owner type
-      expect(onProperty).toHaveBeenNthCalledWith(1, {
-        section: 'none',
-        ownerType: undefined,
-        key: 'config',
-        value: '1',
-        line: 2,
-        column: 0,
-        valueStart: { line: 2, column: 9 },
-        endLine: 2,
-        isMultiline: false,
-        stored: { key: 'config', value: '1' },
-      });
       // index= node has no type attribute: ownerType undefined
-      expect(onProperty).toHaveBeenNthCalledWith(2, {
+      expect(onProperty).toHaveBeenCalledExactlyOnceWith({
         section: 'node',
         ownerType: undefined,
         key: 'visible',
         value: 'true',
-        line: 5,
+        line: 4,
         column: 0,
-        valueStart: { line: 5, column: 10 },
-        endLine: 5,
+        valueStart: { line: 4, column: 10 },
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'visible', value: 'true' },
       });
+    });
+
+    it('records no property after the header, where Godot reads no body', () => {
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+      const onError = vi.fn<NonNullable<ParseObserver['onError']>>();
+
+      parser.parse('[gd_scene format=3]\nconfig = 1\n', simpleCreator, { onProperty, onError });
+
+      expect(onProperty).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ line: 2, column: 1 }));
     });
 
     it("takes a [resource] body's ownerType from the [gd_resource] header", () => {

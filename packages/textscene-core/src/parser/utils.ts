@@ -50,7 +50,11 @@ export function godotIndent(line: string): number {
   return at;
 }
 
-/** A line with nothing to read: codes `get_token` skips, or JavaScript white space the lenient path skips. */
+/**
+ * A line with nothing to read: codes `get_token` skips, or JavaScript white space the lenient path skips.
+ *
+ * @canonical Whether a line holds nothing Godot reads
+ */
 export function isGodotBlank(line: string): boolean {
   return godotIndent(line) === line.length || line.trim().length === 0;
 }
@@ -66,7 +70,11 @@ export function leadingSpace(str: string): number {
   return at;
 }
 
-/** `str` without the white space at its end, where `String.prototype.trimEnd` keeps a control character. */
+/**
+ * `str` without the white space at its end, where `String.prototype.trimEnd` keeps a control character.
+ *
+ * @canonical Trim the end of a value as Godot's tokenizer does
+ */
 export function trimEndSpace(str: string): string {
   let end = str.length;
   while (end > 0 && isSpaceCode(str.charCodeAt(end - 1))) end--;

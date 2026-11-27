@@ -34,9 +34,19 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { HEADER_READING, readTag, SECTION_READING, type TagField } from '../godot/variant/tagReader.js';
-import { isEscapedNewline, strToVar } from '../godot/variant/strToVar.js';
+import { strToVar } from '../godot/variant/strToVar.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
+import {
+  escapedNewlinesIn,
+  escapesItsNewline,
+  headingText,
+  lineAndColumnOf,
+  lineStartsOf,
+  opensKey,
+  valueOffset,
+  withoutComments,
+} from './sourceOffsets.js';
 import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import * as logger from '../logger.js';
@@ -317,6 +327,17 @@ export class TscnParserCore {
       observer?.onSectionStart?.(heading, currentSection, line, columns);
     };
 
+    // After a heading with no body, plain `parse_tag` refuses text (resource_format_text.cpp:40, :1185).
+    const refuseBody = (line: string, lineNumber: number, godotLine: number, column: number) => {
+      headings.refuse({ error: "Expected '['", code: GodotError.ParseError, line: godotLine });
+      observer?.onError?.({
+        message: `Godot reads no body after [${headings.previous()}]: "${line.trim()}"`,
+        line: lineNumber,
+        column: column + 1,
+        code: 'INVALID_PROPERTY_FORMAT',
+      });
+    };
+
     for (let i = 0; i < lines.length; i++) {
       // A `;` comment ends the line for Godot's reader wherever it sits, so it
       // is gone before the line is read as heading, property or continuation.
@@ -366,6 +387,10 @@ export class TscnParserCore {
       if (readsHeader ? indent === line.length : isGodotBlank(line)) continue;
 
       const opensTag = readsHeader || line[indent] === '[';
+      if (!opensTag && !headings.isStopped() && readsNoBody(headings.previous())) {
+        refuseBody(line, lineNumber, godotLine, column + indent);
+        continue;
+      }
       if (opensTag) {
         const reading = headings.previous() === null ? HEADER_READING : SECTION_READING;
         const tag = readTag(content, lineStarts[i]! + column + indent, godotLine, reading);
@@ -408,6 +433,13 @@ export class TscnParserCore {
         // A header refused past its line still names its type, so the file reads as a resource.
         if (tag?.name === 'gd_resource' && !isHeading(line))
           headerResourceType = typeField(content, tag.fields);
+        const stop = tag && lineAndColumnOf(lineStarts, tag.stop, i);
+        // The lenient tree reads a heading the tag stopped at, from its `[`, wherever it opens.
+        if (tag && stop && content[tag.stop] === '[' && (stop.line > i || stop.column > column + indent)) {
+          resumeColumn = stop.column;
+          i = stop.line - 1;
+          continue;
+        }
         // The lenient path draws what it can of a heading Godot refuses.
         if (isHeading(line)) {
           openSection(
@@ -420,16 +452,9 @@ export class TscnParserCore {
           continue;
         }
         // An unclosed heading draws nothing, and the lines its tag read are no section's body.
-        if (tag) {
-          const stop = lineAndColumnOf(lineStarts, tag.stop, i);
-          // The lenient tree reads a heading the tag stopped at, from its `[`, wherever on the line it opens.
-          if (content[tag.stop] === '[' && stop.line > i) {
-            resumeColumn = stop.column;
-            i = stop.line - 1;
-          } else {
-            const opensNextLine = stop.line > i && isSectionHeading(stripLineComment(lines[stop.line]!));
-            i = Math.max(i, opensNextLine ? stop.line - 1 : stop.line);
-          }
+        if (stop) {
+          const opensNextLine = stop.line > i && isSectionHeading(stripLineComment(lines[stop.line]!));
+          i = Math.max(i, opensNextLine ? stop.line - 1 : stop.line);
         }
         continue;
       }
@@ -542,74 +567,7 @@ function headerIndent(line: string): number {
   return nul === -1 ? indent : Math.min(nul, indent);
 }
 
-/** True when line `at` ends on an odd run of backslashes with nothing, not even `\r`, before its `\n`. */
-function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
-  const next = lineStarts[at + 1];
-  return next !== undefined && isEscapedNewline(content, next - 1);
-}
-
-/** A field over several lines without the `;` comments the tag reader skips, so no read sits in one. */
-function withoutComments(text: string): string {
-  if (!text.includes(';')) return text;
-  let state = INITIAL_SCAN_STATE;
-  return text
-    .split('\n')
-    .map((part) => {
-      const code = stripLineComment(part, state.inString);
-      state = scanValueChunk(code, state);
-      return code;
-    })
-    .join('\n');
-}
-
-/** True when `line` starts with a bare key and its `=`, not a value such as `"x=y"` that holds one. */
-function opensKey(line: string): boolean {
-  return /^\s*[^\s"'[\](){},=]+\s*=/.test(line);
-}
-
-/** The offset of each newline in raw `text` that Godot's counter skips. */
-function escapedNewlinesIn(text: string): number[] {
-  const skipped: number[] = [];
-  for (let at = text.indexOf('\n'); at >= 0; at = text.indexOf('\n', at + 1))
-    if (isEscapedNewline(text, at)) skipped.push(at);
-  return skipped;
-}
-
-/** The offset each line of `content` starts at, as `splitLines` splits it. */
-function lineStartsOf(content: string): number[] {
-  const starts = [0];
-  for (let at = content.indexOf('\n'); at !== -1; at = content.indexOf('\n', at + 1)) starts.push(at + 1);
-  return starts;
-}
-
-/** Where a property line's value starts: past its `=` and the white space `parseProperty` trims. */
-function valueOffset(line: string): number {
-  const afterEquals = line.indexOf('=') + 1;
-  return afterEquals + leadingSpace(line.slice(afterEquals));
-}
-
-/** The 0-based line and column of `offset`, searched forward from line `from`. */
-function lineAndColumnOf(
-  lineStarts: readonly number[],
-  offset: number,
-  from: number
-): { line: number; column: number } {
-  let line = from;
-  while (line + 1 < lineStarts.length && lineStarts[line + 1]! <= offset) line++;
-  return { line, column: offset - lineStarts[line]! };
-}
-
-/** A heading's text to its `]`, comments gone. The `]` is code, so no comment strip on its line is needed. */
-function headingText(
-  lines: readonly string[],
-  first: number,
-  column: number,
-  end: { line: number; column: number }
-): string {
-  // One line holds no comment before its `]`, since the tag reader skips a comment to the line's end.
-  if (end.line === first) return lines[first]!.slice(column, end.column);
-  const spanned = lines.slice(first, end.line + 1);
-  spanned[0] = spanned[0]!.slice(column);
-  spanned[spanned.length - 1] = lines[end.line]!.slice(0, end.column);
-  return withoutComments(spanned.join('\n'));
+/** Whether Godot refuses a body after a heading of `type`. Null, before any heading, is not one. */
+function readsNoBody(type: string | null): boolean {
+  return type !== null && type !== 'node' && type !== 'sub_resource' && type !== 'resource';
 }
