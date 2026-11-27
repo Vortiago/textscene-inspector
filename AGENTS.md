@@ -98,6 +98,10 @@ and prints exact pixels. It is a tool, not a gate.
 - Every capture that measures against Godot launches through `launchGodotComparisonBrowser`, so a
   screenshot is the drawing buffer. Never launch one another way. It rasterises on lavapipe, as
   `pnpm ref:godot` does, and fails without `mesa-vulkan-drivers`.
+- A frame cost compares against Godot drawing the same view. `pnpm ref:godot <scene> --gpu-time
+  --width <w> --height <h>` prints Godot's GPU time for the frame and each pass, on the host GPU,
+  through the previewer's camera. Godot draws no 3D without a camera, so a scene run as the game
+  without one measures an empty frame. Give it the canvas size from `textscene.profile()`.
 - `--particles <seconds>` advances every CPUParticles emitter and every GPUParticles3D, on top of its
   authored `preprocess`. The harness never picks the instant. Pass it yourself. For a comparison sheet,
   `SHEET-STANDARD.md` names it.

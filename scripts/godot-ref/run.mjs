@@ -19,6 +19,15 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
 import { CANVAS_2D_CAPTURE, CANVAS_CAPTURE, SETTLE_SIM_SECONDS } from '../visual/previewServer.mjs';
 import { LAVAPIPE_LOADER_ENV } from './lavapipe.mjs';
+import {
+  formatGpuTime,
+  GPU_TIME_DEFAULT_FRAMES,
+  GPU_TIME_WARMUP_FRAMES,
+  gpuTimeArgv,
+  gpuTimeScript,
+  hasHostDisplay,
+  readGpuTime,
+} from './gpuTime.mjs';
 import { resolveProjectRoot } from './projectRoot.mjs';
 
 /**
@@ -175,8 +184,8 @@ export function renderingMethodFallbackMessage(requested, rendered) {
  * of a comparison renders on lavapipe (`launchGodotComparisonBrowser`), and a GPU rasterises
  * differently. An OpenGL frame passes: Xvfb draws it in software on every host.
  */
-export function renderingDeviceMessage(rendered) {
-  if (!rendered || rendered.driver !== 'vulkan' || /llvmpipe/i.test(rendered.adapter)) return null;
+export function renderingDeviceMessage(rendered, { hostGpu = false } = {}) {
+  if (hostGpu || !rendered || rendered.driver !== 'vulkan' || /llvmpipe/i.test(rendered.adapter)) return null;
   return (
     `Refusing to answer: Godot rendered on "${rendered.adapter}", not on lavapipe, the driver the ` +
     'comparison browser renders on. Install mesa-vulkan-drivers, which provides lavapipe.'
@@ -403,6 +412,7 @@ export function parseArgs(argv) {
     renderingDriver: null,
     debugCollisions: false,
     hostCalls: [],
+    gpuTimeFrames: 0,
   };
 
   const given = new Set();
@@ -480,6 +490,12 @@ export function parseArgs(argv) {
         // The editor's "Visible Collision Shapes" run flag: a 2D joint draws its marker in a game too
         // (`pin_joint_2d.cpp:42-50`).
         args.debugCollisions = true;
+        break;
+      case '--gpu-time':
+        // Godot's side of `textscene.profile()`, on the host GPU; an optional frame count follows.
+        args.gpuTimeFrames = /^\d+$/.test(argv[i + 1] ?? '')
+          ? positiveNumber('--gpu-time', argv[++i])
+          : GPU_TIME_DEFAULT_FRAMES;
         break;
       case '--rendering-driver':
         args.renderingDriver = oneOf('--rendering-driver', DRIVER_NAMES, argv[++i]);
@@ -799,6 +815,8 @@ export function bootstrapScript({
   canvas2DSize,
   particles = PARTICLES_PROCESS_DEFAULT,
   hostCalls = [],
+  gpuTimeFrames = 0,
+  gpuTimeOut = '',
 }) {
   if (simSeconds !== 0) {
     throw new Error(
@@ -850,6 +868,7 @@ const HOST_CALLS := [
 ${hostCalls.map((call) => `\t${hostCallRow(call)},`).join('\n')}
 ]
 const CONVERGENCE_FRAMES := ${CONVERGENCE_FRAMES}
+${gpuTimeScript({ frames: gpuTimeFrames, out: gpuTimeOut })}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
 # exit code. A mid-walk quit() would be reset to 0 by that same call.
@@ -943,6 +962,7 @@ func _render_3d(target: Node) -> void:
 	_place_camera(target)
 	await _converge(get_viewport())
 	_save_capture(get_viewport())
+	await _record_gpu_time(get_viewport())
 	_write_bounds(target)
 
 func _save_capture(source: Viewport) -> void:
@@ -1570,16 +1590,21 @@ script = ExtResource("1")
  * wall clock: `CPUParticles2D::_update_internal` then jumps a whole `1/fixed_fps` step on a slow
  * host, only sometimes, and the reference still renders.
  */
-export function renderArgv(work, { renderingDriver = null, debugCollisions = false } = {}) {
+export function renderArgv(
+  work,
+  { renderingDriver = null, debugCollisions = false, gpuTimeFrames = 0 } = {}
+) {
+  const timedFrames = gpuTimeFrames > 0 ? GPU_TIME_WARMUP_FRAMES + gpuTimeFrames : 0;
   const argv = [
     '--path',
     work,
     '--fixed-fps',
     String(REFERENCE_FIXED_FPS),
     '--quit-after',
-    String(RENDER_QUIT_AFTER_FRAMES),
+    String(RENDER_QUIT_AFTER_FRAMES + timedFrames),
   ];
   if (debugCollisions) argv.push('--debug-collisions');
+  if (gpuTimeFrames > 0) argv.push(...gpuTimeArgv());
   // main.cpp:2582 aborts on a driver its method does not offer, so the driver alone would abort
   // under the default `forward_plus`.
   if (renderingDriver) {
@@ -1604,13 +1629,18 @@ export const SPAWN_BACKSTOP_MS = (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S + 30) *
  * The argv and environment for one engine pass, split out so a test can assert the reaping and
  * driver contracts without an engine, an X server or a 300-second wait.
  */
-export function godotSpawnPlan(args, { display, screen = null, groupTimeout = true, firstServer = null }) {
+export function godotSpawnPlan(
+  args,
+  { display, screen = null, groupTimeout = true, firstServer = null, hostGpu = false, hostDisplay = false }
+) {
   // Only the root-window arm and the game size the X screen, as a smaller one clips the window they capture.
   const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
   // Two runs that look at once could take the same free display, so each starts its search apart.
   const serverArgs = firstServer === null ? [] : ['-n', String(firstServer)];
   const xvfb = ['xvfb-run', '-a', ...serverArgs, ...screenArgs];
-  const engine = display ? [...xvfb, 'godot', ...args] : ['godot', ...args];
+  // A GPU timing opens its window on the host's screen, where the GPU and its vsync live.
+  const virtualDisplay = display && !(hostGpu && hostDisplay);
+  const engine = virtualDisplay ? [...xvfb, 'godot', ...args] : ['godot', ...args];
   // `spawnSync` signals only the `xvfb-run` wrapper, and the orphaned `godot` and `Xvfb` render
   // on and hold the display lock. `timeout` signals the whole group (coreutils `timeout.c` calls
   // `setpgid` unless `--foreground`), and `-k` follows with SIGKILL.
@@ -1621,7 +1651,7 @@ export function godotSpawnPlan(args, { display, screen = null, groupTimeout = tr
     command: argv[0],
     argv: argv.slice(1),
     timeoutMs: SPAWN_BACKSTOP_MS,
-    env: { ...process.env, ...LAVAPIPE_LOADER_ENV },
+    env: hostGpu ? { ...process.env } : { ...process.env, ...LAVAPIPE_LOADER_ENV },
   };
 }
 
@@ -1667,8 +1697,14 @@ function stallReason(result) {
     : `failed: ${result.error.message}`;
 }
 
-function runGodot(args, { display, screen = null }) {
-  const plan = godotSpawnPlan(args, { display, screen, groupTimeout: hasGroupTimeout() });
+function runGodot(args, { display, screen = null, hostGpu = false }) {
+  const plan = godotSpawnPlan(args, {
+    display,
+    screen,
+    groupTimeout: hasGroupTimeout(),
+    hostGpu,
+    hostDisplay: hasHostDisplay(process.env, process.platform),
+  });
   const result = spawnSync(plan.command, plan.argv, {
     encoding: 'utf8',
     timeout: plan.timeoutMs,
@@ -1711,6 +1747,7 @@ export async function renderReference({
   debugCollisions = false,
   hostCalls = [],
   keepWork = false,
+  gpuTimeFrames = 0,
 }) {
   const scenePath = resolve(scene);
   if (!existsSync(scenePath)) throw new Error(`No such scene: ${scenePath}`);
@@ -1750,6 +1787,7 @@ export async function renderReference({
       renderingDriver,
       debugCollisions,
       hostCalls,
+      gpuTimeFrames,
     });
   } finally {
     // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM.
@@ -1779,6 +1817,7 @@ async function renderInto(
     renderingDriver,
     debugCollisions,
     hostCalls,
+    gpuTimeFrames,
   }
 ) {
   // Inside the scratch project, not beside the image: the mode and the drift report are read once,
@@ -1786,6 +1825,8 @@ async function renderInto(
   const modeOut = join(work, '__ref_mode.txt');
   const driftOut = join(work, '__ref_root_only.json');
   const rendererOut = join(work, '__ref_renderer.json');
+  const gpuTimeOut = join(work, '__ref_gpu_time.json');
+  const hostGpu = gpuTimeFrames > 0;
   const rootWindow = mode === ROOT_WINDOW_MODE;
   const inGame = mode === IN_GAME_MODE;
 
@@ -1833,6 +1874,8 @@ async function renderInto(
         particles,
         canvas2DSize,
         hostCalls,
+        gpuTimeFrames,
+        gpuTimeOut,
       })
     );
     await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
@@ -1849,8 +1892,9 @@ async function renderInto(
     restage: stage,
   });
 
-  const render = runGodot(renderArgv(work, { renderingDriver, debugCollisions }), {
+  const render = runGodot(renderArgv(work, { renderingDriver, debugCollisions, gpuTimeFrames }), {
     display: true,
+    hostGpu,
     screen: rootWindow ? canvas2DSize : inGame ? windowSize : null,
   });
   if (!existsSync(resolve(out))) {
@@ -1889,7 +1933,7 @@ async function renderInto(
     rendererReport
   );
   if (fallback) await refuse(fallback, { renderingMethodFallback: true });
-  const device = renderingDeviceMessage(rendererReport);
+  const device = renderingDeviceMessage(rendererReport, { hostGpu });
   if (device) await refuse(device);
 
   const drift = existsSync(driftOut)
@@ -1900,7 +1944,16 @@ async function renderInto(
 
   // Both streams: `xvfb-run` hands the engine's `printerr` on through its stdout.
   const warnings = harnessWarnings(`${render.stdout}\n${render.stderr}`);
-  return { workDir: work, out: resolve(out), mode: rendered, warnings };
+  const gpuTime = hostGpu ? await recordedGpuTime(gpuTimeOut, rendered) : null;
+  return { workDir: work, out: resolve(out), mode: rendered, warnings, gpuTime };
+}
+
+/** The bootstrap records only after a 3D capture, so another kind of render has no file. */
+async function recordedGpuTime(gpuTimeOut, rendered) {
+  if (!existsSync(gpuTimeOut)) {
+    throw new Error(`--gpu-time expected a 3D render to time, got a "${rendered}" render with no recording`);
+  }
+  return readGpuTime(await readFile(gpuTimeOut, 'utf8'));
 }
 
 async function main() {
@@ -1936,6 +1989,10 @@ async function main() {
         'each str_to_var(text)) from the scene root; repeatable, in order with --set)'
     );
     console.error(
+      `       [--gpu-time [frames]]  (after the capture, Godot's GPU time for the frame and each ` +
+        `pass over ${GPU_TIME_DEFAULT_FRAMES} frames, on the host GPU and screen)`
+    );
+    console.error(
       '       [--particles seconds]  (advances every CPUParticles emitter that much ' +
         "FURTHER through Godot's own settle loop, on top of any authored preprocess)"
     );
@@ -1945,9 +2002,10 @@ async function main() {
   const out = args.out ?? join(import.meta.dirname, 'output', `${basename(args.scene, '.tscn')}.png`);
   await mkdir(dirname(out), { recursive: true });
   const boundsOut = args.emitBounds ? out.replace(/\.png$/, '.bounds.json') : null;
-  const { out: written, mode, warnings } = await renderReference({ ...args, out, boundsOut });
+  const { out: written, mode, warnings, gpuTime } = await renderReference({ ...args, out, boundsOut });
   for (const warning of warnings) console.warn(warning);
   console.log(`Rendered ${written}${mode ? ` (${mode})` : ''}`);
+  if (gpuTime) console.log(formatGpuTime(gpuTime));
   if (boundsOut && existsSync(boundsOut)) console.log(`Bounds ${boundsOut}`);
 
   if (args.probes.length > 0) {
