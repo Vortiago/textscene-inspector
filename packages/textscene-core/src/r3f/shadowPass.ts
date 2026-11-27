@@ -17,7 +17,7 @@ import {
   type ThreeShadowPass,
 } from './positionalShadow/atlasDepthPass.js';
 import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
-import { clearSunAtlasOncePerPass } from './directionalShadow/sunAtlasClear.js';
+import { SunAtlasClears } from './directionalShadow/sunAtlasClear.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
@@ -103,7 +103,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
         : countShadowDraws(renderer, () => drawCasters(lights, scene, camera)),
   };
   const copy = new OmniShadowCopy();
-  const startSunAtlasPass = clearSunAtlasOncePerPass(renderer);
+  const sunAtlasClears = new SunAtlasClears(renderer);
   shadowMap.render = (lights, scene, camera) => {
     const draws = passDraws(shadowMap);
     const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
@@ -115,8 +115,12 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     allocatePositionalShadowAtlas(renderer);
     threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
-    startSunAtlasPass();
-    drawProjectedShadows(threePass, projected, scene, camera);
+    sunAtlasClears.start();
+    try {
+      drawProjectedShadows(threePass, projected, scene, camera);
+    } finally {
+      sunAtlasClears.end();
+    }
     drawAreaShadows(threePass, areas, scene, camera);
     if (isTimed) endStep(renderer, 'Shadows');
     if (isReading) {

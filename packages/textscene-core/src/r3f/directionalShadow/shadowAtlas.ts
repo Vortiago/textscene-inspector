@@ -69,7 +69,8 @@ export function formatDirectionalShadowColour(read: StoredDepthRead): void {
 const FLOAT_COLOUR = [THREE.RedFormat, THREE.FloatType] as const;
 const BYTE_COLOUR = [THREE.RGFormat, THREE.UnsignedByteType] as const;
 
-export function holdsDirectionalShadowAtlas(target: THREE.WebGLRenderTarget | null): boolean {
+/** True when `target` is the atlas itself, as three binds it to draw a sun. */
+export function isDirectionalShadowAtlas(target: THREE.WebGLRenderTarget | null): boolean {
   return target === atlas;
 }
 

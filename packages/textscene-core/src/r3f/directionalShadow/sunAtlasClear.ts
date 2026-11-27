@@ -1,19 +1,31 @@
 import type * as THREE from 'three';
-import { holdsDirectionalShadowAtlas } from './shadowAtlas.js';
+import { isDirectionalShadowAtlas } from './shadowAtlas.js';
 
-// three clears a map before each light (r187 `WebGLShadowMap.js:340`): only a pass's first clear is whole.
-/** Lets the first clear of the sun atlas after each `startPass` through, and skips the rest. */
-export function clearSunAtlasOncePerPass(renderer: THREE.WebGLRenderer): () => void {
-  const clear = renderer.clear;
-  let isCleared = false;
-  renderer.clear = (color, depth, stencil) => {
-    if (holdsDirectionalShadowAtlas(renderer.getRenderTarget())) {
-      if (isCleared) return;
-      isCleared = true;
+/** Lets one whole clear of the sun atlas through per pass. three clears before each light (r187 `:340`). */
+export class SunAtlasClears {
+  private clear: THREE.WebGLRenderer['clear'];
+  private isCleared = false;
+
+  constructor(private readonly renderer: THREE.WebGLRenderer) {
+    this.clear = renderer.clear;
+  }
+
+  /** On top of every other clear hook, so a frame profile counts only the clears that reach the GPU. */
+  start(): void {
+    this.clear = this.renderer.clear;
+    this.isCleared = false;
+    this.renderer.clear = this.clearOnce;
+  }
+
+  end(): void {
+    if (this.renderer.clear === this.clearOnce) this.renderer.clear = this.clear;
+  }
+
+  private readonly clearOnce: THREE.WebGLRenderer['clear'] = (color, depth, stencil) => {
+    if (isDirectionalShadowAtlas(this.renderer.getRenderTarget())) {
+      if (this.isCleared) return;
+      this.isCleared = true;
     }
-    clear.call(renderer, color, depth, stencil);
-  };
-  return () => {
-    isCleared = false;
+    this.clear.call(this.renderer, color, depth, stencil);
   };
 }

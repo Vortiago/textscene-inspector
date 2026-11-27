@@ -82,12 +82,12 @@ func _record_gpu_time(source: Viewport) -> void:
 # Each pass lasts from its timestamp to the next one, as Godot's own --gpu-profile print reads them.
 func _add_pass_times(device: RenderingDevice, passes: Dictionary) -> void:
 	for i in device.get_captured_timestamps_count() - 1:
-		var name := device.get_captured_timestamp_name(i)
-		if name.begins_with("<") or name.begins_with(">"):
+		var pass_name := device.get_captured_timestamp_name(i)
+		if pass_name.begins_with("<") or pass_name.begins_with(">"):
 			continue
 		var ms := (device.get_captured_timestamp_gpu_time(i + 1) - device.get_captured_timestamp_gpu_time(i)) / 1000000.0
-		if not passes.has(name):
-			passes[name] = []
-		passes[name].append(ms)
+		if not passes.has(pass_name):
+			passes[pass_name] = []
+		passes[pass_name].append(ms)
 `;
 }

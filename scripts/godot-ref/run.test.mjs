@@ -20,6 +20,7 @@ import {
 import {
   bootstrapScript,
   DEFAULT_RENDERING_METHOD,
+  defaultOutPath,
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
   EDITOR_FOV,
@@ -1211,6 +1212,16 @@ describe('--gpu-time measures Godot on the host GPU', () => {
     expect(parseArgs(['a.tscn']).gpuTimeFrames).toBe(0);
   });
 
+  it('refuses a count that is not a whole number (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--gpu-time', '1.5'])).toThrow(
+      '--gpu-time needs a whole number, got "1.5"'
+    );
+  });
+
+  it('refuses the in-game mode, which it never times (error case)', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', 'in-game', '--gpu-time'])).toThrow('cannot take --gpu-time');
+  });
+
   it('keeps the render pass running through the warm-up and the recorded frames', () => {
     const argv = renderArgv('/tmp/work', { gpuTimeFrames: 300 });
     const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
@@ -1246,6 +1257,11 @@ describe('--gpu-time measures Godot on the host GPU', () => {
     const script = bootstrap({ gpuTimeFrames: 300, gpuTimeOut: '/tmp/gpu.json' });
     expect(script).toContain('const GPU_TIME_FRAMES := 300');
     expect(script).toMatch(/_save_capture\(get_viewport\(\)\)\n\tawait _record_gpu_time\(get_viewport\(\)\)/);
+  });
+
+  it('keeps the host-GPU picture of a timed run off the lavapipe reference path', () => {
+    expect(defaultOutPath({ scene: 'a/b.tscn', gpuTimeFrames: 300 })).toMatch(/output\/b\.host-gpu\.png$/);
+    expect(defaultOutPath({ scene: 'a/b.tscn', gpuTimeFrames: 0 })).toMatch(/output\/b\.png$/);
   });
 
   it('adds no recording to an untimed render (edge case)', () => {

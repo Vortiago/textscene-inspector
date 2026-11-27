@@ -126,6 +126,7 @@ const IN_GAME_IGNORED = [
   ['--emit-bounds', 'the mode places no camera from bounds', (o) => o.boundsOut != null],
   ['--width', 'the window is the size the project sets', (o) => o.width !== DEFAULT_WIDTH],
   ['--height', 'the window is the size the project sets', (o) => o.height !== DEFAULT_HEIGHT],
+  ['--gpu-time', 'the bootstrap times only a 3D render', (o) => o.gpuTimeFrames > 0],
 ];
 
 /**
@@ -179,11 +180,7 @@ export function renderingMethodFallbackMessage(requested, rendered) {
   );
 }
 
-/**
- * The refusal for a Vulkan frame drawn by another device than lavapipe, or null. The browser side
- * of a comparison renders on lavapipe (`launchGodotComparisonBrowser`), and a GPU rasterises
- * differently. An OpenGL frame passes: Xvfb draws it in software on every host.
- */
+/** The refusal for a Vulkan frame off lavapipe, or null. OpenGL (Xvfb software) and hostGpu frames pass. */
 export function renderingDeviceMessage(rendered, { hostGpu = false } = {}) {
   if (hostGpu || !rendered || rendered.driver !== 'vulkan' || /llvmpipe/i.test(rendered.adapter)) return null;
   return (
@@ -337,6 +334,12 @@ const PREVIEW_GROUND_BOTTOM = [0.2, 0.169, 0.133];
  * Rejects NaN early. As `viewport_width=NaN` Godot produces nothing and never exits, so both
  * 300 s spawn timeouts elapse before an unrelated "produced no image".
  */
+function positiveInteger(flag, raw) {
+  const value = positiveNumber(flag, raw);
+  if (!Number.isInteger(value)) throw new Error(`${flag} needs a whole number, got "${raw}"`);
+  return value;
+}
+
 function positiveNumber(flag, raw) {
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) {
@@ -493,8 +496,8 @@ export function parseArgs(argv) {
         break;
       case '--gpu-time':
         // Godot's side of `textscene.profile()`, on the host GPU; an optional frame count follows.
-        args.gpuTimeFrames = /^\d+$/.test(argv[i + 1] ?? '')
-          ? positiveNumber('--gpu-time', argv[++i])
+        args.gpuTimeFrames = /^[\d.]+$/.test(argv[i + 1] ?? '')
+          ? positiveInteger('--gpu-time', argv[++i])
           : GPU_TIME_DEFAULT_FRAMES;
         break;
       case '--rendering-driver':
@@ -1998,7 +2001,7 @@ async function main() {
     process.exit(2);
   }
 
-  const out = args.out ?? join(import.meta.dirname, 'output', `${basename(args.scene, '.tscn')}.png`);
+  const out = args.out ?? defaultOutPath(args);
   await mkdir(dirname(out), { recursive: true });
   const boundsOut = args.emitBounds ? out.replace(/\.png$/, '.bounds.json') : null;
   const { out: written, mode, warnings, gpuTime } = await renderReference({ ...args, out, boundsOut });
@@ -2013,6 +2016,12 @@ async function main() {
       console.log(`  probe ${x},${y} → rgb(${rgb.join(', ')})`);
     }
   }
+}
+
+/** A timed run draws on the host GPU, so its picture never takes the lavapipe reference's path. */
+export function defaultOutPath({ scene, gpuTimeFrames }) {
+  const name = basename(scene, '.tscn');
+  return join(import.meta.dirname, 'output', gpuTimeFrames > 0 ? `${name}.host-gpu.png` : `${name}.png`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {

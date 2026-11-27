@@ -99,7 +99,7 @@ describe('gpuTimeScript', () => {
 
   it("skips the bracket timestamps, as Godot's own --gpu-profile print does", () => {
     // rendering_server_default.cpp:169: a name that starts with < or > opens or closes a group.
-    expect(script).toMatch(/begins_with\("<"\) or name\.begins_with\(">"\)/);
+    expect(script).toMatch(/begins_with\("<"\) or pass_name\.begins_with\(">"\)/);
   });
 
   it('adds no recorder when no frames are asked for', () => {
