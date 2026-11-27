@@ -42,13 +42,13 @@ describe('propertyRefusal', () => {
     const later = { ...property('Node3D', 'visible', '"yes"'), endLine: 5, isMultiline: true };
     expect(propertyRefusal({ ...later, valueStart: { line: 5, column: 2 } })).toMatchObject({
       line: 5,
-      column: 2,
+      column: 3,
     });
   });
 
   it('places the refusal where the value starts, past a key with no spaces around `=`', () => {
     const tight = { ...property('Node3D', 'visible', '"yes"'), valueStart: { line: 4, column: 8 } };
-    expect(propertyRefusal(tight)).toMatchObject({ column: 8 });
+    expect(propertyRefusal(tight)).toMatchObject({ column: 9 });
   });
 
   it('skips a property with no typed owner', () => {

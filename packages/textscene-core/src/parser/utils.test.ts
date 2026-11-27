@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseHeading, parseProperty, isHeading, isGodotBlank } from './utils';
+import { parseHeading, parseProperty, isHeading, isGodotBlank, godotIndent, leadingSpace } from './utils';
 
 describe('parseHeading', () => {
   it('should parse simple heading without attributes', () => {
@@ -302,5 +302,36 @@ describe('isGodotBlank', () => {
     expect(isGodotBlank('; comment')).toBe(false);
     expect(isGodotBlank('a')).toBe(false);
     expect(isGodotBlank('  a  ')).toBe(false);
+  });
+});
+
+describe('godotIndent', () => {
+  it('counts the codes up to 32 that start a line', () => {
+    expect(godotIndent('\0\x01\t \x1f[node]')).toBe(5);
+  });
+
+  it('stops at a code above 32, such as an NBSP', () => {
+    expect(godotIndent(' [node]')).toBe(0);
+    expect(godotIndent(' 　[node]')).toBe(1);
+  });
+
+  it('covers a line of only spaces, and is zero on an empty line', () => {
+    expect(godotIndent('   ')).toBe(3);
+    expect(godotIndent('')).toBe(0);
+  });
+});
+
+describe('leadingSpace', () => {
+  it('counts the codes up to 32 that start a line', () => {
+    expect(leadingSpace('\0\x01\t \x1fkey')).toBe(5);
+  });
+
+  it('counts the JavaScript white space Godot does not, such as an NBSP', () => {
+    expect(leadingSpace('  　key')).toBe(3);
+  });
+
+  it('covers a line of only spaces, and is zero on an empty line', () => {
+    expect(leadingSpace('   ')).toBe(3);
+    expect(leadingSpace('')).toBe(0);
   });
 });

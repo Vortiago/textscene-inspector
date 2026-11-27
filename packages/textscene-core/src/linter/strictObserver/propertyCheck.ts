@@ -39,7 +39,7 @@ export function propertyRefusal({
   // The validator places the value at `key.length + 3`, as in `key = value`. This moves it to the value.
   const found: ParseError = {
     ...validated,
-    column: validated.column - lookupKey.length - 3 + valueStart.column,
+    column: validated.column - lookupKey.length - 3 + valueStart.column + 1,
   };
   const keyed: ParseError = { ...found, propertyKey: key };
   const error: ParseError =
