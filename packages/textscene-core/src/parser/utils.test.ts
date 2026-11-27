@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseHeading, parseProperty, isHeading, isEmpty } from './utils';
+import { parseHeading, parseProperty, isHeading, isGodotBlank } from './utils';
 
 describe('parseHeading', () => {
   it('should parse simple heading without attributes', () => {
@@ -288,18 +288,19 @@ describe('isHeading', () => {
   });
 });
 
-describe('isEmpty', () => {
+describe('isGodotBlank', () => {
   it('should identify empty lines', () => {
-    expect(isEmpty('')).toBe(true);
-    expect(isEmpty('   ')).toBe(true);
-    expect(isEmpty('\t')).toBe(true);
-    expect(isEmpty('  \t  ')).toBe(true);
+    expect(isGodotBlank('')).toBe(true);
+    expect(isGodotBlank('   ')).toBe(true);
+    expect(isGodotBlank('\t')).toBe(true);
+    expect(isGodotBlank('  \t  ')).toBe(true);
+    expect(isGodotBlank('\x01\x1f')).toBe(true);
   });
 
   it('should reject non-empty lines', () => {
-    expect(isEmpty('[node]')).toBe(false);
-    expect(isEmpty('; comment')).toBe(false);
-    expect(isEmpty('a')).toBe(false);
-    expect(isEmpty('  a  ')).toBe(false);
+    expect(isGodotBlank('[node]')).toBe(false);
+    expect(isGodotBlank('; comment')).toBe(false);
+    expect(isGodotBlank('a')).toBe(false);
+    expect(isGodotBlank('  a  ')).toBe(false);
   });
 });

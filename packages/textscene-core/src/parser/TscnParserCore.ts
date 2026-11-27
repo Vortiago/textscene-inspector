@@ -22,12 +22,13 @@ import {
   parseProperty,
   isHeading,
   isSectionHeading,
-  isEmpty,
   scanValueChunk,
   isIncompleteState,
   INITIAL_SCAN_STATE,
   stripLineComment,
   leadingSpace,
+  godotIndent,
+  isGodotBlank,
   splitLines,
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
@@ -245,7 +246,9 @@ export class TscnParserCore {
     const storePending = () => {
       if (pendingMultiline && currentHeading) {
         // The one join per value: O(total length), not one per appended line.
-        const value = pendingMultiline.lines.join('\n');
+        const joined = pendingMultiline.lines.join('\n');
+        // A complete value ends where its key's line would trim it, so a value reads the same on either line.
+        const value = isIncompleteState(pendingMultiline.scanState) ? joined : joined.trimEnd();
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
         addBodyValue(value, pendingMultiline.godotStartLine, pendingMultiline.skippedNewlines);
@@ -326,21 +329,21 @@ export class TscnParserCore {
         if (isSectionHeading(line) || (awaitsValue && opensKey(line))) {
           // The lenient path keeps the next key, so an empty value stays empty.
           storePending();
-        } else if (awaitsValue && isEmpty(line)) {
+        } else if (awaitsValue && isGodotBlank(line)) {
           continue;
         } else {
           // Godot reads the value from the token after the `=`, so a value on a later line starts there.
+          const indent = awaitsValue ? leadingSpace(line) : 0;
+          const chunk = line.slice(indent);
           if (awaitsValue) {
             pendingMultiline.godotStartLine = godotLine;
-            pendingMultiline.valueStart = { line: lineNumber, column: column + leadingSpace(line) };
+            pendingMultiline.valueStart = { line: lineNumber, column: column + indent };
           }
-          // Scan only this chunk: a `\n` separator affects neither `inString` nor
-          // `depth`, so scanning `line` alone yields the state the joined string
-          // would.
-          pendingMultiline.joinedLength += (awaitsValue ? 0 : 1) + line.length;
-          pendingMultiline.lines.push(line);
+          // A `\n` separator moves neither `inString` nor `depth`, so this chunk gives the joined state.
+          pendingMultiline.joinedLength += (awaitsValue ? 0 : 1) + chunk.length;
+          pendingMultiline.lines.push(chunk);
           pendingMultiline.endLine = lineNumber;
-          pendingMultiline.scanState = scanValueChunk(line, pendingMultiline.scanState);
+          pendingMultiline.scanState = scanValueChunk(chunk, pendingMultiline.scanState);
           if (pendingMultiline.scanState.inString && escapesItsNewline(content, lineStarts, i)) {
             pendingMultiline.skippedNewlines.push(pendingMultiline.joinedLength);
             skippedLines++;
@@ -354,7 +357,7 @@ export class TscnParserCore {
       // Godot reads the header from the first token, so any text before it, a BOM too, is a refused tag.
       const readsHeader = headings.previous() === null && !headings.isStopped();
       // A comment-only line is already blank: `stripLineComment` above is the one place a `;` is read.
-      if (readsHeader ? indent === line.length : isEmpty(line)) continue;
+      if (readsHeader ? indent === line.length : isGodotBlank(line)) continue;
 
       const opensTag = readsHeader || line[indent] === '[';
       if (opensTag) {
@@ -373,7 +376,7 @@ export class TscnParserCore {
             tag.fields
           );
           // Text after the `]` is the section's body, so the next pass reads the rest of that line.
-          const hasRest = !isEmpty(lines[end.line]!.slice(end.column));
+          const hasRest = !isGodotBlank(lines[end.line]!.slice(end.column));
           resumeColumn = hasRest ? end.column : 0;
           i = hasRest ? end.line - 1 : end.line;
           continue;
@@ -522,13 +525,6 @@ function typeField(content: string, fields: readonly TagField[]): string | undef
 function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
   const next = lineStarts[at + 1];
   return next !== undefined && isEscapedNewline(content, next - 1);
-}
-
-/** The first character `get_token` reads, which skips only codes up to 32, not every JavaScript space. */
-function godotIndent(line: string): number {
-  let at = 0;
-  while (at < line.length && line.charCodeAt(at) <= 32) at++;
-  return at;
 }
 
 /** A field over several lines without the `;` comments the tag reader skips, so no read sits in one. */

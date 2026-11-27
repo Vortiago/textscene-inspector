@@ -13,7 +13,7 @@ import { GodotError, ParseError } from './parseError.js';
 
 const T = VARIANT_TYPE;
 
-export type Token =
+type Token =
   | { kind: 'curlyOpen' | 'curlyClose' | 'bracketOpen' | 'bracketClose' | 'parenOpen' | 'parenClose' }
   | { kind: 'colon' | 'comma' | 'period' | 'equal' | 'eof' }
   | { kind: 'identifier'; text: string }

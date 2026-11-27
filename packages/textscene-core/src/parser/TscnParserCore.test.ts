@@ -494,6 +494,20 @@ visible = true
       expect(onProperty.mock.calls[0]![0]).toMatchObject({ column: 30, valueStart: { line: 2, column: 2 } });
     });
 
+    it.each([
+      ["on its key's line", 'position = Vector2(1, 2)   '],
+      ['on a later line', 'position =\n    Vector2(1, 2)   '],
+    ])('reads a value %s without the space around it', (_place, body) => {
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(`[node name="R" type="Node2D"]\n${body}\n`, simpleCreator, { onProperty });
+
+      expect(onProperty.mock.calls[0]![0]).toMatchObject({
+        value: 'Vector2(1, 2)',
+        stored: { value: 'Vector2(1, 2)' },
+      });
+    });
+
     it('gives the start of a value written with no spaces around `=`', () => {
       const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
 

@@ -39,6 +39,22 @@ function isSpaceCode(code: number): boolean {
   );
 }
 
+/**
+ * The first character `get_token` reads, which skips only codes up to 32, not every JavaScript space.
+ *
+ * @canonical Where Godot's tokenizer starts reading a line
+ */
+export function godotIndent(line: string): number {
+  let at = 0;
+  while (at < line.length && line.charCodeAt(at) <= 32) at++;
+  return at;
+}
+
+/** A line with nothing to read: codes `get_token` skips, or JavaScript white space the lenient path skips. */
+export function isGodotBlank(line: string): boolean {
+  return godotIndent(line) === line.length || line.trim().length === 0;
+}
+
 /** The length of the white space `str` starts with. */
 export function leadingSpace(str: string): number {
   let at = 0;
@@ -327,10 +343,6 @@ export function isSectionHeading(line: string): boolean {
  */
 export function splitLines(text: string): string[] {
   return text.split(/\r?\n/);
-}
-
-export function isEmpty(line: string): boolean {
-  return line.trim().length === 0;
 }
 
 /**
