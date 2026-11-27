@@ -62,7 +62,7 @@ as Godot's tag parser does added 2,909 B.
   fails when they hold a module loaded only on demand, that is a dynamic `import()` target or a
   module no static import from the entry reaches. The web previewer job checks this for the dev
   edition, and `pnpm build:pages` checks it for the public edition. Only the public edition also
-  fails over a gzipped ceiling, 1,304,135 B, which a change raises by its measured growth as above.
+  fails over a gzipped ceiling, 1,304,360 B, which a change raises by its measured growth as above.
   The 2D pan and zoom with no scene render and the scene-render count added 62 B to it, and the
   2D light pass that keeps its buffers while its inputs hold (ADR-0095) added 502 B, its review fixes 543 B, and reading a heading as Godot's tag parser does 3,889 B.
   The dev first paint holds the generated fixture manifest, which grows with each fixture. The three.js chunk holds only the three.js build, so
