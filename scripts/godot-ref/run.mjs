@@ -1858,6 +1858,8 @@ async function renderInto(
   const sourceIni = existsSync(join(root, 'project.godot'))
     ? await readFile(join(root, 'project.godot'), 'utf8')
     : null;
+  const untimed = onHostGpu && untimedMethodMessage(requestedRenderingMethod(sourceIni, renderingDriver));
+  if (untimed) throw new Error(untimed);
   const canvas2DSize = projectViewportSizeFromIni(sourceIni);
   const windowSize = projectWindowSizeFromIni(sourceIni);
   const stage = async () => {
@@ -1965,15 +1967,34 @@ async function renderInto(
 
   // Both streams: `xvfb-run` hands the engine's `printerr` on through its stdout.
   const warnings = harnessWarnings(`${render.stdout}\n${render.stderr}`);
-  if (onHostGpu && !existsSync(gpuTimeOut)) await refuse(missingGpuTimeMessage(rendered));
-  const gpuTime = onHostGpu ? parseGpuTime(await readFile(gpuTimeOut, 'utf8')) : null;
+  const stall = enginePassStalled(render) ? stallReason(render) : null;
+  if (onHostGpu && !existsSync(gpuTimeOut)) await refuse(missingGpuTimeMessage(rendered, stall));
+  const gpuTime = onHostGpu ? await parsedGpuTime(gpuTimeOut, { refuse, stall }) : null;
   const resized = gpuTime && gpuTimeSizeMessage(gpuTime.device.size, { width, height });
   if (resized) await refuse(resized);
   return { workDir: work, out: resolve(out), mode: rendered, warnings, gpuTime };
 }
 
-/** The bootstrap records only after a 3D capture. A null `rendered` means it wrote no mode file. */
-export function missingGpuTimeMessage(rendered) {
+/** A recording that does not parse is refused, naming a stall, which can leave it half-written. */
+async function parsedGpuTime(gpuTimeOut, { refuse, stall }) {
+  try {
+    return parseGpuTime(await readFile(gpuTimeOut, 'utf8'));
+  } catch (error) {
+    const why = stall ? `. The engine ${stall}` : '';
+    return refuse(`--gpu-time could not read the recording ${gpuTimeOut}: ${error.message}${why}`);
+  }
+}
+
+/** The refusal for a rendering method with no RenderingDevice to time, or null. */
+export function untimedMethodMessage(method) {
+  return method === 'gl_compatibility'
+    ? '--gpu-time cannot time the gl_compatibility method: it has no RenderingDevice.'
+    : null;
+}
+
+/** Null `rendered`: no mode file. A `stall`, why the render pass ended early, outranks the mode. */
+export function missingGpuTimeMessage(rendered, stall = null) {
+  if (stall) return `--gpu-time expected a recording, but the engine ${stall}`;
   if (rendered === null) return '--gpu-time expected a recording, but Godot wrote no render mode';
   return rendered === '3d'
     ? '--gpu-time expected a recording, but Godot quit before it ended. ' +

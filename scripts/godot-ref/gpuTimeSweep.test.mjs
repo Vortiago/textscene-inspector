@@ -7,6 +7,8 @@ import {
   parseArgs,
   projectConfig,
   projectSize,
+  requestedRenderingMethod,
+  untimedMethodMessage,
 } from './run.mjs';
 
 const OK = null;
@@ -45,6 +47,28 @@ describe('--gpu-time render outcome', () => {
     [null, 'Godot wrote no render mode'],
   ])('no recording after a %s render', (rendered, message) => {
     expect(missingGpuTimeMessage(rendered)).toContain(message);
+  });
+
+  it('names the engine timeout when the render pass stalled', () => {
+    expect(missingGpuTimeMessage('3d', 'did not finish within 300s')).toBe(
+      '--gpu-time expected a recording, but the engine did not finish within 300s'
+    );
+  });
+
+  it.each([
+    ['', null, OK],
+    ['[rendering]\nrenderer/rendering_method="forward_plus"', null, OK],
+    ['[rendering]\nrenderer/rendering_method="mobile"', null, OK],
+    [
+      '[rendering]\nrenderer/rendering_method="gl_compatibility"',
+      null,
+      'cannot time the gl_compatibility method',
+    ],
+    ['[rendering]\nrenderer/rendering_method="gl_compatibility"', 'vulkan', OK],
+  ])('untimed method for project %j and driver %s', (ini, driver, refusal) => {
+    const message = untimedMethodMessage(requestedRenderingMethod(ini, driver));
+    if (refusal === OK) expect(message).toBeNull();
+    else expect(message).toContain(refusal);
   });
 
   it.each([
