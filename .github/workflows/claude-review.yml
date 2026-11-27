@@ -5,8 +5,8 @@ name: Claude review
 # `--comment` posts the findings as inline comments. The command does not read REVIEW.md on its
 # own, so the appended system prompt makes REVIEW.md the bar.
 #
-# It authenticates with the `ANTHROPIC_API_KEY` secret, so a review spends API credit, not
-# subscription usage.
+# It authenticates with the `CLAUDE_CODE_OAUTH_TOKEN` secret from `claude setup-token`, so a
+# review spends subscription usage.
 #
 # A review spends the repository owner's credit, so only the owner starts one:
 # - The owner's own pull request gets one review when it is ready, not one per push.
@@ -84,8 +84,7 @@ jobs:
       - id: claude
         uses: anthropics/claude-code-action@acfe7992852970efb4fee683d63d628e3e52df67 # v1.0.286
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          show_full_output: true
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: '/code-review high --comment ${{ github.repository }}/pull/${{ env.PR_NUMBER }}'
           # The `opus` alias, because the action's default model is Sonnet. The alias names the
           # latest Opus of the pinned Claude Code, so a Dependabot update brings a newer one.
