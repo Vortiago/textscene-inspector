@@ -27,7 +27,7 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 1,800,634 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
+is 1,800,572 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
 split build. A change that outgrows the ceiling, with no shrink found, raises it by its measured growth:
 the editor camera node (ADR-0091) added 1,820 B, the panels that read the scene through node
 handles added 1,413 B, the Scene tree on node handles added 409 B, its review fixes added 685 B,
@@ -41,7 +41,7 @@ snapped Sprite2D edit rect and the remapped glTF materials added 487 B, their re
 added 278 B, a 2D pan and zoom with no scene render, the scene-render count and a pan press
 the browser cannot turn into a text selection added 109 B, the 2D light pass that keeps its
 buffers while its inputs hold (ADR-0095) added 668 B, its review fixes added 374 B, and reading a heading
-as Godot's tag parser does added 1,847 B.
+as Godot's tag parser does added 1,785 B.
 
 ## Consequences
 
@@ -62,8 +62,8 @@ as Godot's tag parser does added 1,847 B.
   fails when they hold a module loaded only on demand, that is a dynamic `import()` target or a
   module no static import from the entry reaches. The web previewer job checks this for the dev
   edition, and `pnpm build:pages` checks it for the public edition. Only the public edition also
-  fails over a gzipped ceiling, 1,302,797 B, which a change raises by its measured growth as above.
+  fails over a gzipped ceiling, 1,302,807 B, which a change raises by its measured growth as above.
   The 2D pan and zoom with no scene render and the scene-render count added 62 B to it, and the
-  2D light pass that keeps its buffers while its inputs hold (ADR-0095) added 502 B, its review fixes 543 B, and reading a heading as Godot's tag parser does 2,551 B.
+  2D light pass that keeps its buffers while its inputs hold (ADR-0095) added 502 B, its review fixes 543 B, and reading a heading as Godot's tag parser does 2,561 B.
   The dev first paint holds the generated fixture manifest, which grows with each fixture. The three.js chunk holds only the three.js build, so
   the addons a dynamic `import()` reaches stay out of it.
