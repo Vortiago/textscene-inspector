@@ -13,12 +13,7 @@ import { CHECKOUT_CONTROLS, ENV_CONTROLS } from './godot-source-decoupling.contr
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
-/**
- * A name for the checkout implies resolving it, and only REFERENCES.md, which tells a human how
- * to create it, may name it. Four spellings: a versioned tag directory, the `repos/godot` clone,
- * and a `godot` directory before an engine top-level directory, as a path or as `join()` segments.
- * A URL, such as the GitHub API fetch in `godotLinks.mjs`, can never be the checkout.
- */
+/** A name for the checkout implies resolving it, so only the files of `CHECKOUT_ALLOWED` may name it. */
 const PATH_ENGINE_DIRS = 'core|doc|modules|servers|main|platform|editor';
 const ENGINE_DIRS = `scene|${PATH_ENGINE_DIRS}`;
 /**
@@ -30,14 +25,25 @@ const ENGINE_SCENE_DIRS = '2d|3d|animation|audio|debugger|gui|main|resources|the
 const CHECKOUT_SCENE = `scene(?=['"]|[\\\\/](?:(?:${ENGINE_SCENE_DIRS})[\\\\/]|\\w+(?:\\.\\w+)*\\.(?:cpp|h|inc|glsl)\\b|SCsub\\b))`;
 const CHECKOUT_RE = new RegExp(
   [
+    // A versioned tag directory.
     'godot-4\\.\\d+(\\.\\d+)?(-stable)?\\b',
+    // The `repos/godot` clone.
     '[\\\\/]repos[\\\\/]godot',
+    // A `godot` directory before an engine top-level directory, as a path.
     `\\bgodot[\\\\/](?:(?:${PATH_ENGINE_DIRS})\\b|${CHECKOUT_SCENE})`,
+    // The same directory as `join()` segments.
     `['"]godot['"]\\s*,\\s*['"](?:${ENGINE_DIRS})['"]`,
   ].join('|')
 );
+// A URL, such as the GitHub API fetch in `godotLinks.mjs`, can never be the checkout.
 const URL_RE = /https?:\/\//;
-const CHECKOUT_ALLOWED = new Set(['REFERENCES.md', 'scripts/godot-source-decoupling.controls.mjs']);
+const CHECKOUT_ALLOWED = new Set([
+  // Tells a human how to create the checkout.
+  'REFERENCES.md',
+  // Creates the checkout on a runner, for the agent of one run to read as the human does.
+  '.github/workflows/claude.yml',
+  'scripts/godot-source-decoupling.controls.mjs',
+]);
 
 /**
  * A `GODOT_*` read from the environment can only locate the checkout, except `GODOT_BIN`, a path
