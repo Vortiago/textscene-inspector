@@ -10,13 +10,8 @@ import { ownsNilMessage } from '../propertyValidator.js';
 import { isNilLiteral } from '../../godot/variant/variantParser.js';
 
 /** The refusal for one property, or null where no validator claims it or the value passes. */
-export function propertyRefusal({
-  ownerType,
-  key,
-  value,
-  valueStart,
-  stored,
-}: ParsedProperty): ParseError | null {
+export function propertyRefusal(property: ParsedProperty): ParseError | null {
+  const { ownerType, key, value, valueStart, stored } = property;
   // A value over several lines (shader code, label text) or with no typed owner goes unvalidated.
   if (value.includes('\n') || !ownerType) return null;
 
@@ -36,11 +31,7 @@ export function propertyRefusal({
 
   const validated = validator(lookupKey, lookupValue, valueStart.line);
   if (!validated) return null;
-  // The validator places the value at `key.length + 3`, as in `key = value`. This moves it to the value.
-  const found: ParseError = {
-    ...validated,
-    column: validated.column - lookupKey.length - 3 + valueStart.column + 1,
-  };
+  const found: ParseError = { ...validated, ...writtenPlace(validated.column, lookupKey, property) };
   const keyed: ParseError = { ...found, propertyKey: key };
   const error: ParseError =
     lookupKey === key
@@ -50,6 +41,17 @@ export function propertyRefusal({
           message: `Property '${key}' is applied as '${lookupKey} = ${lookupValue}': ${found.message}`,
         };
   return isNilLiteral(value) && !ownsNilMessage(error) ? nilConversion(error, key, value) : error;
+}
+
+// A validator anchors on a line `key = value`: below `key.length + 3` in the key, from it on in the value.
+function writtenPlace(
+  anchor: number,
+  lookupKey: string,
+  { line, column, valueStart }: ParsedProperty
+): { line: number; column: number } {
+  const valueAnchor = lookupKey.length + 3;
+  if (anchor < valueAnchor) return { line, column: column + anchor };
+  return { line: valueStart.line, column: valueStart.column + 1 + anchor - valueAnchor };
 }
 
 /**

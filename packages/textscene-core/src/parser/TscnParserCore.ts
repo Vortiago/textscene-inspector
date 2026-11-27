@@ -598,13 +598,8 @@ function headingText(
 ): string {
   // One line holds no comment before its `]`, since the tag reader skips a comment to the line's end.
   if (end.line === first) return lines[first]!.slice(column, end.column);
-  const parts: string[] = [];
-  let state = INITIAL_SCAN_STATE;
-  for (let at = first; at <= end.line; at++) {
-    const raw = lines[at]!.slice(at === first ? column : 0, at === end.line ? end.column : undefined);
-    const code = at === end.line ? raw : stripLineComment(raw, state.inString);
-    parts.push(code);
-    state = scanValueChunk(code, state);
-  }
-  return parts.join('\n');
+  const spanned = lines.slice(first, end.line + 1);
+  spanned[0] = spanned[0]!.slice(column);
+  spanned[spanned.length - 1] = lines[end.line]!.slice(0, end.column);
+  return withoutComments(spanned.join('\n'));
 }
