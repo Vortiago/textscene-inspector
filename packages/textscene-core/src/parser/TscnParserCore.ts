@@ -422,20 +422,22 @@ export class TscnParserCore {
           pendingMultiline.joinedLength += (awaitsValue ? 0 : 1) + chunk.length;
           pendingMultiline.lines.push(chunk);
           pendingMultiline.endLine = lineNumber;
-          pendingMultiline.scanState = scanValueChunk(chunk, pendingMultiline.scanState);
+          const stateBefore = pendingMultiline.scanState;
+          pendingMultiline.scanState = scanValueChunk(chunk, stateBefore);
           if (pendingMultiline.scanState.inString && escapesItsNewline(content, lineStarts, i)) {
             pendingMultiline.skippedNewlines.push(pendingMultiline.joinedLength);
             skippedLines++;
           }
-          if (!isIncompleteState(pendingMultiline.scanState)) {
-            const headingAt = headingInLastChunk(pendingMultiline.lines);
-            if (headingAt !== null) {
-              pendingMultiline.lines[pendingMultiline.lines.length - 1] = chunk.slice(0, headingAt);
-              resumeColumn = column + indent + headingAt;
-              i--;
-            }
-            storePending();
+          const isComplete = !isIncompleteState(pendingMultiline.scanState);
+          // A heading's own `[` or quote leaves the scan open, so an unclosed heading is looked for too.
+          const mayHoldHeading = isComplete || closesBeforeBracket(chunk, stateBefore);
+          const headingAt = mayHoldHeading ? headingInLastChunk(pendingMultiline.lines) : null;
+          if (headingAt !== null) {
+            pendingMultiline.lines[pendingMultiline.lines.length - 1] = chunk.slice(0, headingAt);
+            resumeColumn = column + indent + headingAt;
+            i--;
           }
+          if (isComplete || headingAt !== null) storePending();
           continue;
         }
       }
@@ -637,6 +639,7 @@ function typeField(content: string, fields: readonly TagField[]): string | undef
 
 /** A `[` after a token that can end a value, not a typed `Array[` or `Dictionary[`. */
 const MAY_HOLD_HEADING = /[^\s,[(:{]\s*(?<!\b(?:Array|Dictionary))\[/;
+const MAY_HOLD_HEADING_ALL = new RegExp(MAY_HOLD_HEADING, 'g');
 
 /** Where a heading opens after a complete value on its line, as Godot reads it, or null. */
 function headingAfterValue(value: string): number | null {
@@ -647,7 +650,15 @@ function headingAfterValue(value: string): number | null {
   return value[at] === '[' ? at : null;
 }
 
-/** Where a heading opens in the last of the lines of a complete value, as Godot reads it, or null. */
+/** Whether the scan closes the value at the token before some `[` that may open a heading in `chunk`. */
+function closesBeforeBracket(chunk: string, state: ValueScanState): boolean {
+  for (const match of chunk.matchAll(MAY_HOLD_HEADING_ALL)) {
+    if (!isIncompleteState(scanValueChunk(chunk.slice(0, match.index + 1), state))) return true;
+  }
+  return false;
+}
+
+/** Where a heading opens in the last of the lines of a value, as Godot reads it, or null. */
 function headingInLastChunk(lines: readonly string[]): number | null {
   const last = lines[lines.length - 1]!;
   if (!last.includes('[')) return null;

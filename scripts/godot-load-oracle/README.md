@@ -29,6 +29,8 @@ Godot must be on the path. The oracle measures the rows of `packages/textscene-c
 
 `emptyValueSweep.mjs <folder>` writes 21 cases into a new or empty folder: a `key =` with no value in a node, in a sub-resource and in a last sub-resource. Its next line is a key, a heading, a `]` or the end of the file, with or without a blank line between. `emptyValues.test.ts` holds Godot's result for each case.
 
-`stringEscapeSweep.mjs <folder>` writes 60 cases into a new or empty folder: each of 30 string escapes in a heading name and in a body string. `stringEscapes.test.ts` holds Godot's result for each case.
+`stringEscapeSweep.mjs <folder>` writes 60 cases into a new or empty folder: each of 30 string escapes in a heading name and in a body string. It also writes `str_to_var.txt`, the same 30 escapes as one string each. `stringEscapes.test.ts` holds Godot's result for each case, through each reader of a string.
 
-`valueThenHeadingSweep.mjs <folder>` writes 26 cases into a new or empty folder: a value of each of 11 kinds before a heading on its line, with and without a space between. Two more read a `SubResource` by a number id and a string id. Two more put the value on the line below its key, and over two lines. `valueThenHeading.test.ts` holds Godot's result for each case.
+`strToVarOracle.mjs <file>` runs `str_to_var` in Godot on each line of a file such as `str_to_var.txt`. A line holds a case name, a tab and a text. The oracle prints the name and the string's code points, or the type of any other value.
+
+`valueThenHeadingSweep.mjs <folder>` writes 50 cases into a new or empty folder: a value of each of 11 kinds before a heading on its line, with and without a space between. Two more read a `SubResource` by a number id and a string id. Two more put the value on the line below its key, and over two lines. 24 more put a value of each of 6 kinds over several lines, with a heading after it that is whole, has no `]`, has a field with no value, or has an open string. `valueThenHeading.test.ts` holds Godot's result for each case.

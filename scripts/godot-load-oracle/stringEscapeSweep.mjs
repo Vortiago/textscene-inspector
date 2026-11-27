@@ -44,7 +44,7 @@ const PLACES = {
   ],
 };
 
-const cases = Object.entries(ESCAPES).flatMap(([name, escape]) =>
+const sceneCases = Object.entries(ESCAPES).flatMap(([name, escape]) =>
   Object.entries(PLACES).map(([place, lines]) => ({
     file: `${name}__${place}.tscn`,
     text: ['[gd_scene format=3]', '', '[node name="Root" type="Node2D"]', '', ...lines(escape), ''].join(
@@ -52,4 +52,11 @@ const cases = Object.entries(ESCAPES).flatMap(([name, escape]) =>
     ),
   }))
 );
-console.log(writeCaseFiles(process.argv[2], cases));
+/** The same escapes as `str_to_var` reads them, for `strToVarOracle.mjs`: one name and one text a line. */
+const strToVarCase = {
+  file: 'str_to_var.txt',
+  text: Object.entries(ESCAPES)
+    .map(([name, escape]) => `${name}\t"A${escape}"\n`)
+    .join(''),
+};
+console.log(writeCaseFiles(process.argv[2], [...sceneCases, strToVarCase]));

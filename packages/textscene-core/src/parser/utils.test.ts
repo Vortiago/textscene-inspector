@@ -9,6 +9,7 @@ import {
   isHeading,
   isGodotBlank,
   godotIndent,
+  headerIndent,
   leadingSpace,
   trimEndSpace,
   isSectionHeading,
@@ -327,6 +328,20 @@ describe('godotIndent', () => {
   it('covers a line of only spaces, and is zero on an empty line', () => {
     expect(godotIndent('   ')).toBe(3);
     expect(godotIndent('')).toBe(0);
+  });
+});
+
+describe('headerIndent', () => {
+  it('starts the header past the codes Godot skips', () => {
+    expect(headerIndent(' \t[gd_scene]')).toBe(2);
+  });
+
+  it('starts at a NUL before the header, which ends the stream', () => {
+    expect(headerIndent(' \0[gd_scene]')).toBe(1);
+  });
+
+  it('gives the line length for a line of skipped codes only', () => {
+    expect(headerIndent(' \t ')).toBe(3);
   });
 });
 

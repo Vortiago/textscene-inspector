@@ -88,8 +88,18 @@ export function isEscapedNewline(text: string, at: number): boolean {
 const UTF8_ENCODER = new TextEncoder();
 const UTF8_DECODER = new TextDecoder();
 
+/** The string a token builds: raw text as the stream reads it, and each code an escape names. */
+interface GodotString {
+  addRaw(text: string): void;
+  addCode(code: number): void;
+  read(): string;
+}
+
+/** A file is `StreamFile`, `str_to_var` text is `StreamString`: only a file re-reads escapes as UTF-8. */
+export type GodotStream = 'file' | 'string';
+
 /** A file's string: each escape one Latin-1 byte, all bytes read as UTF-8 (variant_parser.cpp:399-403). */
-class GodotFileString {
+class GodotFileString implements GodotString {
   private readonly bytes: number[] = [];
   /** Raw text not yet encoded, so a surrogate pair reaches the encoder whole. Cleared by `encodeRaw`. */
   private raw = '';
@@ -124,12 +134,37 @@ class GodotFileString {
   }
 }
 
+/** A `StreamString` string: each escape one code point, NUL, a surrogate or past U+10FFFF as U+FFFD. */
+class GodotTextString implements GodotString {
+  private text = '';
+
+  addRaw(text: string): void {
+    this.text += text;
+  }
+
+  /** `append_utf32` replaces each code it refuses (ustring.cpp:199-213). */
+  addCode(code: number): void {
+    const isRefused = code === 0 || (code & 0xfffff800) === 0xd800 || code > 0x10ffff;
+    this.text += isRefused ? '\uFFFD' : String.fromCodePoint(code);
+  }
+
+  read(): string {
+    return this.text;
+  }
+}
+
+const STRINGS: Readonly<Record<GodotStream, new () => GodotString>> = {
+  file: GodotFileString,
+  string: GodotTextString,
+};
+
 /** One token at a time over `text` from `at`, as `get_token` reads a stream, counting lines as it does. */
 export class Tokens {
   constructor(
     private readonly text: string,
     private at = 0,
-    private lineAt = 1
+    private lineAt = 1,
+    private readonly stream: GodotStream = 'file'
   ) {}
 
   private startAt = 0;
@@ -215,7 +250,7 @@ export class Tokens {
   private quoted(): string {
     const plain = this.plainQuoted();
     if (plain !== null) return plain;
-    const text = new GodotFileString();
+    const text = new STRINGS[this.stream]();
     let lead = 0;
     for (;;) {
       const c = this.char();
@@ -447,6 +482,8 @@ export interface VariantReading {
   readonly classExists?: (className: string) => boolean;
   /** The file an `ExtResource` or a `SubResource` id names. Absent reads the id as a path. */
   readonly resourceOf?: (kind: 'ExtResource' | 'SubResource', id: string) => ResourceReference | null;
+  /** The stream the text comes from. Absent reads it as a file's. */
+  readonly stream?: GodotStream;
 }
 
 export class ValueReader {
@@ -777,7 +814,7 @@ export type VariantRead = { readonly value: VariantValue } | { readonly error: s
 
 /** `VariantParser::parse`: the first value, the rest unread. */
 export function readVariant(text: string, reading: VariantReading = {}): VariantRead {
-  const tokens = new Tokens(text);
+  const tokens = new Tokens(text, 0, 1, reading.stream);
   const first = tokens.next();
   // `parse` returns `get_token`'s own error, so `"abc` stops with `Unterminated string`.
   if (first.kind === 'error') return { error: first.message };
@@ -791,7 +828,7 @@ export function readVariant(text: string, reading: VariantReading = {}): Variant
 
 /** The offset past the first value in `text`, where `parse_tag_assign_eof` returns, or null. */
 export function variantEnd(text: string, reading: VariantReading): number | null {
-  const tokens = new Tokens(text);
+  const tokens = new Tokens(text, 0, 1, reading.stream);
   const first = tokens.next();
   if (first.kind === 'error') return null;
   try {
@@ -803,7 +840,7 @@ export function variantEnd(text: string, reading: VariantReading): number | null
   }
 }
 
-/** `str_to_var` with strings read as a file's: the value, or null (Nil) where the text does not parse. */
+/** A value as Godot's parser reads it, from a file unless `reading` names a stream, or Nil if refused. */
 export function strToVar(text: string, reading?: VariantReading): VariantValue {
   const read = readVariant(text, reading);
   return 'value' in read ? read.value : NIL_VALUE;

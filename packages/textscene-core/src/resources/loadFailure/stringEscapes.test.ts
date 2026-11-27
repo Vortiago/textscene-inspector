@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { strToVar } from '../../godot/variant/strToVar';
+import { VARIANT_TYPE } from '../../godot/variant/variantType';
 import { TscnParser } from '../../parser/TscnParser';
+import { unquoteString } from '../../parser/utils';
+import { valueOfSceneValue, variant } from '../../scene/variant';
 import { previewerLoadResult } from './headingSweep.testkit';
 
 /** Each escape form, as the oracle's `stringEscapeSweep.mjs` writes it inside a string. */
@@ -70,6 +74,43 @@ const GODOT_NAME: Record<string, string> = {
   lead_lead: 'refused',
 };
 
+/** `str_to_var` of `"A` and each escape as code points, or `refused` for Nil (`strToVarOracle.mjs`). */
+const GODOT_STR_TO_VAR: Record<string, string> = {
+  b: '41 8',
+  t: '41 9',
+  n: '41 A',
+  f: '41 C',
+  r: '41 D',
+  quote: '41 22',
+  backslash: '41 5C',
+  other: '41 71',
+  other_utf8: '41 E9',
+  u_ascii: '41 41',
+  u_latin: '41 E9',
+  u_bmp: '41 20AC',
+  u_nul: '41 FFFD',
+  u_utf8_pair: '41 C3 A9',
+  u_cut_sequence: '41 E2 82',
+  raw_astral_then_escape: '41 1F600 9',
+  u_ffff: '41 FFFF',
+  u_short: 'refused',
+  u_nonhex: 'refused',
+  U_ascii: '41 41',
+  U_astral: '41 1F600',
+  U_max: '41 10FFFF',
+  U_past: '41 FFFD',
+  U_top: '41 FFFD',
+  U_surrogate: 'refused',
+  pair: '41 1F600',
+  lone_lead: 'refused',
+  lead_then_char: 'refused',
+  lone_trail: 'refused',
+  lead_lead: 'refused',
+};
+
+const codePoints = (text: string) =>
+  [...text].map((c) => c.codePointAt(0)!.toString(16).toUpperCase()).join(' ');
+
 const HEAD = ['[gd_scene format=3]', '', '[node name="Root" type="Node2D"]', ''];
 
 function headingFile(name: string): { path: string; text: string } {
@@ -87,6 +128,7 @@ function bodyFile(name: string): { path: string; text: string } {
 }
 
 const NAMES = Object.keys(ESCAPES);
+const literal = (name: string) => `"A${ESCAPES[name]}"`;
 const LOADING = NAMES.filter((name) => GODOT_NAME[name] !== 'refused');
 const REFUSED = NAMES.filter((name) => GODOT_NAME[name] === 'refused');
 
@@ -113,4 +155,35 @@ describe('each string escape, as Godot 4.6.3 reads it from a file', () => {
   it.each(REFUSED)('loads a body string with %s, where Godot stops', (name) => {
     expect(previewerLoadResult(bodyFile(name))).toBe('loads Root[A(5.0, 5.0)]');
   });
+});
+
+describe('each string escape, as each reader of a string decodes it', () => {
+  it('measures every escape through str_to_var', () => {
+    expect(Object.keys(GODOT_STR_TO_VAR).sort()).toEqual([...NAMES].sort());
+  });
+
+  it.each(LOADING)('reads a body value with %s as the file load builds the heading name', (name) => {
+    expect(strToVar(literal(name))).toEqual({ type: VARIANT_TYPE.STRING, value: GODOT_NAME[name] });
+  });
+
+  it.each(REFUSED)('reads a body value with %s as Nil, as the file load refuses it', (name) => {
+    expect(strToVar(literal(name)).type).toBe(VARIANT_TYPE.NIL);
+  });
+
+  it.each(LOADING)('unquotes a string with %s as the file load builds the heading name', (name) => {
+    expect(unquoteString(literal(name))).toBe(GODOT_NAME[name]);
+  });
+
+  const stringReads = NAMES.filter((name) => GODOT_STR_TO_VAR[name] !== 'refused');
+  it.each(stringReads)('reads variant text with %s as str_to_var does', (name) => {
+    const read = valueOfSceneValue(variant(literal(name)));
+    expect(read.type === VARIANT_TYPE.STRING && codePoints(read.value)).toBe(GODOT_STR_TO_VAR[name]);
+  });
+
+  it.each(NAMES.filter((name) => GODOT_STR_TO_VAR[name] === 'refused'))(
+    'refuses variant text with %s as str_to_var does',
+    (name) => {
+      expect(() => variant(literal(name))).toThrow(/expected a Variant/);
+    }
+  );
 });

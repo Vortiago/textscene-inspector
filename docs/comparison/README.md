@@ -21,14 +21,17 @@ facts below are true of every node, so this file states them once.
 substitutes a documented default and continues. Each sheet's prose describes
 that substitution.
 
-**The lenient parser swallows five structural errors silently**, with no
-warning and no node dropped from the render: `INVALID_HEADING_FORMAT`,
-`INVALID_PROPERTY_FORMAT`, `MISSING_NODE_NAME`, `MISSING_NODE_IDENTIFIER` and
-`INSTANCE_PLACEHOLDER_ROOT`.
+**The lenient parser reports three structural errors only to its observer**:
+`INVALID_HEADING_FORMAT`, `INVALID_PROPERTY_FORMAT` and `MISSING_HEADING_FIELD`.
+The strict parser adds `MISSING_NODE_NAME`, `MISSING_NODE_IDENTIFIER` and
+`INSTANCE_PLACEHOLDER_ROOT`. Where Godot stops the load, such as at a refused
+heading, the scene records the stop as `headingStop`. The lenient parser still
+builds the nodes it reads, and the load failure names Godot's error from the stop.
 
 **Two classes of property are never format-checked, even by strict.**
-`StrictTscnParser.onProperty` skips validation for multiline values (shader
-source, long label text) and for any property whose owning type is unknown.
+`propertyRefusal` skips validation for a value whose text runs over several
+lines (shader source, long label text) and for any property whose owning type
+is unknown. A value on the line after its key is one line, so it is checked.
 A property override on an instanced child (`instance=`) is therefore never
 validated. Existence checks stay silent across an instance boundary on purpose.
 

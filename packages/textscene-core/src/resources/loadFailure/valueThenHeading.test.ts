@@ -22,6 +22,39 @@ const HEADING = '[node name="B" type="Node2D" parent="."]';
 
 const LOADS = 'loads Root[A, B(5.0, 5.0)]';
 
+/** A value of each kind that runs over lines, its last line ending where a heading follows. */
+const MULTILINE_VALUES: Record<string, string[]> = {
+  string: ['"a', 'b"'],
+  constructor: ['Vector2(1,', '2)'],
+  array: ['[1,', '2]'],
+  typed_array: ['Array[int]([1,', '2])'],
+  dictionary: ['{', '"a": 1', '}'],
+  string_name: ['&"a', 'b"'],
+};
+
+/** A heading after the value: whole, with no `]`, with a field that has no value, or with an open string. */
+const HEADINGS: Record<string, string> = {
+  closed: HEADING,
+  unclosed: '[node name="B" type="Node2D" parent="."',
+  malformed: '[node name= type="Node2D" parent="."]',
+  open_string: '[node name="B type="Node2D" parent="."]',
+};
+
+/** `editor_description` holding `value` over its lines, with `heading` after the last one. */
+const multilineProperty = ([first, ...rest]: string[], heading: string) => [
+  `editor_description = ${first}`,
+  ...rest.slice(0, -1),
+  `${rest[rest.length - 1]} ${heading}`,
+];
+
+/** Godot stops at the heading's line, or for an unclosed heading at the end of the file, two lines on. */
+function godotMultiline(value: string[], heading: string): string {
+  const headingLine = 7 + value.length;
+  if (heading === 'closed') return LOADS;
+  const line = heading === 'unclosed' ? headingLine + 2 : headingLine;
+  return `Parse Error: Parse error. [Resource file @:${line}]`;
+}
+
 /** A scene whose node A holds `property`, written over one or more lines, after a sub-resource with id 1. */
 const scene = (...property: string[]) =>
   [
@@ -50,11 +83,24 @@ const WRITTEN: Record<string, string> = {
   sub_resource_string: scene(`editor_description = SubResource("1") ${HEADING}`),
   next_line: scene('editor_description =', `"a" ${HEADING}`),
   split: scene('editor_description = ["a",', `"b"] ${HEADING}`),
+  ...Object.fromEntries(
+    Object.entries(MULTILINE_VALUES).flatMap(([kind, value]) =>
+      Object.entries(HEADINGS).map(([name, heading]) => [
+        `multiline_${kind}__${name}`,
+        scene(...multilineProperty(value, heading)),
+      ])
+    )
+  ),
 };
 
 /** The line Godot 4.6.3 prints for each case, `@` for the file, measured with the load oracle. */
 const GODOT: Record<string, string> = {
   ...Object.fromEntries(Object.keys(WRITTEN).map((name) => [name, LOADS])),
+  ...Object.fromEntries(
+    Object.entries(MULTILINE_VALUES).flatMap(([kind, value]) =>
+      Object.keys(HEADINGS).map((name) => [`multiline_${kind}__${name}`, godotMultiline(value, name)])
+    )
+  ),
   node_path__space: 'Parse Error: Parse error. [Resource file @:8]',
   node_path__none: 'Parse Error: Parse error. [Resource file @:8]',
 };

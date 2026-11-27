@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isEscapedNewline, readVariant, strToVar, Tokens, ValueReader } from './strToVar';
+import { isEscapedNewline, readVariant, strToVar, Tokens, ValueReader, variantEnd } from './strToVar';
 import { ParseError } from './parseError';
 import { varToStr } from './varToStr';
 import { VARIANT_TYPE as T } from './variantType';
@@ -155,6 +155,20 @@ describe('Tokens', () => {
     tokens.next();
     expect(tokens.next()).toEqual({ kind: 'eof' });
     expect(tokens.isEof).toBe(true);
+  });
+});
+
+describe('variantEnd', () => {
+  it('ends past the first value, before the text after it', () => {
+    expect(variantEnd('{ "a": [1] } [node]', {})).toBe(12);
+  });
+
+  it('gives null where the value does not parse', () => {
+    expect(variantEnd('Vector2(1, ', {})).toBeNull();
+  });
+
+  it('ends a string over two lines at the text length', () => {
+    expect(variantEnd('"a\nb"', {})).toBe(5);
   });
 });
 
