@@ -310,6 +310,53 @@ describe('AnimationTree — gating and restore', () => {
   });
 });
 
+describe('AnimationTree — playing readout', () => {
+  beforeEach(() => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // A committed report rebuilds the context value, so each frame re-spies `transport`.
+  async function frame(renderer: Awaited<ReturnType<typeof mountTree>>, delta: number, calls: unknown[][]) {
+    const reportTime = vi.spyOn(transport, 'reportTime');
+    await renderer.advanceFrames(1, delta);
+    await ReactThreeTestRenderer.act(async () => {});
+    calls.push(...reportTime.mock.calls);
+    reportTime.mockRestore();
+  }
+
+  it('reports no playhead while playing when the dominant clip has no action', async () => {
+    const renderer = await mountTree(
+      makeDriver(),
+      makeTreeNode({ tree_root: 'SubResource("tree_ghost")', parameters: { 'mix/blend_amount': '0.75' } })
+    );
+    const calls: unknown[][] = [];
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    // Move the clock past the throttle window each frame, so a `?? 0` fallback would report.
+    await frame(renderer, 0.25, calls);
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_100);
+    await frame(renderer, 0.25, calls);
+    expect(calls).toEqual([]);
+    await renderer.unmount();
+  });
+
+  it("reports the dominant clip's live time while playing, a real 0 included", async () => {
+    const renderer = await mountTree(makeDriver(), makeTreeNode());
+    const calls: unknown[][] = [];
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await frame(renderer, 0, calls);
+    expect(calls).toEqual([[0]]);
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_100);
+    await frame(renderer, 0.5, calls);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]![0]).toBeCloseTo(0.5, 5);
+    await renderer.unmount();
+  });
+});
+
 // While playing, `reportTime` commits at most once per 100 ms of `Date.now`. A frozen clock lets
 // the first report through and throttles every later one, so only the pause flush moves the readout.
 describe('AnimationTree — paused readout flush', () => {
