@@ -154,14 +154,20 @@ export class LanguageDocument {
   readonly lines: readonly string[];
   readonly sections: readonly DocumentSection[];
   private readonly sectionByLine: Map<number, DocumentSection>;
+  /** The sections whose heading starts on each line, in order: a line can hold several. */
+  private readonly headingsByLine: Map<number, DocumentSection[]>;
   private readonly propertyByLine: Map<number, PropertyLocation>;
 
   constructor(readonly text: string) {
     this.lines = splitLines(text);
     this.sections = scanSections(text, this.lines);
     this.sectionByLine = new Map();
+    this.headingsByLine = new Map();
     this.propertyByLine = new Map();
     for (const section of this.sections) {
+      const sharing = this.headingsByLine.get(section.headingLine);
+      if (sharing) sharing.push(section);
+      else this.headingsByLine.set(section.headingLine, [section]);
       for (let line = section.headingLine; line <= section.endLine; line++) {
         this.sectionByLine.set(line, section);
       }
@@ -177,10 +183,8 @@ export class LanguageDocument {
   sectionAt(line: number, character: number): DocumentSection | undefined {
     const section = this.sectionByLine.get(line);
     if (section?.headingLine !== line) return section;
-    // A line can hold several headings: the column picks the last one that starts at or before it.
-    const started = this.sections.filter(
-      (found) => found.headingLine === line && found.headingColumns.start <= character
-    );
+    // The column picks the last heading on the line that starts at or before it.
+    const started = this.headingsByLine.get(line)!.filter((found) => found.headingColumns.start <= character);
     return started.at(-1) ?? section;
   }
 

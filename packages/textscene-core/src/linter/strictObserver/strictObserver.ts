@@ -40,9 +40,9 @@ export function strictObserver(): StrictObserver {
       });
     },
 
-    onSectionStart: (heading, section, line) => {
+    onSectionStart: (heading, section, line, columns) => {
       reads.read(heading, line);
-      lines.start();
+      lines.start(columns.start + 1);
       if (section !== 'node') {
         owner = sectionOwnerOf(heading, section);
         return;
@@ -53,6 +53,7 @@ export function strictObserver(): StrictObserver {
       instanced.record(heading, isRoot);
       const context = {
         line,
+        column: columns.start + 1,
         isRoot,
         owner: nodeOwner,
         hasInstancedAncestor: instanced.hasInstancedAncestor,
@@ -62,7 +63,7 @@ export function strictObserver(): StrictObserver {
 
     onProperty: (property) => {
       // The key the scan stores the value under, so a reader of the bag finds the line.
-      lines.record(property.stored.key, property.line);
+      lines.record(property.stored.key, property.line, property.column + 1);
       const error = propertyRefusal(property);
       if (error) errors.push({ ...error, ...owner });
     },

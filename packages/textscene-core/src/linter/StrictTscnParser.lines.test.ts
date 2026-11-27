@@ -46,7 +46,12 @@ size = Vector3(1, 2, 3)
 `);
     const box = scene!.internalResources[0]!;
 
-    expect(lines.get(box)).toEqual({ heading: 3, properties: new Map([['size', 4]]) });
+    expect(lines.get(box)).toEqual({
+      heading: 3,
+      headingColumn: 1,
+      properties: new Map([['size', 4]]),
+      propertyColumns: new Map([['size', 1]]),
+    });
   });
 
   it('records an ext-resource heading under the object the scene holds', () => {
@@ -58,7 +63,12 @@ size = Vector3(1, 2, 3)
 `);
     const tree = scene!.externalResources[0]!;
 
-    expect(lines.get(tree)).toEqual({ heading: 3, properties: new Map() });
+    expect(lines.get(tree)).toEqual({
+      heading: 3,
+      headingColumn: 1,
+      properties: new Map(),
+      propertyColumns: new Map(),
+    });
   });
 
   it('keeps the line of a property whose value the validators refuse', () => {
@@ -137,7 +147,9 @@ background_mode = 1
     expect(lines.size).toBe(1);
     expect(lines.get(scene!.mainResource!)).toEqual({
       heading: 3,
+      headingColumn: 1,
       properties: new Map([['background_mode', 4]]),
+      propertyColumns: new Map([['background_mode', 1]]),
     });
   });
 

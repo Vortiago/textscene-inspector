@@ -19,7 +19,7 @@ interface SpannedHeading extends ParsedHeading {
   unclosed: ReadonlySet<string>;
 }
 
-/** A code `get_token` skips (up to 32), or a `\s` space, split on so the lenient reading keeps the node. */
+/** A code up to 32 or a `\s` space, split on so the lenient reading keeps the node. A body NUL loads. */
 function isSpaceCode(code: number): boolean {
   if (code <= 32) return true;
   // Godot rejects this tail: a heading key is `[A-Za-z_][A-Za-z0-9_]*`
@@ -307,7 +307,7 @@ export function parseHeading(line: string): SpannedHeading | null {
 }
 
 export function parseProperty(line: string): { key: string; value: string } | null {
-  const trimmed = line.trim();
+  const trimmed = trimSpace(line);
 
   if (!trimmed || trimmed.startsWith(';')) {
     return null;
@@ -318,8 +318,8 @@ export function parseProperty(line: string): { key: string; value: string } | nu
     return null;
   }
 
-  const key = trimmed.slice(0, equalsIndex).trim();
-  const value = trimmed.slice(equalsIndex + 1).trim();
+  const key = trimSpace(trimmed.slice(0, equalsIndex));
+  const value = trimSpace(trimmed.slice(equalsIndex + 1));
 
   return { key, value };
 }

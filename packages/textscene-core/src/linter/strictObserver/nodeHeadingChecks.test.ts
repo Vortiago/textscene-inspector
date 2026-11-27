@@ -7,6 +7,7 @@ const owner = { nodeName: 'N', nodeType: 'Node3D' };
 function errorsOf(line: string, context: Partial<NodeHeadingContext> = {}) {
   return nodeHeadingErrors(parseHeading(line)!, {
     line: 3,
+    column: 1,
     isRoot: false,
     owner,
     hasInstancedAncestor: () => false,

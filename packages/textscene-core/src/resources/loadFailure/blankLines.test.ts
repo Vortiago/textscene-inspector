@@ -11,6 +11,9 @@ const BLANK_PLACES = {
   after_bracket: (code: string) => `${HEADING}${code}\nposition = Vector2(1, 2)\n`,
   body_line: (code: string) => `${HEADING}\n${code}\nposition = Vector2(1, 2)\n`,
   before_value: (code: string) => `${HEADING}\nposition =\n${code}\nVector2(1, 2)\n`,
+  before_key: (code: string) => `${HEADING}\n${code}position = Vector2(1, 2)\n`,
+  around_equals: (code: string) => `${HEADING}\nposition${code}=${code}Vector2(1, 2)\n`,
+  after_value: (code: string) => `${HEADING}\nposition = Vector2(1, 2)${code}\n`,
 };
 
 const CELLS = Object.entries(BLANK_PLACES).flatMap(([place, scene]) =>
