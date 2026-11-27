@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { headingOrder } from './headingOrder.js';
+import { headingOrder, missingField } from './headingOrder.js';
 
 function misplacedIn(...types: string[]) {
   const order = headingOrder();
@@ -40,6 +40,41 @@ describe('headingOrder', () => {
 
   it('keeps the first refusal, as the loader stops there', () => {
     expect(misplacedIn('gd_scene', 'node', 'sub_resource', 'ext_resource')).toMatchObject({ line: 3 });
+  });
+
+  it.each([
+    ['ext_resource', ['id'], 'path'],
+    ['ext_resource', ['path', 'id'], 'type'],
+    ['sub_resource', ['type'], 'id'],
+    ['connection', ['from', 'to', 'signal'], 'method'],
+    ['node', [], undefined],
+    ['ext_resource', ['path', 'type', 'id'], undefined],
+  ])('names the first required field a [%s] with %j lacks', (type, keys, field) => {
+    expect(missingField(type, keys)).toBe(field);
+  });
+
+  it('stops at a heading in its place that lacks a required field', () => {
+    const order = headingOrder();
+    order.read('gd_scene', 1);
+    order.read('ext_resource', 3, 'id');
+    order.read('node', 5);
+
+    expect(order.stop()).toEqual({ type: 'ext_resource', line: 3, missing: 'id' });
+  });
+
+  it('judges the place before the fields', () => {
+    const order = headingOrder();
+    ['gd_scene', 'node'].forEach((type, index) => order.read(type, index + 1));
+    order.read('ext_resource', 3, 'id');
+
+    expect(order.stop()).toEqual({ type: 'ext_resource', line: 3, reason: 'unknown tag' });
+  });
+
+  it('stops at a header that lacks a required field', () => {
+    const order = headingOrder();
+    order.read('gd_resource', 2, 'type');
+
+    expect(order.stop()).toEqual({ type: 'gd_resource', line: 2, missing: 'type' });
   });
 
   const unparsed = { error: 'Expected identifier', code: 'ERR_PARSE_ERROR', line: 3 } as const;

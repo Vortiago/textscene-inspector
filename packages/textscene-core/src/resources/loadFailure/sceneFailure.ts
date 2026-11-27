@@ -1,7 +1,7 @@
 import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import type { FailingFileRead, ParseStop } from './fileReads.js';
-import type { MisplacedHeading, UnparsedHeading } from '../../parser/headingOrder.js';
+import type { IncompleteHeading, MisplacedHeading, UnparsedHeading } from '../../parser/headingOrder.js';
 import { ERROR_NAMES } from '../../godot/variant/parseError.js';
 
 /** The root scene, its reads that fail the whole scene in file order, and the read that stops its parse. */
@@ -56,6 +56,7 @@ function godotStopLine(scenePath: string, stop: ParseStop): string {
   const at = `${scenePath}:${stop.line}`;
   if ('reason' in stop) return `${at} - Parse Error: ${misplacedError(stop)}.`;
   if ('readBy' in stop) return unparsedLine(at, stop);
+  if ('missing' in stop) return incompleteLine(scenePath, at, stop);
   const { read, place, isOpeningTag } = stop;
   if (isOpeningTag) return unexpectedEndOfFile(at);
   if (place === 'node' || place === 'binds') {
@@ -81,6 +82,15 @@ function unparsedLine(at: string, { error, code, readBy }: UnparsedHeading): str
   if (readBy === 'opening tag') return unexpectedEndOfFile(at);
   if (readBy === 'node body') return `Parse Error: ${ERROR_NAMES[code]}. [Resource file ${at}]`;
   return `${at} - Parse Error: ${error}.`;
+}
+
+/** The line for a heading without a required field, measured in 4.6.3 (resource_format_text.cpp:311-331). */
+function incompleteLine(scenePath: string, at: string, { type, missing }: IncompleteHeading): string {
+  // A `[connection]` sets its error with no `_printerr`, so only the resource loader's own line prints.
+  if (type === 'connection') return `Failed loading resource: ${scenePath}.`;
+  if (type === 'editable') return `${at} - Parse Error: Missing '${missing}' field from editable tag.`;
+  if (type === 'gd_resource') return `${at} - Parse Error: Missing '${missing}' field in 'gd_resource' tag.`;
+  return `${at} - Parse Error: Missing '${missing}' in external resource tag.`;
 }
 
 /** The loader's error for a heading it refuses (resource_format_text.cpp:415, :724, :840, :871, :903). */

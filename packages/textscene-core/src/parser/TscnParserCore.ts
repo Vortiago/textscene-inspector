@@ -5,7 +5,7 @@
  * the lenient skip-and-continue recovery.
  */
 
-import { headingOrder } from './headingOrder.js';
+import { headingOrder, missingField } from './headingOrder.js';
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/classdb/deprecated.js';
 import type {
   TscnScene,
@@ -323,9 +323,23 @@ export class TscnParserCore {
       if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
       addFieldValues(fields, heading.type, headings.previous());
       // Godot judges a tag once it has read the `]`, so a refusal names the line it ends on.
-      headings.read(heading.type, endLine);
+      const missing = missingField(
+        heading.type,
+        fields.map(({ key }) => key)
+      );
+      const stopBefore = headings.stop();
+      headings.read(heading.type, endLine, missing);
+      if (missing && headings.stop() !== stopBefore) reportMissingField(heading.type, missing, line, columns);
       observer?.onSectionStart?.(heading, currentSection, line, columns);
     };
+
+    const reportMissingField = (type: string, field: string, line: number, columns: HeadingColumns) =>
+      observer?.onError?.({
+        message: `Godot stops the load at a [${type}] heading with no '${field}' field`,
+        line,
+        column: columns.start + 1,
+        code: 'MISSING_HEADING_FIELD',
+      });
 
     // After a heading with no body, plain `parse_tag` refuses text (resource_format_text.cpp:40, :1185).
     const refuseBody = (line: string, lineNumber: number, godotLine: number, column: number) => {

@@ -147,17 +147,16 @@ resource_local_to_scene = 7
       expect(result.errors[0]?.message).toContain('resource_local_to_scene');
     });
 
-    it('validates nothing when the header names no type', () => {
-      // A typeless header is not loadable either ("Missing 'type' field in
-      // 'gd_resource' tag", resource_format_text.cpp:1153-1159), but nothing
-      // here knows what the body was meant to be, so it reports no bound.
+    it('reports only the typeless header, which Godot refuses, and no bound in the body', () => {
       const content = `[gd_resource format=3]
 
 [resource]
 background_mode = 99
 `;
 
-      expect(parser.parse(content).errors).toHaveLength(0);
+      expect(parser.parse(content).errors.map(({ message }) => message)).toEqual([
+        "Godot stops the load at a [gd_resource] heading with no 'type' field",
+      ]);
     });
 
     it('validates nothing for a [resource] section with no header above it', () => {

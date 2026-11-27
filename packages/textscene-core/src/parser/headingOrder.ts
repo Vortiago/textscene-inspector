@@ -20,8 +20,31 @@ export interface UnparsedHeading {
   readonly readBy: TagReader;
 }
 
-/** Where the loader stops at a heading: one it refuses for its place, or one it cannot parse. */
-export type HeadingStop = MisplacedHeading | UnparsedHeading;
+/** A heading the loader takes in its place but refuses for a field it requires and lacks. */
+export interface IncompleteHeading {
+  readonly type: string;
+  readonly line: number;
+  readonly missing: string;
+}
+
+/** Where the loader stops at a heading: refused for its place, for a missing field, or unparsed. */
+export type HeadingStop = MisplacedHeading | IncompleteHeading | UnparsedHeading;
+
+/** Required fields by heading, in check order (resource_format_text.cpp:311-331, :392, :466-560, :1155). */
+const REQUIRED_FIELDS: ReadonlyMap<string, readonly string[]> = new Map(
+  Object.entries({
+    gd_resource: ['type'],
+    ext_resource: ['path', 'type', 'id'],
+    sub_resource: ['type', 'id'],
+    connection: ['from', 'to', 'signal', 'method'],
+    editable: ['path'],
+  })
+);
+
+/** The first field the loader requires of a `type` heading that `keys` lacks, or undefined. */
+export function missingField(type: string, keys: readonly string[]): string | undefined {
+  return REQUIRED_FIELDS.get(type)?.find((field) => !keys.includes(field));
+}
 
 /** The headings the loader takes next: `[ext_resource]`, then `[sub_resource]`, then the main tag. */
 type Phase = 'ext_resource' | 'sub_resource' | 'node' | 'resource';
@@ -51,7 +74,8 @@ function readerAfter(previous: string | null): TagReader {
 
 /** A tracker to feed each heading in file order. A first heading other than a header is never misplaced. */
 export function headingOrder(): {
-  read(type: string, line: number): void;
+  /** Records a heading with the first required field it lacks, if any. */
+  read(type: string, line: number, missing?: string): void;
   /** The type of the last heading read, null before the first. */
   previous(): string | null;
   /** Records a heading `parse_tag` refuses, where the loader reads no further, the first heading included. */
@@ -66,17 +90,20 @@ export function headingOrder(): {
   let phase: Phase = 'ext_resource';
   let stop: HeadingStop | null = null;
   let isUnparsed = false;
-  const judge = (type: string, line: number) => {
+  // The loader checks a heading's place before its fields, and the header's fields as it opens the file.
+  const judge = (type: string, line: number, missing?: string) => {
     if (isScene === null || stop) return;
     const reason = refusalOf(phase, type, isScene);
     if (reason) stop = { type, line, reason };
+    else if (missing) stop = { type, line, missing };
     else phase = phaseAfter(phase, type);
   };
   return {
-    read(type, line) {
+    read(type, line, missing) {
       if (previous === null) {
         if (type === 'gd_scene' || type === 'gd_resource') isScene = type === 'gd_scene';
-      } else judge(type, line);
+        if (isScene !== null && !stop && missing) stop = { type, line, missing };
+      } else judge(type, line, missing);
       previous = type;
     },
     previous: () => previous,
