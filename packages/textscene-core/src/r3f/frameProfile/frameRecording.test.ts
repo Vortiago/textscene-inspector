@@ -290,6 +290,21 @@ describe('recordFrames with draws', () => {
     ]);
   });
 
+  it('names a clear of a target whose texture has no name apart from the canvas (edge case)', async () => {
+    const { gpu, renderer } = drawingRenderer(2);
+    const cube = new THREE.WebGLCubeRenderTarget(4);
+    renderer.getRenderTarget = () => cube;
+    renderer.clear = () => gpu.advanceGpu(1);
+    const profile = timed(renderer);
+    const recorded = recordFrames({ frames: 2, draws: true });
+    runFrames(profile, 0, 3, () => {
+      renderer.clear();
+      gpu.resolve();
+    });
+    const [recording] = await recorded;
+    expect(recording!.draws![0]).toMatchObject({ object: 'Clear', material: 'unnamed target' });
+  });
+
   it('names a clear of the canvas after the canvas (edge case)', async () => {
     const { gpu, renderer } = drawingRenderer(2);
     renderer.getRenderTarget = () => null;

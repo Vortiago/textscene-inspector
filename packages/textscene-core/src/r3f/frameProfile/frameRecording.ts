@@ -117,6 +117,9 @@ function spreadOf(ns: readonly number[]): GpuSpread | null {
   return spreadOfMs(ns.map((value) => value / NS_PER_MS));
 }
 
+/** The name of a cleared target whose texture has none, such as an omni light's cube. */
+const UNNAMED_TARGET = 'unnamed target';
+
 /** One draw source per step, object and material, so a recording's sums key on identity. */
 export class DrawSources {
   private readonly sources = new Map<string, DrawSource>();
@@ -127,7 +130,7 @@ export class DrawSources {
 
   /** A clear of the bound target, named by its texture, or `canvas` for the screen. */
   ofClear(step: StepKey, target: THREE.WebGLRenderTarget | null): DrawSource {
-    return this.named(step, 'Clear', target?.texture.name || 'canvas');
+    return this.named(step, 'Clear', target ? target.texture.name || UNNAMED_TARGET : 'canvas');
   }
 
   private named(step: StepKey, object: string, material: string): DrawSource {

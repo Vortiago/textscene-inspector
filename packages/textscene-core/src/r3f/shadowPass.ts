@@ -1,11 +1,3 @@
-/**
- * The renderer's shadow pass. three r187 has no hook between its shadow pass and its draw
- * (`WebGLRenderer.js:1750-1765`), so the pass runs three's pass, then Godot's copy of each omni cube
- * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each spot light and split
- * sun, then each area light's paraboloid (`atlasDepthPass.ts`), then each reader of the maps, and
- * last writes the sun shadow terms and records the framebuffer height.
- */
-
 import * as THREE from 'three';
 import { AtlasOmniShadow } from './positionalShadow/atlasOmniShadow.js';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow.js';
@@ -17,7 +9,8 @@ import {
   type ThreeShadowPass,
 } from './positionalShadow/atlasDepthPass.js';
 import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
-import { SunAtlasClears } from './directionalShadow/sunAtlasClear.js';
+import { OneAtlasClear } from './oneAtlasClear.js';
+import { isDirectionalShadowAtlas } from './directionalShadow/shadowAtlas.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
@@ -103,7 +96,9 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
         : countShadowDraws(renderer, () => drawCasters(lights, scene, camera)),
   };
   const copy = new OmniShadowCopy();
-  const sunAtlasClears = new SunAtlasClears(renderer);
+  const sunAtlasClear = new OneAtlasClear(renderer, isDirectionalShadowAtlas);
+  const positionalAtlasClear = new OneAtlasClear(renderer, (target) => target === positionalShadowAtlas());
+  // The omni copies run after the slot draws. Godot runs them first (`render_forward_clustered.cpp:2722`).
   shadowMap.render = (lights, scene, camera) => {
     const draws = passDraws(shadowMap);
     const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
@@ -113,15 +108,21 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     const isTimed = draws && lights.length > 0 && !isReading;
     if (isTimed) beginStep(renderer, 'Shadows');
     allocatePositionalShadowAtlas(renderer);
+    // One whole clear of the positional atlas, unless an omni light keeps an earlier pass's slot.
+    const clearsPositionalWhole = !lights.some(keepsOmniSlot);
     threePass.draw(lights, scene, camera);
-    copyOmniShadows(renderer, copy, copied);
-    sunAtlasClears.start();
+    sunAtlasClear.start();
+    if (clearsPositionalWhole) positionalAtlasClear.start();
     try {
       drawProjectedShadows(threePass, projected, scene, camera);
+      drawAreaShadows(threePass, areas, scene, camera);
     } finally {
-      sunAtlasClears.end();
+      // Off in the reverse order, so each hook finds its own clear on top.
+      positionalAtlasClear.end();
+      sunAtlasClear.end();
     }
-    drawAreaShadows(threePass, areas, scene, camera);
+    // After the slot draws, whose one whole clear would erase a copy.
+    copyOmniShadows(renderer, copy, copied);
     if (isTimed) endStep(renderer, 'Shadows');
     if (isReading) {
       readMaps(readers, scene, camera);
@@ -211,6 +212,14 @@ function needsCopy(light: THREE.Light): light is OmniLight {
   const { shadow } = light as THREE.Light & { shadow?: unknown };
   return (
     shadow instanceof AtlasOmniShadow && shadow.slot !== null && (shadow.autoUpdate || shadow.needsUpdate)
+  );
+}
+
+/** An omni light with a slot that this pass does not copy, so its slot keeps an earlier pass's map. */
+function keepsOmniSlot(light: THREE.Light): boolean {
+  const { shadow } = light as THREE.Light & { shadow?: unknown };
+  return (
+    shadow instanceof AtlasOmniShadow && shadow.slot !== null && !(shadow.autoUpdate || shadow.needsUpdate)
   );
 }
 

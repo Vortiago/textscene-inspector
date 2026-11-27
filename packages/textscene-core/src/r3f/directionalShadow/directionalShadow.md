@@ -238,8 +238,10 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
   (r187 `WebGLShadowMap.js:281-285`). Each slot's viewport and matrix place the split at its texels in
   the atlas.
 - three binds and clears a shadow's whole map before it draws the shadow (`:340-341`). The shadow
-  pass lets only the first of these clears through in a pass (`sunAtlasClear.ts`), so the atlas is
-  cleared whole once and each later sun keeps the shares drawn before it. Each split's viewport keeps its draws inside its rectangle.
+  pass lets only the first of these clears through in a pass (`oneAtlasClear.ts`), so the atlas is
+  cleared whole once and each later sun keeps the shares drawn before it. Godot also clears the
+  whole atlas once per frame (`render_forward_clustered.cpp:1542`). Each split's viewport keeps its
+  draws inside its rectangle.
 - `shadowAtlasChunk.ts` replaces three's array of sun shadow samplers with one sampler,
   `directionalShadowAtlas`, in `shadowmap_pars_fragment`, `lights_fragment_begin` and
   `shadowmask_pars_fragment`. It gives every lit `ShaderLib` entry and `UniformsLib.lights` that
