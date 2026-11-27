@@ -91,7 +91,7 @@ jobs:
           anthropic_workspace_id: wrkspc_01JmuR8g6h7JStm7hFpxStdt
           # Inline-comment classification requires a static API key, which federation replaces.
           classify_inline_comments: 'false'
-          prompt: '/code-review medium --comment ${{ github.repository }}/pull/${{ env.PR_NUMBER }}'
+          prompt: '/code-review high --comment ${{ github.repository }}/pull/${{ env.PR_NUMBER }}'
           # The `opus` alias, because the action's default model is Sonnet. The alias names the
           # latest Opus of the pinned Claude Code, so a Dependabot update brings a newer one.
           # The action starts the inline-comment server only when `--allowedTools` names its tool.
