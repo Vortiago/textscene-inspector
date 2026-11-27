@@ -83,6 +83,11 @@ describe('parseArgs', () => {
     );
   });
 
+  it('takes a forced read of the stored depth', () => {
+    expect(parseArgs(['a.tscn', '--stored-depth-read', 'fetched']).storedDepthRead).toBe('fetched');
+    expect(() => parseArgs(['a.tscn', '--stored-depth-read', 'other'])).toThrow();
+  });
+
   it('rejects a lit surface form the previewer does not know (error path)', () => {
     expect(() => parseArgs(['a.tscn', '--lit-surface', 'node'])).toThrow(
       '--lit-surface takes one of nodes, got "node"'

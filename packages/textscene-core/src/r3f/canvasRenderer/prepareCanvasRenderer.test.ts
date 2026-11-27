@@ -6,7 +6,14 @@ import * as shaderPatches from '../shaderPatch/installShaderPatches';
 import * as textureCopies from '../../shaders/uniforms/textureCopies';
 import { heldLiveTargetCopy } from '../liveTargets';
 import { installGodotOpaqueOrder } from '../../shaders/pipeline/opaqueOrder';
+import * as shadowAtlas from '../directionalShadow/shadowAtlas';
 import { prepareCanvasRenderer } from './prepareCanvasRenderer';
+
+// The probe draws a pixel, which the fake renderer cannot.
+vi.mock('../directionalShadow/storedDepthRead', () => ({
+  decideStoredDepthRead: () => 'float',
+  storedDepthRead: () => 'float',
+}));
 
 const renderer = () =>
   ({
@@ -23,6 +30,14 @@ function godotOpaqueSort(): unknown {
 }
 
 describe('prepareCanvasRenderer', () => {
+  it('formats the sun atlas colour for the decided read before any patch installs', () => {
+    const format = vi.spyOn(shadowAtlas, 'formatDirectionalShadowColour');
+    const install = vi.spyOn(shaderPatches, 'installShaderPatches');
+    prepareCanvasRenderer({ gl: renderer() });
+    expect(format).toHaveBeenCalledWith('float');
+    expect(format.mock.invocationCallOrder[0]).toBeLessThan(install.mock.invocationCallOrder[0]!);
+  });
+
   it('installs the shader patches', () => {
     const install = vi.spyOn(shaderPatches, 'installShaderPatches');
     prepareCanvasRenderer({ gl: renderer() });

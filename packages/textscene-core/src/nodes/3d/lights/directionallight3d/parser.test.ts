@@ -75,6 +75,18 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.light_angular_distance).toBeUndefined();
     });
 
+    it('parses shadow_transmittance_bias', () => {
+      const result = parseDirectionalLight3D(heading('DirectionalLight3D', { name: 'Sun' }), {
+        shadow_transmittance_bias: '0.5',
+      });
+      expect(result.shadow_transmittance_bias).toBe(0.5);
+    });
+
+    it('leaves shadow_transmittance_bias unset when it is absent (edge case)', () => {
+      const result = parseDirectionalLight3D(heading('DirectionalLight3D', { name: 'Sun' }), {});
+      expect(result.shadow_transmittance_bias).toBeUndefined();
+    });
+
     it('should parse shadow_enabled as false when not "true"', () => {
       const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
 

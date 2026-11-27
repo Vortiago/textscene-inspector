@@ -66,6 +66,13 @@ export const GEOMETRY_SCENES = [
   // Two orthogonal suns, so each map is half the atlas wide. The posts' shadows,
   // which lie across that width, spread into faint smudges. The bars cast as under one sun.
   { name: 'directional-shadow-shared-atlas', file: 'unit-directional-shadow-shared-atlas.tscn' },
+  // A slab 400 units towards the sun, past every split box, casts on the ground in view.
+  // Godot 4.6.3: 0 px over 2/255.
+  {
+    name: 'directional-shadow-far-caster',
+    file: 'unit-directional-shadow-far-caster.tscn',
+    camera: 'DirectionalShadowFarCasterRoot/Camera3D',
+  },
   // An omni light and a spot light, each with `shadow_blur = 4` and alone under a
   // dark sun. A board's straight shadow edge fades over the width of the light's
   // PCF kernel.

@@ -1,0 +1,78 @@
+import * as THREE from 'three';
+import { perObject } from '../../utils/perObject.js';
+
+/** The two texels' bytes, high then low: the depths 255 and 256. */
+const PROBE_TEXELS = new Uint8Array([0, 255, 1, 0]);
+
+/** The second texel's weight. A weight with no short binary fraction fails a filter with few extra bits. */
+const PROBE_WEIGHT = 0.4;
+
+const PROBE_FRAGMENT = /* glsl */ `
+uniform sampler2D probe;
+out vec4 fragColour;
+void main() {
+	vec2 bytes = textureLod( probe, vec2( ${(0.5 + PROBE_WEIGHT) / 2}, 0.5 ), 0.0 ).rg * 255.0;
+	fragColour = vec4( fract( dot( bytes, vec2( 256.0, 1.0 ) ) ), 0.0, 0.0, 1.0 );
+}`;
+
+const PROBE_VERTEX = /* glsl */ `
+void main() {
+	gl_Position = vec4( position.xy, 0.0, 1.0 );
+}`;
+
+/** The depth between 255 and 256 at the probe weight: full precision keeps its fraction, 8 bits drop it. */
+const FULL_PRECISION_BYTE = Math.round(PROBE_WEIGHT * 255);
+/** A filter within 1/16 of a depth step of the exact mix passes. An 8-bit filter misses by half a step. */
+const TOLERANCE_BYTES = 16;
+
+/** Whether the probe's read-back byte shows a full-precision filter. */
+export function isFullPrecisionByte(byte: number): boolean {
+  return Math.abs(byte - FULL_PRECISION_BYTE) <= TOLERANCE_BYTES;
+}
+
+/** Written only by `filtersTwoBytesExactly`: each renderer's byte, which a frame recording reports. */
+// eslint-disable-next-line no-restricted-syntax -- a renderer is an object key with no use in perObject's stamp.
+const probedBytes = new WeakMap<THREE.WebGLRenderer, number>();
+
+/** Whether the GPU's linear filter mixes two texels' byte pairs into their depths' mix, once per renderer. */
+export const filtersTwoBytesExactly = perObject((renderer: THREE.WebGLRenderer) => {
+  const byte = probeByte(renderer);
+  probedBytes.set(renderer, byte);
+  return isFullPrecisionByte(byte);
+});
+
+/** The byte the probe read on `renderer`, or null where it has not run, as on a page that forces a read. */
+export function measuredProbeByte(renderer: THREE.WebGLRenderer): number | null {
+  return probedBytes.get(renderer) ?? null;
+}
+
+function probeByte(renderer: THREE.WebGLRenderer): number {
+  const texels = new THREE.DataTexture(PROBE_TEXELS, 2, 1, THREE.RGFormat, THREE.UnsignedByteType);
+  texels.minFilter = THREE.LinearFilter;
+  texels.magFilter = THREE.LinearFilter;
+  texels.needsUpdate = true;
+  const material = new THREE.RawShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    vertexShader: `in vec3 position;\n${PROBE_VERTEX}`,
+    fragmentShader: `precision highp float;\n${PROBE_FRAGMENT}`,
+    uniforms: { probe: { value: texels } },
+  });
+  const triangle = new THREE.BufferGeometry();
+  triangle.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
+  const scene = new THREE.Scene().add(new THREE.Mesh(triangle, material));
+  const target = new THREE.WebGLRenderTarget(1, 1);
+  const pixel = new Uint8Array(4);
+  const previous = renderer.getRenderTarget();
+  try {
+    renderer.setRenderTarget(target);
+    renderer.render(scene, new THREE.Camera());
+    renderer.readRenderTargetPixels(target, 0, 0, 1, 1, pixel);
+  } finally {
+    renderer.setRenderTarget(previous);
+    target.dispose();
+    triangle.dispose();
+    material.dispose();
+    texels.dispose();
+  }
+  return pixel[0]!;
+}

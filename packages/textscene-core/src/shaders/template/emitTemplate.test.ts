@@ -81,6 +81,25 @@ describe('emitTemplateStage', () => {
     expect(fragmentOf(globals, 'color = sampled(shadow_atlas);')).toMatch(/texture\(\s*nodeUniform/);
   });
 
+  describe('a uniform struct that a function takes as an argument', () => {
+    const KERNEL = [
+      'struct Scene {\n\tvec4 kernel[4];\n\tvec4 tint;\n};',
+      'layout(set = 0, binding = 3, std140) uniform SceneBlock {\n\tScene data;\n} scene_block;',
+    ].join('\n');
+
+    it('is read in place, not copied into a parameter at each call', () => {
+      const globals = `${KERNEL}\nvec4 shade(Scene scene) { return scene.kernel[2] * scene.tint; }`;
+      expect(fragmentOf(globals, 'color = shade(scene_block.data);')).toMatch(/vec4 sl\d+_shade \(\s*\)/);
+    });
+
+    it('is copied into a parameter when the function writes it', () => {
+      const globals = `${KERNEL}\nvec4 shade(Scene scene) { scene.tint *= 2.0; return scene.tint; }`;
+      expect(fragmentOf(globals, 'color = shade(scene_block.data);')).toMatch(
+        /vec4 sl\d+_shade \( vec4\[4\] p0/
+      );
+    });
+  });
+
   describe('a guard on a specialisation constant', () => {
     const guarded = (packed: string, guard = 'is_on()') =>
       fragmentOf(

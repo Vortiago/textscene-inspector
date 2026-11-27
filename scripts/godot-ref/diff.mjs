@@ -28,12 +28,14 @@ const RESIDUE_MAX_DELTA = 2;
 const LIT_SURFACE_NODES = 'nodes';
 /** The one canvas item form beside the default that the previewer opens with `?canvasItem=`. */
 const CANVAS_ITEM_TRANSLATED = 'translated';
+/** The reads of the sun's stored depth that the previewer forces with `?storedDepthRead=`. */
+const STORED_DEPTH_READS = ['sampled', 'float', 'fetched'];
 /** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
 const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--lit-surface nodes] [--canvas-item translated] [--table <file.md>]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--lit-surface nodes] [--canvas-item translated] [--stored-depth-read sampled|float|fetched] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
@@ -46,6 +48,7 @@ function usage() {
       '  --set p:prop=v   on both sides, get_node(p).set(prop, str_to_var(v)) before the capture\n' +
       '  --lit-surface nodes  open our side with the node lit surface (?litSurface=nodes)\n' +
       "  --canvas-item translated  open our side with canvas items through Godot's template (?canvasItem=translated)\n" +
+      "  --stored-depth-read sampled|float|fetched  force our side's read of the sun's stored depth\n" +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
@@ -59,6 +62,7 @@ export function parseArgs(argv) {
     collisions: false,
     litSurface: null,
     canvasItem: null,
+    storedDepthRead: null,
     mode: null,
     table: null,
     hostCalls: [],
@@ -79,6 +83,8 @@ export function parseArgs(argv) {
       args.litSurface = oneOf('--lit-surface', [LIT_SURFACE_NODES], argv[++i]);
     } else if (arg === '--canvas-item') {
       args.canvasItem = oneOf('--canvas-item', [CANVAS_ITEM_TRANSLATED], argv[++i]);
+    } else if (arg === '--stored-depth-read') {
+      args.storedDepthRead = oneOf('--stored-depth-read', STORED_DEPTH_READS, argv[++i]);
     } else if (arg === '--set') {
       args.hostCalls.push(parseSet(argv[++i]));
     } else if (arg === '--call') {
@@ -170,6 +176,7 @@ export async function diffOne(
     hostCalls = [],
     litSurface = null,
     canvasItem = null,
+    storedDepthRead = null,
   },
   { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
 ) {
@@ -203,6 +210,7 @@ export async function diffOne(
     showCollisions: collisions,
     litSurface,
     canvasItem,
+    storedDepthRead,
     hostCalls,
   });
   if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);

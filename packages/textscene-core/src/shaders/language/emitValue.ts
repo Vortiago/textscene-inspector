@@ -27,6 +27,18 @@ export const inVar = (node: unknown): Node => Var(node as never) as unknown as N
 export const isArrayValue = (value: Value): value is ArrayValue => (value as ArrayValue).kind === 'array';
 export const isStructValue = (value: Value): value is StructValue => (value as StructValue).kind === 'struct';
 
+/** Written only by `uniformView`: the id the next view takes. Never clears, so no two views share one. */
+let nextUniformView = 0;
+
+/** `view` marked as reading only uniforms and constants, so a called function reads it in place. */
+export function uniformView<View extends ArrayValue | StructValue>(view: View): View {
+  return { ...view, uniformViewId: nextUniformView++ };
+}
+
+/** The id `uniformView` gave `value`, or nothing for a value that may read the caller's variables. */
+export const uniformViewId = (value: Value): number | undefined =>
+  (value as { readonly uniformViewId?: number }).uniformViewId;
+
 /** The struct a type names, or nothing for a value type. */
 export type StructOf = (type: ValueType) => StructNode | undefined;
 

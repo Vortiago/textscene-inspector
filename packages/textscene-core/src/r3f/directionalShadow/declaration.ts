@@ -20,6 +20,8 @@ export interface DirectionalShadowDeclaration {
   depthBias: number;
   /** `shadow_normal_bias`, in shadow-map texels. The fitter turns it into world units. */
   normalBias: number;
+  /** The transmittance bias per world unit of a split's depth range. */
+  transmittanceBias: number;
   /**
    * Godot's `soft_shadow_scale`: the PCF kernel's radius in atlas texels, or the blocker search's
    * spread for a light with an angular distance.
@@ -53,6 +55,7 @@ const declaration = userDataDeclaration<DirectionalShadowDeclaration>(
     typeof candidate.fadeStart === 'number' &&
     typeof candidate.depthBias === 'number' &&
     typeof candidate.normalBias === 'number' &&
+    typeof candidate.transmittanceBias === 'number' &&
     typeof candidate.filterRadius === 'number' &&
     typeof candidate.softShadowAngle === 'number' &&
     typeof candidate.drawsSoftShadow === 'boolean' &&

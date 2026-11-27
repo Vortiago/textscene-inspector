@@ -1,0 +1,157 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sun_shadow_splits"]
+
+; The variables: a sun's two splits with blend, a max distance with its fade, and depth bias, beside
+; an orthogonal sun with normal bias and opacity. They share the atlas, so each reads its own half.
+; The other sun shadow golden has one sun at the defaults, so it shows no wrong half, blend or fade.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 4)
+
+[sub_resource type="Shader" id="Shader_ground"]
+code = "shader_type spatial;
+
+void fragment() {
+	ALBEDO = vec3(0.5);
+	ROUGHNESS = 1.0;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ground"]
+shader = SubResource("Shader_ground")
+
+[sub_resource type="BoxMesh" id="BoxMesh_post"]
+size = Vector3(0.08, 1, 0.08)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="SpatialShaderLitSunShadowSplitsRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("ShaderMaterial_ground")
+
+[node name="Post1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.3, 0, 0, 0, 1, -1.5, 0.15, -1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9, 0, 0, 0, 1, -0.75, 0.45, -1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0.25, -1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.1, 0, 0, 0, 1, 0.75, 0.55, -1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7, 0, 0, 0, 1, 1.5, 0.35, -1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.3, 0, 0, 0, 1, -1.5, 0.15, -0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9, 0, 0, 0, 1, -0.75, 0.45, -0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0.25, -0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post9" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.1, 0, 0, 0, 1, 0.75, 0.55, -0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post10" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7, 0, 0, 0, 1, 1.5, 0.35, -0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post11" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.3, 0, 0, 0, 1, -1.5, 0.15, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post12" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9, 0, 0, 0, 1, -0.75, 0.45, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post13" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post14" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.1, 0, 0, 0, 1, 0.75, 0.55, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post15" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7, 0, 0, 0, 1, 1.5, 0.35, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post16" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.3, 0, 0, 0, 1, -1.5, 0.15, 0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post17" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9, 0, 0, 0, 1, -0.75, 0.45, 0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post18" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0.25, 0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post19" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.1, 0, 0, 0, 1, 0.75, 0.55, 0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post20" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7, 0, 0, 0, 1, 1.5, 0.35, 0.75)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post21" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.3, 0, 0, 0, 1, -1.5, 0.15, 1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post22" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9, 0, 0, 0, 1, -0.75, 0.45, 1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post23" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0.25, 1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post24" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.1, 0, 0, 0, 1, 0.75, 0.55, 1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post25" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7, 0, 0, 0, 1, 1.5, 0.35, 1.5)
+mesh = SubResource("BoxMesh_post")
+
+[node name="SunSplits" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 2, 4, 2)
+light_energy = 1.2
+shadow_enabled = true
+shadow_bias = 0.4
+directional_shadow_mode = 1
+directional_shadow_split_1 = 0.5
+directional_shadow_blend_splits = true
+directional_shadow_fade_start = 0.5
+directional_shadow_max_distance = 6.0
+
+[node name="SunOrthogonal" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.5, 0.612372, -0.612372, 0, 0.707107, 0.707107, 0.866025, 0.353553, -0.353553, -2, 4, -2)
+light_energy = 0.6
+light_color = Color(1, 0.8, 0.6, 1)
+shadow_enabled = true
+shadow_normal_bias = 3.0
+shadow_opacity = 0.7
+directional_shadow_mode = 0
+directional_shadow_max_distance = 8.0

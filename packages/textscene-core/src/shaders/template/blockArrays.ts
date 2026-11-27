@@ -1,4 +1,4 @@
-import type { ArrayValue } from '../language/emitValue.js';
+import { uniformView, type ArrayValue } from '../language/emitValue.js';
 import { shapeOf } from '../language/types.js';
 import { blockLayout } from './blockLayout.js';
 import { BitsArrayNode, bitsUniform, SLOT_BYTES, type UniformValue } from '../uniforms/uniformNodes.js';
@@ -31,11 +31,11 @@ export class BlockArrays {
     if (this.node) throw new Error(`expected the arrays of ${this.blockName} before its buffer, got ${name}`);
     const packed: PackedArray = { name, type, count, array: new Array<unknown>(count).fill(undefined) };
     this.arrays.push(packed);
-    const value: ArrayValue = {
+    const value = uniformView<ArrayValue>({
       kind: 'array',
       count,
       element: (index) => (packed.uniform!.value as ArrayValue).element(index),
-    };
+    });
     return { value, written: packed };
   }
 

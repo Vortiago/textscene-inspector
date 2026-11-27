@@ -19,6 +19,14 @@ describe('sceneQuery', () => {
     );
   });
 
+  it('opens a golden with the read of the stored depth it forces', () => {
+    const scene = { name: 'fetched', file: 'a.tscn', storedDepthRead: 'fetched' };
+
+    expect(fixtureUrl(SITE, scene.file, sceneQuery(scene))).toBe(
+      `${SITE}/?fixture=a.tscn&storedDepthRead=fetched`
+    );
+  });
+
   it('opens every other golden with no lit surface parameter', () => {
     const scene = { name: 'plain', file: 'a.tscn', camera: 'Camera3D' };
 

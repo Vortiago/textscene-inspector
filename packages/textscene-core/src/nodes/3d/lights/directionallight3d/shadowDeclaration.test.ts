@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { directionalShadowDeclaration } from './shadowDeclaration';
-import { directionalShadowBias } from '../shared/shadowBias';
+import { directionalShadowBias, directionalTransmittanceBias } from '../shared/shadowBias';
 import { DirectionalShadowMode } from '../../../../godot/rendering/lights/directionalShadow';
 import { DirectionalLightSkyMode } from '../../../../godot/rendering/lights/directionalLightSkyMode';
 
@@ -26,6 +26,7 @@ describe('directionalShadowDeclaration', () => {
       fadeStart: 0.5,
       depthBias: directionalShadowBias(0.5, 4),
       normalBias: 1.5,
+      transmittanceBias: directionalTransmittanceBias(0.05, 4),
       filterRadius: 4,
       softShadowAngle: 0,
       drawsSoftShadow: false,
@@ -44,6 +45,7 @@ describe('directionalShadowDeclaration', () => {
       fadeStart: 0.8,
       depthBias: directionalShadowBias(0.1, 2),
       normalBias: 2,
+      transmittanceBias: directionalTransmittanceBias(0.05, 2),
       filterRadius: 2,
       softShadowAngle: 0,
       drawsSoftShadow: false,

@@ -12,6 +12,7 @@ import { roundedLayer } from './textureLayer.js';
 import { layerScaledRead } from './layerScaledReads.js';
 import { swizzles } from './compositeParts.js';
 import { textureKindOf } from './types.js';
+import { storedDepthOf, storedDepthRead } from './storedDepthReads.js';
 
 /** A gradient of its own type: three builds every `textureGrad` gradient as `vec2` (`TextureNode.js:699`). */
 class GradientNode extends TslNode {
@@ -57,8 +58,13 @@ function projected(sampler: string, coordinate: Node, type: string): Coordinate 
 
 function sampled(texture: TextureNode, { uv, layer, reference }: Coordinate): TextureNode {
   const node = texture.sample(uv);
-  if (reference !== undefined) return node.compare(reference as never) as unknown as TextureNode;
+  if (reference !== undefined)
+    return node.compare(storedReference(texture, uv, reference) as never) as unknown as TextureNode;
   return layer === undefined ? node : (node.depth(roundedLayer(layer) as never) as unknown as TextureNode);
+}
+
+function storedReference(texture: TextureNode, uv: Node, reference: Node): Node {
+  return storedDepthOf(texture)?.storedReference(uv, reference) ?? reference;
 }
 
 function loaded(texture: TextureNode, { uv, layer }: Coordinate): TextureNode {
@@ -174,19 +180,24 @@ function cubeArrayReader(
   return (texture) => new CubeArrayReadNode(texture, held, level) as unknown as Node;
 }
 
-/** The filtered reads: a gather reads one channel of four texels, which no layer scale fits. */
-const LAYER_SCALED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
+/** The filtered reads, which a layer scale and a stored depth fit, unlike a gather or a fetch. */
+const FILTERED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
 
 function sampledCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
   const [texture, coordinate, ...rest] = operands as [TextureNode, Node, ...Node[]];
   const [sampler, coordinateType] = row.args!;
   const projectedCall = PROJECTED[name];
-  if (projectedCall === undefined) {
-    const placed = coordinateOf(sampler!, coordinate);
-    const read = CALLS[name]!(texture, placed, rest, sampler!);
-    return placed.layer && LAYER_SCALED_CALLS.has(name) ? layerScaledRead(texture, read, placed.layer) : read;
-  }
-  return CALLS[projectedCall]!(texture, projected(sampler!, coordinate, coordinateType!), rest, sampler!);
+  const placed =
+    projectedCall === undefined
+      ? coordinateOf(sampler!, coordinate)
+      : projected(sampler!, coordinate, coordinateType!);
+  const call = projectedCall ?? name;
+  const isFiltered = FILTERED_CALLS.has(call);
+  const stored = storedDepthOf(texture);
+  // A stored depth filters its own texels, so the call's level, bias or gradients have nothing to pick.
+  if (stored && isFiltered && placed.reference === undefined) return storedDepthRead(stored, placed.uv);
+  const read = CALLS[call]!(texture, placed, rest, sampler!);
+  return placed.layer && isFiltered ? layerScaledRead(texture, read, placed.layer) : read;
 }
 
 const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);

@@ -57,6 +57,56 @@
       }
     }
   },
+  "sun-soft-shadow": {
+    "drawCalls": 71,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 11,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 10,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 49,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "sun-soft-shadow-hard-twin": {
+    "drawCalls": 71,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 11,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 10,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 49,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
   "glow": {
     "drawCalls": 16,
     "steps": {

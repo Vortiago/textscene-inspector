@@ -16,7 +16,7 @@ import {
   softShadowAngle,
 } from '../../../../godot/rendering/lights/directionalSoftShadow';
 import type { DirectionalShadowDeclaration } from '../../../../r3f/directionalShadow/declaration';
-import { directionalShadowBias } from '../shared/shadowBias';
+import { directionalShadowBias, directionalTransmittanceBias } from '../shared/shadowBias';
 import type { DirectionalLight3DProperties } from './types';
 
 /** The properties a DirectionalLight3D's shadow reads. */
@@ -26,6 +26,7 @@ type DirectionalShadowProperties = Pick<
   | 'shadow_bias'
   | 'shadow_blur'
   | 'shadow_normal_bias'
+  | 'shadow_transmittance_bias'
   | 'light_angular_distance'
   | 'sky_mode'
   | 'directional_shadow_mode'
@@ -56,6 +57,10 @@ export function directionalShadowDeclaration(
       filterRadius
     ),
     normalBias: properties.shadow_normal_bias ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowNormalBias,
+    transmittanceBias: directionalTransmittanceBias(
+      properties.shadow_transmittance_bias ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowTransmittanceBias,
+      filterRadius
+    ),
     filterRadius,
     softShadowAngle: softShadowAngle(angularDistance),
     drawsSoftShadow: drawsDirectionalSoftShadow({

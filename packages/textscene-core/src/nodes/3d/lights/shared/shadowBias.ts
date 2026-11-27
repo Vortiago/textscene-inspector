@@ -20,6 +20,11 @@ export function directionalShadowBias(shadowBias: number, softShadowScale: numbe
   return -(shadowBias / 100) * softShadowScale;
 }
 
+/** Per world unit of a split's depth range, which `bias_scale` holds (`light_storage.cpp:725`). */
+export function directionalTransmittanceBias(transmittanceBias: number, softShadowScale: number): number {
+  return (transmittanceBias / 100) * softShadowScale;
+}
+
 /**
  * In world units: Godot sends `shadow_bias` unscaled (`light_storage.cpp:973`), and scales it by
  * `soft_shadow_scale` in the spot branch alone (`:1024`). The omni lookup subtracts it from the

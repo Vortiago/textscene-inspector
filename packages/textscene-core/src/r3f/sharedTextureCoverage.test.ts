@@ -37,6 +37,10 @@ const FREED_OTHERWISE: Record<string, string> = {
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'shaders/spatial/dfgTexture.ts':
     'The shader package holds no React, so the previewer releases the table in `spatialSurface.ts`.',
+  'r3f/directionalShadow/twoByteFilterProbe.ts':
+    'The probe disposes its 2x1 texture in the call that makes it, before any scene mounts.',
+  'shaders/spatial/directionalShadowDepth.ts':
+    'The shader package holds no React, so the previewer releases the colour in `spatialSurface.ts`.',
   'r3f/sky/environmentSwitch.ts':
     'The switch only turns on a program define. Its version stays 0, so no renderer uploads it.',
 };

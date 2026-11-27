@@ -36,6 +36,7 @@ export const LIGHT_3D_DEFAULTS = {
   shadowBlur: 1, // :489
   shadowBias: 0.1, // :490
   shadowNormalBias: 1, // :491
+  shadowTransmittanceBias: 0.05, // :492
   distanceFade: { begin: 40, shadow: 50, length: 10 }, // light_3d.h:79-81
   bakeMode: BakeMode.DYNAMIC, // light_3d.h:85
   /** Every one of the 32 render layers. */

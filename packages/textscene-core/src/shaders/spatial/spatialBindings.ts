@@ -6,7 +6,7 @@ import type { TranspiledSpatial } from './transpileSpatial.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { EnvironmentFog } from '../pipeline/environmentFog.js';
 import { FOG_BINDINGS } from './fogBindings.js';
-import { PACKED_SPECIALISATIONS } from './packedSpecialisation.js';
+import { PACKED_SPECIALISATIONS, type SpecialisedRender } from './packedSpecialisation.js';
 import { SceneDataFlag } from '../../godot/rendering/sceneDataFlags.js';
 import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
 import {
@@ -14,6 +14,7 @@ import {
   DIRECTIONAL_SHADOW_SCENE_BINDINGS,
   bindDirectionalShadowAtlas,
   type DirectionalLight,
+  type DirectionalShadowAtlasTextures,
 } from './directionalLights.js';
 import { GODOT_ROUGHNESS_LIMITER, type RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 import { bindSkyLayers, SCENE_SKY_BINDINGS, skyFlagsOf, type SceneSky } from './sceneSky.js';
@@ -37,8 +38,8 @@ export interface SpatialScene {
   readonly fog?: EnvironmentFog;
   /** The directional lights that light surfaces, the ones Godot's cull draws. */
   readonly directionalLights: readonly DirectionalLight[];
-  /** The depth every `splitMatrix` maps to, left out when no light has a shadow. */
-  readonly directionalShadowAtlas?: THREE.DepthTexture;
+  /** The atlas every `splitMatrix` maps to, left out when no light has a shadow. */
+  readonly directionalShadowAtlas?: DirectionalShadowAtlasTextures;
   /** The project's screen-space roughness limiter, Godot's defaults when left out. */
   readonly roughnessLimiter?: RoughnessLimiter;
 }
@@ -184,8 +185,12 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
 }
 
 /** Writes the specialisation constants of `spatial`, which pick the colour pass's program. */
-export function specialiseSpatial(spatial: TranspiledSpatial, fog: EnvironmentFog | undefined): void {
-  writeBindings(PACKED_SPECIALISATIONS, spatial.specialisations, { fog });
+export function specialiseSpatial(spatial: TranspiledSpatial, render: SpecialisedRender): void {
+  // A JavaScript caller that passes the fog alone would drop the fog bit with no type error.
+  if (typeof render?.drawsDirectionalSoftShadows !== 'boolean') {
+    throw new Error(`expected a render with drawsDirectionalSoftShadows, got ${JSON.stringify(render)}`);
+  }
+  writeBindings(PACKED_SPECIALISATIONS, spatial.specialisations, render);
   writeBindings(EFFECT_SPECIALISATIONS, spatial.specialisations, undefined);
 }
 

@@ -8,6 +8,9 @@ export interface DirectionalLight3DProperties extends Node3DProperties, BaseLigh
   /** The sun's angular size in degrees, which softens its shadow and widens its lit side (optional). */
   light_angular_distance?: number;
 
+  /** How far a transmittance read steps inside the surface, in percent of the shadow's depth range. */
+  shadow_transmittance_bias?: number;
+
   /** 0 draws one shadow map, 1 two splits and 2 four splits (optional). */
   directional_shadow_mode?: number;
 

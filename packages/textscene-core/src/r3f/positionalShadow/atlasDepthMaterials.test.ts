@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { ProgramShader } from '../materialProgramInputs';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
-import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './atlasDepthMaterials';
+import {
+  AtlasDepthMaterial,
+  FlattenedFloatAtlasDepthMaterial,
+  FloatAtlasDepthMaterial,
+  ParaboloidDepthMaterial,
+} from './atlasDepthMaterials';
 
 /** The depth program as `depth`'s `onBeforeCompile` leaves it. */
 function compiled(depth: THREE.Material): ProgramShader {
@@ -30,6 +35,27 @@ describe('AtlasDepthMaterial', () => {
   it('compiles apart from three’s own depth material (error case)', () => {
     expect(new AtlasDepthMaterial().customProgramCacheKey()).not.toBe(
       new THREE.MeshDepthMaterial().customProgramCacheKey()
+    );
+  });
+});
+
+const FLOAT_DEPTH =
+  /gl_FragColor = vec4\( floor\( clamp\( gl_FragCoord\.z, 0\.0, 1\.0 \) \* 65535\.0 \+ 0\.5 \) \/ 65535\.0, 0\.0, 0\.0, 1\.0 \);\s*}\s*$/;
+
+describe('FloatAtlasDepthMaterial', () => {
+  it('writes the 16-bit depth the atlas stores as a float in red', () => {
+    expect(compiled(new FloatAtlasDepthMaterial()).fragmentShader).toMatch(FLOAT_DEPTH);
+  });
+
+  it('flattens near casters as the byte material does', () => {
+    const { vertexShader, fragmentShader } = compiled(new FlattenedFloatAtlasDepthMaterial());
+    expect(vertexShader).toContain('gl_Position.z = min( gl_Position.z, 0.9999 * gl_Position.w );');
+    expect(fragmentShader).toMatch(FLOAT_DEPTH);
+  });
+
+  it('compiles apart from the byte material (error case)', () => {
+    expect(new FloatAtlasDepthMaterial().customProgramCacheKey()).not.toBe(
+      new AtlasDepthMaterial().customProgramCacheKey()
     );
   });
 });
