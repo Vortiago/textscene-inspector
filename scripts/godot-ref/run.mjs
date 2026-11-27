@@ -618,17 +618,17 @@ function dropSection(ini, name) {
 
 const WINDOW_MODE_SETTING = /^window\/size\/mode\s*=/;
 
-/** The size the project asks for. A timed run pins the window to it, so a stretch cannot resize the frame. */
+/** The size the project asks for. The root-window arm and a timed run pin the window to it. */
 export function projectSize({ rootWindow, inGame, onHostGpu, width, height, canvas2DSize }) {
   if (rootWindow) return { ...canvas2DSize, pinWindowToViewport: true };
   if (inGame) return { ...canvas2DSize, inGame: true };
-  return { width, height, pinWindowToViewport: onHostGpu };
+  return { width, height, pinWindowToViewport: onHostGpu, unstretched: onHostGpu };
 }
 
 /** The generated `project.godot`. `inGame` keeps the default environment and the window settings. */
 export function projectConfig(
   sourceIni,
-  { width, height, pinWindowToViewport = false, runScripts = true, inGame = false }
+  { width, height, pinWindowToViewport = false, unstretched = false, runScripts = true, inGame = false }
 ) {
   const drop = [
     /^window\/size\/viewport_width\s*=/,
@@ -654,9 +654,7 @@ export function projectConfig(
   // The monitor a fullscreen or maximised window fills is unknown here, so only the sizes stay.
   if (inGame) drop.push(WINDOW_MODE_SETTING);
 
-  // A window override or a fullscreen `window/size/mode` makes the stretch transform scale the
-  // picture, so the root-window arm would draw a rectangle the previewer never draws. Only that
-  // arm drops them: a blanket drop would move every existing 3D reference.
+  // An override or a fullscreen mode rescales the frame. A drop for every arm would move every 3D reference.
   if (pinWindowToViewport) {
     drop.push(
       /^window\/size\/window_width_override\s*=/,
@@ -664,6 +662,9 @@ export function projectConfig(
       WINDOW_MODE_SETTING
     );
   }
+
+  // A `viewport` stretch with a scale draws the 3D below the window size: 160 x 120 for 320 x 240 at 2.
+  if (unstretched) drop.push(/^window\/stretch\//);
 
   // An autoload runs before the scene exists, so stripping the scene's scripts misses it. Only a
   // game runs one (`main/main.cpp:4397`), never the editor this harness mirrors. An autoload that
@@ -1964,18 +1965,14 @@ async function renderInto(
 
   // Both streams: `xvfb-run` hands the engine's `printerr` on through its stdout.
   const warnings = harnessWarnings(`${render.stdout}\n${render.stderr}`);
-  const gpuTime = onHostGpu ? await recordedGpuTime(gpuTimeOut, rendered) : null;
+  if (onHostGpu && !existsSync(gpuTimeOut)) await refuse(missingGpuTimeMessage(rendered));
+  const gpuTime = onHostGpu ? parseGpuTime(await readFile(gpuTimeOut, 'utf8')) : null;
   const resized = gpuTime && gpuTimeSizeMessage(gpuTime.device.size, { width, height });
-  if (resized) throw new Error(resized);
+  if (resized) await refuse(resized);
   return { workDir: work, out: resolve(out), mode: rendered, warnings, gpuTime };
 }
 
-async function recordedGpuTime(gpuTimeOut, rendered) {
-  if (!existsSync(gpuTimeOut)) throw new Error(missingGpuTimeMessage(rendered));
-  return parseGpuTime(await readFile(gpuTimeOut, 'utf8'));
-}
-
-/** The bootstrap records only after a 3D capture, so a 3D render with no file quit before it ended. */
+/** The bootstrap records only after a 3D capture. A null `rendered` means it wrote no mode file. */
 export function missingGpuTimeMessage(rendered) {
   if (rendered === null) return '--gpu-time expected a recording, but Godot wrote no render mode';
   return rendered === '3d'

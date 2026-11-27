@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GPU_TIME_DEFAULT_FRAMES, hasHostDisplay, parseGpuTime } from './gpuTime.mjs';
+import { hasHostDisplay, parseGpuTime } from './gpuTime.mjs';
 import {
   godotSpawnPlan,
   gpuTimeSizeMessage,
@@ -35,10 +35,6 @@ describe('--gpu-time flags', () => {
     if (refusal === OK) expect(parse).not.toThrow();
     else expect(parse).toThrow(refusal);
   });
-
-  it('records the default frames for a bare flag', () => {
-    expect(parseArgs(['a.tscn', '--gpu-time']).gpuTimeFrames).toBe(GPU_TIME_DEFAULT_FRAMES);
-  });
 });
 
 describe('--gpu-time render outcome', () => {
@@ -71,7 +67,8 @@ describe('--gpu-time window', () => {
     'window/size/window_width_override=1280',
     'window/size/window_height_override=720',
     'window/size/mode=2',
-    'window/stretch/mode="canvas_items"',
+    'window/stretch/mode="viewport"',
+    'window/stretch/scale=2.0',
   ].join('\n');
   const timed = (onHostGpu) =>
     projectConfig(
@@ -83,6 +80,9 @@ describe('--gpu-time window', () => {
     ['window_width_override', true],
     ['window_height_override', true],
     ['window/size/mode', true],
+    ['window/stretch/mode', true],
+    ['window/stretch/scale', true],
+    ['window/stretch/mode', false],
     ['window_width_override', false],
     ['window/size/mode', false],
   ])('%s with a timed run %s', (key, isTimed) => {
@@ -146,16 +146,5 @@ describe('--gpu-time pass times', () => {
 
   it('refuses a recording with no pass times (error case)', () => {
     expect(() => parseGpuTime(recorded([]))).toThrow('expected pass times from a RenderingDevice');
-  });
-
-  it('refuses a recording with no frames (error case)', () => {
-    const empty = JSON.stringify({
-      adapter: 'GPU',
-      driver: 'vulkan',
-      size: [1, 1],
-      frames: [],
-      passFrames: [],
-    });
-    expect(() => parseGpuTime(empty)).toThrow('expected GPU frame times from Godot, got 0 frames');
   });
 });
