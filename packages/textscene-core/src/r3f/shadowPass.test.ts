@@ -210,6 +210,26 @@ describe('installShadowPass', () => {
     expect(sun.shadow.needsUpdate).toBe(true);
   });
 
+  it('clears the sun atlas once in a pass that draws two suns, so the second keeps the first', () => {
+    const { renderer, threePass } = fakeRenderer();
+    let bound: THREE.RenderTarget | null = null;
+    vi.mocked(renderer.getRenderTarget).mockImplementation(() => bound as THREE.WebGLRenderTarget | null);
+    const cleared: (THREE.RenderTarget | null)[] = [];
+    renderer.clear = () => void cleared.push(bound);
+    threePass.mockImplementation((lights: THREE.Light[]) => {
+      for (const { shadow } of lights as THREE.DirectionalLight[]) {
+        if (!shadow.autoUpdate && !shadow.needsUpdate) continue;
+        bound = shadow.map;
+        renderer.clear();
+        shadow.needsUpdate = false;
+      }
+    });
+    installShadowPass(renderer);
+    const [first, second] = [new SplitSunLight(), new SplitSunLight()];
+    runPass(renderer, [first, second]);
+    expect(cleared).toEqual([first.shadow.map]);
+  });
+
   it('draws a split sun’s casters flattened onto the box, as a pancake size does (edge case)', () => {
     const { renderer, threePass } = fakeRenderer();
     const scene = new THREE.Scene();

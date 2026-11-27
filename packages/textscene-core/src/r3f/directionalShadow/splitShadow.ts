@@ -15,7 +15,7 @@ import {
   type DirectionalShadowFade,
 } from '../../godot/rendering/lights/directionalShadow.js';
 import { cameraFrustum } from '../../shaders/pipeline/cameraFrustum';
-import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
+import type { LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
 
 /**
@@ -107,12 +107,6 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   private readonly splitFrustums: THREE.Frustum[] = [];
   private readonly undrawn = new UndrawnFrustum();
 
-  /**
-   * The light's share of the atlas, in units of one split's rectangle, as three gives each slot's
-   * viewport (r187 `WebGLShadowMap.js:347-352`).
-   */
-  private readonly share = new THREE.Vector4();
-
   /** The split count and light rectangle the layout was last built for. Written only by `layOut`. */
   private laidOutSplitCount = -1;
   private readonly laidOutRect: DirectionalShadowAtlasRect = { x: NaN, y: NaN, width: NaN, height: NaN };
@@ -176,12 +170,6 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
       DIRECTIONAL_SHADOW_SIZE_DEFAULT / first.width,
       DIRECTIONAL_SHADOW_SIZE_DEFAULT / first.height
     );
-    this.share.set(
-      lightRect.x / first.width,
-      lightRect.y / first.height,
-      lightRect.width / first.width,
-      lightRect.height / first.height
-    );
     for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
       const viewport = this._viewports[slot]!;
       if (slot >= splitCount) {
@@ -231,9 +219,6 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
    * as its vec4 repeats that split's far end. With no split drawn, every slot keeps its matrix.
    */
   override updateMatrices(_light: THREE.Light): void {
-    // three clears the whole target before it draws a light (r187 `WebGLShadowMap.js:340-341`), so the
-    // scissor keeps the clear inside this light's share.
-    confineShadowScissor(this, this.share);
     const lastSplit = Math.max(this.splitCount - 1, 0);
     for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
       if (slot < this.splitCount) this.updateSplitMatrix(slot);

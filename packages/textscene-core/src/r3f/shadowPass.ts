@@ -17,6 +17,7 @@ import {
   type ThreeShadowPass,
 } from './positionalShadow/atlasDepthPass.js';
 import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
+import { clearSunAtlasOnce } from './directionalShadow/sunAtlasClear.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
@@ -113,7 +114,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     allocatePositionalShadowAtlas(renderer);
     threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
-    drawProjectedShadows(threePass, projected, scene, camera);
+    clearSunAtlasOnce(renderer, () => drawProjectedShadows(threePass, projected, scene, camera));
     drawAreaShadows(threePass, areas, scene, camera);
     if (isTimed) endStep(renderer, 'Shadows');
     if (isReading) {
