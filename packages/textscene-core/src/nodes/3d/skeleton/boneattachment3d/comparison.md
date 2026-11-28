@@ -14,6 +14,11 @@ Skeleton3D that is its parent, or the node `external_skeleton` names under `use_
 (`bone_attachment_3d.cpp:128-142`). The index `bone_idx` at 0 or more wins. A negative one takes
 the first bone `bone_name` names (`:113-126`).
 
+An instancing file applies the five setters in file order. A valid index also sets the name.
+An invalid index keeps the name for binding on tree entry. A name selects its bone on the
+current skeleton (`bone_attachment_3d.cpp:117-119,178-214`). Turning off `override_pose`
+resets that bone to its local rest (`skeleton_3d.cpp:908-914`).
+
 The previewer seats the node on the bone pose over the live scene tree, after the modifiers and
 the bone poses a clip writes. The boxes of the fixture ride the swung-aside ribbon. A node that
 reaches no skeleton or no bone keeps the transform the file states, and so does a node with

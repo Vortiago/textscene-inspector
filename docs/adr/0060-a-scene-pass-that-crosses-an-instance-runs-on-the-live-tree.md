@@ -39,6 +39,10 @@ a modifier reads the scene around the skeleton and two instances of one sub-scen
 A type registers its edit as a `poseModifier` beside a scene pass, and a load that leaves the
 skin as it was hands back the same array.
 
+A BoneAttachment3D resolves its instance setters on the live tree while the loader can reach their targets.
+The attachment and each bound mesh share the resulting local bone poses and any global poses already read.
+The pose model applies animation and modifiers to that state (`bone_attachment_3d.cpp:190-233`, `skeleton_3d.cpp:532-569,856-914`).
+
 ## Considered Options
 
 - **Compose the sub-scenes into the parse, then run the passes.** Rejected. Sub-scenes load lazily
