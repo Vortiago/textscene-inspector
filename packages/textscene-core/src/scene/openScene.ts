@@ -13,11 +13,10 @@ import type { SceneFailure, SceneFile } from './sceneFiles.js';
 import { SceneListeners } from './sceneListeners.js';
 import { SceneNodes } from './sceneNodes.js';
 import type { CameraState } from './viewportCameras.js';
-import { SceneProperties } from './sceneProperties.js';
+import type { ScenePropertyState } from './loadPropertyAccess.js';
 import type { SceneWrites } from './sceneWrites.js';
 import { createSceneRuntime, type SceneRuntime, type SceneTree } from './sceneRuntime.js';
 import { variantOf, type Variant } from './variant.js';
-import { writtenSceneGraph } from './writtenScene.js';
 
 /** The path a scene opens under when the host names none. */
 export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
@@ -97,13 +96,18 @@ export function openScene({
 
   const parse = (): ParseResult => (parsed ??= parseTscnContent(currentSource, rootScenePath));
   const graph = (): SceneGraph | null => parse().sceneGraph;
-  const properties = new SceneProperties(
-    rootScenePath,
-    () => graph()?.scenes.get(rootScenePath),
-    (livePath) => tree()?.node(livePath) ?? null,
-    (livePath) => writtenTree()?.node(livePath) ?? null,
-    (path) => resource(path)
-  );
+  const properties: ScenePropertyState = {
+    current: null,
+    forAccess(access) {
+      return (this.current ??= new access.SceneProperties(
+        rootScenePath,
+        () => graph()?.scenes.get(rootScenePath),
+        (livePath) => tree()?.node(livePath) ?? null,
+        (livePath) => writtenTree()?.node(livePath) ?? null,
+        (path) => resource(path)
+      ));
+    },
+  };
   const tree = (): SceneTree | null => {
     const current = graph();
     return current ? runtime().tree(current) : null;
@@ -145,10 +149,12 @@ export function openScene({
     parse,
     written() {
       const current = parse();
-      const writes = properties.writes();
-      const resources = properties.resources();
+      const store = properties.current;
+      if (!store) return current.sceneGraph;
+      const writes = store.writes();
+      const resources = store.resources();
       if (written?.parse !== current || written.writes !== writes || written.resources !== resources) {
-        const laid = current.sceneGraph && writtenSceneGraph(current.sceneGraph, writes, resources);
+        const laid = current.sceneGraph && store.writtenGraph(current.sceneGraph);
         written = { parse: current, writes, resources, graph: laid };
       }
       return written.graph;

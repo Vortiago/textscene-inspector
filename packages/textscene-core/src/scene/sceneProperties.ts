@@ -1,21 +1,17 @@
-import type { ParsedScene } from '../core/SceneGraph.js';
+import type { ParsedScene, SceneGraph } from '../core/SceneGraph.js';
 import type { TscnExternalResource } from '../parser/types.js';
 import { varToStr } from '../godot/variant/varToStr.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import * as logger from '../logger.js';
-import { memoisedImport } from '../resources/memoisedImport.js';
+import { writtenSceneGraph } from './writtenScene.js';
+import type { PropertyAccess } from './loadPropertyAccess.js';
 import { parseSubResourcePath, subResourcePath } from '../resources/subResourcePath.js';
 import type { DerivedProperties, NodeReader, NodeReads } from './derived/derivedProperty.js';
 import type { ListedReads } from './listed/listedProperties.js';
 import type { ContainerVisibility, SceneTreeNode } from './sceneRuntime.js';
 import { WriteStore, type SceneWrites } from './sceneWrites.js';
 import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
-
-/** The class table and the defaults: hundreds of kB, so they load on the first `get` or `set`. */
-export type PropertyAccess = typeof import('./propertyAccess.js');
-
-export const loadPropertyAccess = memoisedImport(() => import('./propertyAccess.js'));
 
 /** The id prefix of a file `scene.load` gave, which no Godot-written id starts with. */
 const LOADED_ID_PREFIX = 'textscene_load_';
@@ -49,6 +45,10 @@ export class SceneProperties {
   /** The files the writes name, which the written graph adds to the root scene's own. */
   resources(): readonly TscnExternalResource[] {
     return this.loadedList;
+  }
+
+  writtenGraph(graph: SceneGraph): SceneGraph {
+    return writtenSceneGraph(graph, this.writes(), this.resources());
   }
 
   clear(): void {

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { Color } from 'three';
 import { describe, expect, it } from 'vitest';
-import { propertyWriteRevision } from '../../scene/writtenScene';
+import { propertyWriteRevision } from '../../scene/writeRevisions';
 import { openScene } from '../../scene/openScene';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
 import { TscnSceneProvider } from '../TscnSceneProvider';

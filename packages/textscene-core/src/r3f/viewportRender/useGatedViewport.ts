@@ -4,7 +4,7 @@
  */
 import { useLayoutEffect, useState, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
-import { propertyWriteRevision } from '../../scene/writtenScene.js';
+import { propertyWriteRevision } from '../../scene/writeRevisions.js';
 import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
 import { perObject } from '../../utils/perObject.js';
 import { TargetRenderState } from './renderGate.js';
