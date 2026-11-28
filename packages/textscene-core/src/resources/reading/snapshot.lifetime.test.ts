@@ -43,7 +43,7 @@ it('releases closed Environments while another scene uses the same loader', asyn
   ];
   await collectGarbage();
 
-  expect(closed.map((ref) => ref.deref() !== undefined)).toEqual([false, false, false, false]);
+  for (const ref of closed) expect(ref.deref()).toBeUndefined();
   expect(source.current().read(nodeReference('SubResource("open")', open.tables), ENVIRONMENT)).toBe(
     open.answer
   );

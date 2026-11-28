@@ -149,6 +149,7 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
     version: 0,
     files,
     treeFiles: {
+      owner: loader,
       getCached(path) {
         const answer = files.parsedFiles().getCached(path);
         if (!treeReads.has(path)) treeReads.set(path, answer);

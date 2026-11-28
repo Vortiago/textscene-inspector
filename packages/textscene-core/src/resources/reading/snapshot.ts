@@ -61,12 +61,20 @@ interface Decoded {
 
 const ANONYMOUS_SOURCE = {};
 
-const slotsOfSource = perObject((_source: object) => ({
-  owned: perObject((_tables: SceneResources) =>
-    perObject((_kind: ResourceKind<unknown>) => new Map<string, Decoded>())
-  ),
-  shared: perObject((_kind: ResourceKind<unknown>) => weakDecodeSlots()),
-}));
+class DecodeCache {
+  readonly owners = new WeakMap<SceneResources, Map<string, Decoded>>();
+  shared?: ReturnType<typeof weakDecodeSlots>;
+
+  keep(owner: SceneResources, slot: string, entry: Decoded) {
+    let slots = this.owners.get(owner);
+    if (!slots) this.owners.set(owner, (slots = new Map()));
+    slots.set(slot, entry);
+  }
+}
+
+const cacheOf = perObject((_source: object) =>
+  perObject((_kind: ResourceKind<unknown>) => new DecodeCache())
+);
 
 // A new parse has new tables, so it can find the previous plain decode only by its strings.
 function weakDecodeSlots() {
@@ -97,8 +105,6 @@ function weakDecodeSlots() {
 
 /** The loader's answer for each file path, undefined while it loads and null once it failed. */
 export interface FileSource extends CacheSource<ParsedResource> {
-  // A loader owns multiple snapshots, and two loaders can serve different files at the same address.
-  readonly owner?: object;
   /**
    * The value the processor of `fileKind` built for `address`, undefined while it loads and null once
    * it failed. A source with no processors answers each one failed.
@@ -257,14 +263,14 @@ function decoded<T>(
   const isWholeFile = held.properties === NO_PROPERTIES;
   const shared = held.address === null || isWholeFile;
   const source = shared ? (files.owner ?? (isWholeFile ? files : ANONYMOUS_SOURCE)) : ANONYMOUS_SOURCE;
-  const cache = slotsOfSource(source);
-  const slots = cache.owned(located.resources)(kind);
+  const cache = cacheOf(source)(kind);
+  const slots = cache.owners.get(located.resources);
   // A slot for each holding: a resource read both ways keeps both values, and its texture with them.
   const slot = `${held.type}|${located.key}|${held.isHeldLocally ? 'local' : 'shared'}`;
-  const candidates = shared ? cache.shared(kind) : undefined;
-  const kept = slots.get(slot) ?? candidates?.get(slot);
+  const owned = slots?.get(slot);
+  const kept = owned ?? (shared ? cache.shared?.get(slot) : undefined);
   if (kept && stillHolds(kept, located, files, stack)) {
-    if (!isWholeFile) slots.set(slot, kept);
+    if (!owned && !isWholeFile) cache.keep(located.resources, slot, kept);
     return kept.answer as Read<T>;
   }
 
@@ -298,15 +304,17 @@ function decoded<T>(
   const value = decodeOnce(kind, located.held, follow);
   // Pending spreads upward: the value waits for the file a nested read named, and is not kept.
   if (isWaiting) return PENDING;
-  const answer: Read<T> = value === null ? declined(reads) : { status: 'loaded', value };
+  const built = isWholeFile && reads.find((read) => 'fileKind' in read && read.answer.value === value);
+  const answer: Read<T> =
+    value === null ? declined(reads) : built ? (built.answer as Read<T>) : { status: 'loaded', value };
   const entry: Decoded = {
     properties: located.held.properties,
     reads,
     answer,
   };
-  if (!isWholeFile || handsOnReference) slots.set(slot, entry);
-  else slots.delete(slot);
-  if (!handsOnReference) candidates?.set(slot, entry);
+  if (!isWholeFile || handsOnReference) cache.keep(located.resources, slot, entry);
+  else slots?.delete(slot);
+  if (shared && !handsOnReference) (cache.shared ??= weakDecodeSlots()).set(slot, entry);
   return answer;
 }
 

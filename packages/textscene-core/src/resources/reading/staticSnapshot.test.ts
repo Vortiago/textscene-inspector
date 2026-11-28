@@ -375,13 +375,17 @@ describe('a read of the value a processor built', () => {
   });
 
   it('keeps the whole-file answer of each source when the same reference reads both', () => {
-    const first = staticSnapshot({}, { [FONT_FILE]: { name: 'first' } });
-    const second = staticSnapshot({}, { [FONT_FILE]: { name: 'second' } });
+    const firstFont = { name: 'first' };
+    const secondFont = { name: 'second' };
+    const first = staticSnapshot({}, { [FONT_FILE]: firstFont });
+    const second = staticSnapshot({}, { [FONT_FILE]: secondFont });
     const reference = nodeReference('ExtResource("1_font")', sceneTables(EXT_FONT));
     const kind = wholeFileKind();
     const a = first.read(reference, kind);
     const b = second.read(reference, kind);
 
+    expect(a.value).toBe(firstFont);
+    expect(b.value).toBe(secondFont);
     expect(first.read(reference, kind)).toBe(a);
     expect(second.read(reference, kind)).toBe(b);
   });

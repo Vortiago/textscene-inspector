@@ -4,6 +4,8 @@
  */
 
 export interface CacheSource<T> {
+  /** Snapshot views of a loader share its resource reads across scene reparses. */
+  readonly owner?: object;
   getCached: (path: string) => T | null | undefined;
 }
 
@@ -24,6 +26,7 @@ export function recordingReads<T>(
   onRead: (path: string, answer: T | null | undefined) => void
 ): CacheSource<T> {
   return {
+    owner: source.owner,
     getCached: (path) => {
       const answer = source.getCached(path);
       onRead(path, answer);
@@ -104,6 +107,7 @@ function stillAnswered(reads: KeptValue<unknown, unknown>['reads'], sources: Sou
 export function answeredOnce<T>(source: CacheSource<T>): CacheSource<T> {
   const answers = new Map<string, T | null | undefined>();
   return {
+    owner: source.owner,
     getCached: (path) => {
       const known = answers.get(path);
       if (known !== undefined || answers.has(path)) return known;
