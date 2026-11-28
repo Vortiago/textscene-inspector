@@ -6,7 +6,7 @@
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { nodeReference } from '../../reading/scopedReference';
 import { snapshotOver } from '../../reading/snapshot';
-import type { LoadedFont } from '../../scopedResource';
+import type { CachedFileReader } from '../../useLoadedFiles';
 import { FONT } from './kind';
 import type { FontResource } from './types';
 
@@ -21,11 +21,12 @@ export interface ResolvedFont {
 export function resolveFontReference(
   ref: string | undefined,
   resources: SceneResources,
-  loadedFont: LoadedFont
+  loadedFont: CachedFileReader<FontResource>
 ): ResolvedFont {
   // A kept decode checks a file again before a new decode reads it, so a path can be read twice.
   const paths = new Set<string>();
   const snapshot = snapshotOver({
+    owner: loadedFont.owner,
     // FONT reads a font file whole through `loaded`, so the walk parses no file.
     getCached: () => undefined,
     loaded: (_fileKind, address) => {

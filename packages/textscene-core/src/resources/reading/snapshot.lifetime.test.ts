@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 import { SHADER_MODE } from '../materials/fogmaterial/shaderMode';
 import { ENVIRONMENT } from '../environment/kind';
 import { loaderServing } from '../testing/servingResourceLoader';
-import { loaderSnapshots } from './loaderSnapshots';
+import { loaderSnapshots, NO_LOADER } from './loaderSnapshots';
 import type { ResourceSnapshot } from './read';
 import { sceneTables } from './reading.testkit';
 import { nodeReference } from './scopedReference';
@@ -33,21 +33,24 @@ async function collectGarbage() {
   }
 }
 
-it('releases closed Environments while another scene uses the same loader', async () => {
-  const source = loaderSnapshots(loaderServing({}));
-  const snapshot = source.current();
-  const open = readEnvironment(snapshot, 'open', '');
-  const closed = [
-    ...closedEnvironment(snapshot, 'plain', ''),
-    ...closedEnvironment(snapshot, 'with_sky', 'sky = SubResource("sky")'),
-  ];
-  await collectGarbage();
+it.each(['one loader', 'no loader'])(
+  'releases closed Environments while another scene stays open with %s',
+  async (host) => {
+    const source = host === 'one loader' ? loaderSnapshots(loaderServing({})) : NO_LOADER;
+    const snapshot = source.current();
+    const open = readEnvironment(snapshot, 'open', '');
+    const closed = [
+      ...closedEnvironment(snapshot, 'plain', ''),
+      ...closedEnvironment(snapshot, 'with_sky', 'sky = SubResource("sky")'),
+    ];
+    await collectGarbage();
 
-  for (const ref of closed) expect(ref.deref()).toBeUndefined();
-  expect(source.current().read(nodeReference('SubResource("open")', open.tables), ENVIRONMENT)).toBe(
-    open.answer
-  );
-});
+    for (const ref of closed) expect(ref.deref()).toBeUndefined();
+    expect(source.current().read(nodeReference('SubResource("open")', open.tables), ENVIRONMENT)).toBe(
+      open.answer
+    );
+  }
+);
 
 it('reuses the public Environment value held across a reparse', async () => {
   const source = loaderSnapshots(loaderServing({}));

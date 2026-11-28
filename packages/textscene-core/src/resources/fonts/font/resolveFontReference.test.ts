@@ -37,15 +37,20 @@ describe('resolveFontReference', () => {
   });
 
   it('shares an embedded FontFile with a component that reads the same section', () => {
-    const resources = {
+    const resources: SceneResources = {
       externalResources: [],
-      internalResources: [{ id: 'face', type: 'FontFile', data: { data: 'PackedByteArray(0, 1, 0, 0)' } }],
+      internalResources: [
+        { id: 'face', type: 'FontFile', data: { data: 'PackedByteArray(0, 1, 0, 0)' } },
+        { id: 'variant', type: 'FontVariation', data: { base_font: 'SubResource("face")' } },
+      ],
     };
     const ref = 'SubResource("face")';
     const font = resolveFontReference(ref, resources, nothingLoaded).font;
+    const variation = resolveFontReference('SubResource("variant")', resources, nothingLoaded).font;
     const source = loaderSnapshots(loaderServing({}));
     const component = source.current().read(nodeReference(ref, { ...resources }), FONT);
 
+    expect(variation?.kind).toBe('variation');
     expect(font?.kind).toBe('file');
     expect(component.value).toBe(font);
   });

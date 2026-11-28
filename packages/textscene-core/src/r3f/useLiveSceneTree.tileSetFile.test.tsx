@@ -15,7 +15,7 @@ import { HierarchyProvider } from './contexts/HierarchyContext.js';
 import { useBuildSolveTree } from './controls/native/buildSolveTree.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 import { useLiveNode } from './liveNode.testkit.js';
-import { liveFilesOf } from './liveFiles.js';
+import { liveFilesOf, NO_LIVE_FILES } from './liveFiles.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { nodeReference } from '../resources/reading/scopedReference.js';
 import { TILE_SET } from '../resources/tileset/kind.js';
@@ -119,6 +119,30 @@ describe('the live tree over a TileSet file', () => {
     expect(tileSetLoads()).toBe(1);
     expect(result.current.tile?.node.name).toBe('@SceneTile@0_0');
     expect(result.current.tileSet.status).toBe('loaded');
+  });
+
+  it('shares a scene tile between a Control forest and a tile component with no loader', () => {
+    const scene = MAIN.replace(
+      '[ext_resource type="TileSet" path="res://tiles.tres" id="tiles"]',
+      [
+        '[ext_resource type="PackedScene" path="res://crate.tscn" id="crate"]',
+        '[sub_resource type="TileSetScenesCollectionSource" id="scenes"]',
+        'scenes/1/scene = ExtResource("crate")',
+        '[sub_resource type="TileSet" id="tiles"]',
+        'sources/0 = SubResource("scenes")',
+      ].join('\n')
+    ).replace('ExtResource("tiles")', 'SubResource("tiles")');
+    const main = new TscnParser().parse(scene);
+    const decode = vi.spyOn(TILE_SET, 'decode');
+    try {
+      renderHook(() => useBuildSolveTree(main.nodes, main.externalResources, main.internalResources));
+      expect(decode).toHaveBeenCalledOnce();
+      const component = NO_LIVE_FILES.current().read(nodeReference('SubResource("tiles")', main), TILE_SET);
+      expect(component.value?.sceneSources.get(0)?.scenes.get(1)?.scene?.path).toBe('res://crate.tscn');
+      expect(component.value).toBe(decode.mock.results[0]!.value);
+    } finally {
+      decode.mockRestore();
+    }
   });
 
   it.each(['live tree', 'Control forest'])('shares a built-in TileSet model with the %s', async (reader) => {
