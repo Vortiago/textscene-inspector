@@ -19,13 +19,27 @@ const DEFAULT_WAIT_MS = 20 * 60_000;
 const POLL_MS = 1_000;
 const UNREADABLE_GRACE_MS = 60_000;
 
-function processRuns(pid) {
+function pidExists(pid) {
   try {
     process.kill(pid, 0);
     return true;
   } catch (error) {
     if (error.code === 'ESRCH') return false;
     if (error.code === 'EPERM') return true;
+    throw error;
+  }
+}
+
+function processRuns(pid) {
+  if (!pidExists(pid)) return false;
+  if (process.platform !== 'linux') return true;
+  try {
+    // kill(pid, 0) still finds an exited child until its parent reaps it.
+    return !/^State:\s*[ZX]\b/m.test(readFileSync(`/proc/${pid}/status`, 'utf8'));
+  } catch (error) {
+    if (error.code === 'ESRCH') return false;
+    if (error.code === 'ENOENT') return pidExists(pid);
+    if (error.code === 'EACCES' || error.code === 'EPERM') return true;
     throw error;
   }
 }
@@ -138,6 +152,7 @@ function releaseOnExit(lock, file) {
   return Object.assign(release, { ownerPath: join(lock, file) });
 }
 
+/** @canonical Retain the parent harness's working-copy lock in a child process */
 export function joinBuildLock(ownerPath) {
   const lock = dirname(ownerPath);
   const file = `${randomUUID()}.json`;
@@ -152,6 +167,7 @@ export function joinBuildLock(ownerPath) {
   return releaseOnExit(lock, file);
 }
 
+/** @canonical Lock one working copy for a preview build and capture */
 export async function acquireBuildLock({
   root = REPO_ROOT,
   portEnvName = 'VISUAL_PORT',

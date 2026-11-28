@@ -18,7 +18,7 @@ import { acquireBuildLock, buildLockState, joinBuildLock } from './buildLock.mjs
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal();
-  return { ...actual, writeFileSync: vi.fn(actual.writeFileSync) };
+  return { ...actual, writeFileSync: vi.fn(actual.writeFileSync), readFileSync: vi.fn(actual.readFileSync) };
 });
 
 it('keeps the live record when a waiter removes a record it read during the write', async () => {
@@ -221,5 +221,60 @@ it('removes the record of a force-stopped child when its harness releases', asyn
   await once(child, 'exit');
   writeFileSync(join(lock, 'child.json'), JSON.stringify({ ...owner, pid: child.pid }));
   harness();
+  expect(existsSync(lock)).toBe(false);
+});
+
+it.skipIf(process.platform !== 'linux')(
+  'takes over an exited process before its parent reaps it',
+  async () => {
+    const { root, lock } = checkout();
+    mkdirSync(lock, { recursive: true });
+    writeFileSync(join(lock, 'orphan.json'), JSON.stringify(owner));
+    vi.stubEnv('HARNESS_LOCK_WAIT_MS', '0');
+    onTestFinished(() => vi.unstubAllEnvs());
+    readFileSync.mockImplementation((path, ...options) =>
+      path === `/proc/${owner.pid}/status` ? 'State:\tZ (zombie)\n' : fs.readFileSync(path, ...options)
+    );
+    onTestFinished(() => readFileSync.mockReset());
+    const release = await acquireBuildLock({ root });
+    release();
+    expect(existsSync(lock)).toBe(false);
+  }
+);
+
+it.skipIf(process.platform !== 'linux')('takes over a process that exits during the state read', async () => {
+  const { root, lock } = checkout();
+  mkdirSync(lock, { recursive: true });
+  writeFileSync(join(lock, 'departed.json'), JSON.stringify(owner));
+  readFileSync.mockImplementation((path, ...options) => {
+    if (path === `/proc/${owner.pid}/status`) throw Object.assign(new Error('reaped'), { code: 'ESRCH' });
+    return fs.readFileSync(path, ...options);
+  });
+  onTestFinished(() => readFileSync.mockReset());
+  const release = await acquireBuildLock({ root });
+  release();
+  expect(existsSync(lock)).toBe(false);
+});
+
+it.skipIf(process.platform !== 'linux')('checks the pid again when procfs cannot find it', async () => {
+  const { root, lock } = checkout();
+  mkdirSync(lock, { recursive: true });
+  writeFileSync(join(lock, 'racing.json'), JSON.stringify(owner));
+  const kill = vi
+    .spyOn(process, 'kill')
+    .mockReturnValueOnce(true)
+    .mockImplementationOnce(() => {
+      throw Object.assign(new Error('reaped'), { code: 'ESRCH' });
+    });
+  onTestFinished(() => kill.mockRestore());
+  readFileSync.mockImplementation((path, ...options) => {
+    if (path === `/proc/${owner.pid}/status`) throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+    return fs.readFileSync(path, ...options);
+  });
+  onTestFinished(() => readFileSync.mockReset());
+  vi.stubEnv('HARNESS_LOCK_WAIT_MS', '0');
+  onTestFinished(() => vi.unstubAllEnvs());
+  const release = await acquireBuildLock({ root });
+  release();
   expect(existsSync(lock)).toBe(false);
 });
