@@ -97,12 +97,13 @@ export function activate(context: vscode.ExtensionContext) {
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
   const projectFileWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
   context.subscriptions.push(...forgetProjectFilesOnChange(projectFileWatcher));
-  const diagnostics = new TscnDiagnostics(resourceWatcher, projectFileWatcher);
+  const diagnostics = new TscnDiagnostics(roots, resourceWatcher, projectFileWatcher);
 
   registerTscnTools(context, {
     openPreview: (uri) => void getOrCreatePanel(uri),
     capturePreview: (uri, signal) => getOrCreatePanel(uri).capture(signal),
-    lintProviderFor: (uri) => diagnostics.providerFor(uri),
+    lintComplete: (uri, text) => diagnostics.lintComplete(uri, text),
+    rootFor: (uri) => roots.rootOf(uri),
   });
 
   context.subscriptions.push(resourceWatcher, projectFileWatcher, diagnostics);
@@ -173,10 +174,7 @@ function registerLanguageFeatureProviders(roots: WorkspaceResRoots): vscode.Disp
   ];
 }
 
-/**
- * Forgets the shared `project.godot` answers on each event of the watcher, subscribed before every walk that follows the
- * same event. A directory above the workspace has no watcher, so a return to the window forgets them too.
- */
+// The preview still needs fresh project answers before its reload listeners run.
 function forgetProjectFilesOnChange(projectFileWatcher: vscode.FileSystemWatcher): vscode.Disposable[] {
   return [
     projectFileWatcher.onDidCreate(forgetProjectFiles),

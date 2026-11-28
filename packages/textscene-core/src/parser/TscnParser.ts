@@ -247,6 +247,7 @@ import '../nodes/resources/resourcepreloader/index.js';
 import '../nodes/os/statusindicator/index.js';
 
 import type { NodeOrigin, TscnNode, TscnScene } from './types.js';
+import { observeOverrideWrites } from './overridePropertyWrites.js';
 import { TscnParserCore } from './TscnParserCore.js';
 import { orphanedNodes, type SceneSeating } from './sceneTreeBuilder.js';
 import { parseNodeWithRegistry } from '../core/NodeRegistry.js';
@@ -267,7 +268,11 @@ export class TscnParser {
    * shape declared by the relevant node-type module.
    */
   parse(content: string): TscnScene {
-    const { scene, origins, seating } = this.core.parse(content, parseNodeWithRegistry);
+    const { scene, origins, seating } = this.core.parse(
+      content,
+      parseNodeWithRegistry,
+      observeOverrideWrites()
+    );
     warnOrphanedNodes(origins, seating);
     return scene;
   }

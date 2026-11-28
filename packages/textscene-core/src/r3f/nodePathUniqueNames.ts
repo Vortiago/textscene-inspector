@@ -4,7 +4,11 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
-import { resolveNodePathLiteral, UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
+import {
+  resolveNodePathLiteral,
+  UNIQUE_NODE_PREFIX,
+  type NodePathBoundary,
+} from '../godot/string/nodePath.js';
 import type { LiveTree, LiveTreeContext } from './liveSceneTree.js';
 import { claimOwnerOf, localSceneOf, localSceneUniquePaths, ownerUniquePaths } from './uniqueNameOwner.js';
 
@@ -49,7 +53,8 @@ export function uniquePathsOfLiteral(
 export function resolveLiteralOnLiveTree(
   from: string,
   literal: string | undefined,
-  tree: Pick<LiveTree, 'roots' | 'ctx'>
+  tree: Pick<LiveTree, 'roots' | 'ctx'>,
+  boundary?: NodePathBoundary
 ): string | null {
-  return resolveNodePathLiteral(from, literal, uniquePathsOfLiteral(literal, from, tree));
+  return resolveNodePathLiteral(from, literal, uniquePathsOfLiteral(literal, from, tree), boundary);
 }

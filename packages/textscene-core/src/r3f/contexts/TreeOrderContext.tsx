@@ -4,6 +4,8 @@
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
+import { useByValue } from '../hooks/useByValue.js';
+import { sameElements } from '../../utils/sameElements.js';
 import type { TreeOrder } from './treeOrder.js';
 
 export {
@@ -20,7 +22,9 @@ const TreeOrderContext = createContext<TreeOrder>(SCENE_ROOT);
 TreeOrderContext.displayName = 'TreeOrderContext';
 
 export function TreeOrderProvider({ order, children }: { order: TreeOrder; children: ReactNode }) {
-  return <TreeOrderContext.Provider value={order}>{children}</TreeOrderContext.Provider>;
+  return (
+    <TreeOrderContext.Provider value={useByValue(order, sameElements)}>{children}</TreeOrderContext.Provider>
+  );
 }
 
 /** The enclosing node's place in tree order. Outside the dispatcher, every node ties at the root. */

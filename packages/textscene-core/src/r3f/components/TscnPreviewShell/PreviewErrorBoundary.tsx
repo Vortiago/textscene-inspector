@@ -5,22 +5,18 @@
  * keeps the viewport camera state.
  */
 import type { ReactNode } from 'react';
-import type { SceneGraph } from '../../../core/SceneGraph.js';
+import { useWrittenGraph } from '../../contexts/HierarchyContext.js';
 import { ErrorBoundary } from '../ErrorBoundary.js';
 import styles from './TscnPreviewShell.module.css';
 
 interface PreviewErrorBoundaryProps {
-  sceneGraph: SceneGraph | null;
   children: ReactNode;
   /** Fired with each caught error, and with null when the viewport renders again. */
   onViewportErrorChange?: (error: Error | null) => void;
 }
 
-export function PreviewErrorBoundary({
-  sceneGraph,
-  children,
-  onViewportErrorChange,
-}: PreviewErrorBoundaryProps) {
+export function PreviewErrorBoundary({ children, onViewportErrorChange }: PreviewErrorBoundaryProps) {
+  const sceneGraph = useWrittenGraph();
   return (
     <ErrorBoundary
       resetKeys={[sceneGraph]}

@@ -5,6 +5,9 @@
  * its children's runs where it draws them.
  */
 
+import { sceneHeadings } from '../../parser/sceneTreeBuilder';
+import { perObject } from '../../utils/perObject';
+import { sameData } from '../../utils/sameData';
 import type { TscnNode } from '../../parser/types';
 import { isInjected, type LiveChildGroup, type LiveTree } from '../liveSceneTree';
 import { liveScenePassResults, type LiveScenePass } from '../liveScenePass';
@@ -82,7 +85,14 @@ export function canvasPaintPassFrom(start: PaintRange): LiveScenePass<CanvasItem
   const key = `${start.base}:${start.size}`;
   let pass = passesByStart.get(key);
   if (!pass) {
-    pass = (tree, snapshot) => paintOf(tree, snapshot, start);
+    // Each parse owns its last completed pass, so a cached instance keeps no enclosing view's paint.
+    const previousOf = perObject((_file: object) => ({ paints: new Map<string, CanvasItemPaint>() }));
+    pass = (tree, snapshot) => {
+      const headings = sceneHeadings(tree.roots);
+      const previous = previousOf(headings.length ? headings : tree.roots);
+      previous.paints = paintOf(tree, snapshot, start, previous.paints);
+      return previous.paints;
+    };
     passesByStart.set(key, pass);
   }
   return pass;
@@ -94,8 +104,9 @@ export const canvasPaintPass: LiveScenePass<CanvasItemPaint> = canvasPaintPassFr
 function paintOf(
   tree: LiveTree,
   snapshot: ResourceSnapshot,
-  start: PaintRange
-): ReadonlyMap<string, CanvasItemPaint> {
+  start: PaintRange,
+  previous: ReadonlyMap<string, CanvasItemPaint>
+): Map<string, CanvasItemPaint> {
   const results = new Map<string, CanvasItemPaint>();
   const patches = liveScenePassResults(liveNodePatches, tree, snapshot);
   const roots = tree.rootGroups.flatMap((group) => group.children);
@@ -121,7 +132,7 @@ function paintOf(
     // Injected content draws after the authored children, in the room `reservesRoom` holds back.
     const injected = step.groups.filter(isInjected).flatMap((group) => group.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injected).children;
-    results.set(path, {
+    const paint: CanvasItemPaint = {
       range,
       own: allocated.self,
       front: allocated.front,
@@ -129,7 +140,9 @@ function paintOf(
       back: allocated.back,
       tail: allocated.tail,
       behind: behindRangesOf(inline, allocated.children),
-    });
+    };
+    const held = previous.get(path);
+    results.set(path, held && sameData(held, paint) ? held : paint);
     descend({
       ranges: new Map([
         ...rangesOf(front, frontRanges),

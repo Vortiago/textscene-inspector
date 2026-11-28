@@ -3,12 +3,13 @@
  * tree by the viewport's path and from the `visible` an AnimationPlayer drives on the nodes around
  * it. With no tree, the authored mode stands and the viewport is the root.
  */
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 
 import { useAnimatedVisibility } from '../contexts/AnimatedValueContext.js';
 import { useViewportRect } from '../contexts/ViewportRectContext.js';
 import { liveTreeOf } from '../liveSceneTree.js';
-import { useSharedLiveTree } from '../useLiveSceneTree.js';
+import { sameData } from '../../utils/sameData.js';
+import { useLiveTreeSelection, type SharedLiveTree } from '../useLiveSceneTree.js';
 import {
   resolveGate,
   ungatedViewport,
@@ -18,14 +19,11 @@ import {
 } from './viewportGate.js';
 
 export function useViewportGate(path: string, authoredMode: number): UpdateGate {
-  const live = useSharedLiveTree();
-  const gate = useMemo(
-    () =>
-      live
-        ? viewportGateAt(liveTreeOf(live.roots, live.ctx), path, authoredMode)
-        : ungatedViewport(authoredMode),
-    [live, path, authoredMode]
+  const select = useCallback(
+    ({ roots, ctx }: SharedLiveTree) => viewportGateAt(liveTreeOf(roots, ctx), path, authoredMode),
+    [path, authoredMode]
   );
+  const gate = useLiveTreeSelection(select, sameData) ?? ungatedViewport(authoredMode);
   return useResolvedGate(gate, path);
 }
 

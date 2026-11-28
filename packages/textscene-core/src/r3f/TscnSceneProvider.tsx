@@ -1,7 +1,6 @@
-import { useId, useMemo, type ReactNode } from 'react';
+import { useSyncExternalStore, useId, useMemo, type ReactNode } from 'react';
 import type { Scene } from '../scene/openScene.js';
 import { useSceneLoader } from './sceneResourcePipeline.js';
-import { useSceneGraphs } from './hooks/useSceneGraphs.js';
 import './sceneLiveTree.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
 import { viewProviders } from './viewProviders.js';
@@ -14,8 +13,8 @@ interface TscnSceneProviderProps {
 
 export function TscnSceneProvider({ scene, children }: TscnSceneProviderProps) {
   const panelId = useId();
-  const { parsed, sceneGraph } = useSceneGraphs(scene);
-  if (parsed.error) throw new Error(`expected the text of a .tscn scene, got: ${parsed.error}`);
+  const { sceneGraph, error } = useSyncExternalStore(scene.subscribe, scene.parse);
+  if (error) throw new Error(`expected the text of a .tscn scene, got: ${error}`);
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const withProviders = viewProviders({
     hierarchyValue,
@@ -25,7 +24,7 @@ export function TscnSceneProvider({ scene, children }: TscnSceneProviderProps) {
   // A new parse clears the selection, or the highlight draws a removed node. A write keeps every node.
   return withProviders(
     <>
-      <SceneChangeResetter sceneGraph={parsed.sceneGraph} />
+      <SceneChangeResetter sceneGraph={sceneGraph} />
       {children}
     </>
   );

@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useCallback } from 'react';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
 import { liveTreeOf } from '../../../r3f/liveSceneTree.js';
-import { useSharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
+import { useLiveTreeSelection, type SharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
 import { embedsSubwindows } from '../../../r3f/viewportRender/windowEmbedder.js';
 import { enclosingViewport, type EnclosingViewport } from './controlRasterViewports.js';
 import { embedderStretch } from './targetSize.js';
@@ -24,15 +24,26 @@ interface WindowEmbedder {
   isRootEmbedder: boolean;
 }
 
+function sameEmbedder(a: WindowEmbedder, b: WindowEmbedder): boolean {
+  return (
+    a.isRootEmbedder === b.isRootEmbedder &&
+    a.viewport?.path === b.viewport?.path &&
+    a.viewport?.node === b.viewport?.node
+  );
+}
+
 /** The stretch the embedder of the window at `path` renders it at. Null `path` reads no stretch. */
 export function useEmbedderStretchAt(path: string | null): number {
-  const live = useSharedLiveTree();
-  const embedder = useMemo((): WindowEmbedder | null => {
-    if (!live || path === null) return null;
-    const tree = liveTreeOf(live.roots, live.ctx);
-    const viewport = enclosingViewport(tree, path);
-    return { viewport, isRootEmbedder: viewport === null && embedsSubwindows(tree, null) };
-  }, [live, path]);
+  const select = useCallback(
+    (live: SharedLiveTree): WindowEmbedder | undefined => {
+      if (path === null) return undefined;
+      const tree = liveTreeOf(live.roots, live.ctx);
+      const viewport = enclosingViewport(tree, path);
+      return { viewport, isRootEmbedder: viewport === null && embedsSubwindows(tree, null) };
+    },
+    [path]
+  );
+  const embedder = useLiveTreeSelection(path === null ? null : select, sameEmbedder);
   const viewportStretch = useEmbedderStretch(embedder?.viewport ?? null);
   const rootStretch = useRootWindowStretch();
   return embedder?.isRootEmbedder ? rootStretch : viewportStretch;
