@@ -5,7 +5,9 @@
 
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { constants } from 'node:os';
+import { join } from 'node:path';
+import { once } from 'node:events';
+import { onHarnessExit } from './onHarnessExit.mjs';
 import { REPO_ROOT } from './paths.mjs';
 
 /**
@@ -31,49 +33,48 @@ export async function assertPortFree(port, envVarName = 'VISUAL_PORT') {
   }
 }
 
-export function startPreview(port) {
+export function startPreview(port, ownerPath) {
+  // The child is the listening process on Windows and POSIX.
+  const cwd = join(REPO_ROOT, 'apps/textscene-web');
   const proc = spawn(
-    'pnpm',
-    ['--filter', '@textscene/web-previewer', 'preview', '--port', String(port), '--strictPort'],
-    { cwd: REPO_ROOT, shell: true, stdio: 'ignore', detached: true }
+    process.execPath,
+    [
+      '--import',
+      new URL('./childBuildLock.mjs', import.meta.url).href,
+      join(cwd, 'node_modules/vite/bin/vite.js'),
+      'preview',
+      '--port',
+      String(port),
+      '--strictPort',
+    ],
+    {
+      cwd,
+      env: { ...process.env, TEXTSCENE_PREVIEW_LOCK_OWNER: ownerPath, TEXTSCENE_PREVIEW_SERVER: '1' },
+      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      detached: true,
+    }
   );
-  // Registered at the spawn, so no launcher can forget it.
   reapPreviewGroupOnExit(proc);
   return { proc, baseUrl: `http://localhost:${port}` };
 }
 
-/**
- * SIGHUP arrives when the terminal closes. The detached group is in its own session and gets no
- * SIGHUP, so the harness reaps it then too.
- */
-const TERMINATING_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
-
-/**
- * Reaps the preview group when this process ends, however it ends. `detached: true` lets the group
- * outlive us and escape the terminal's Ctrl-C, and Node runs no `finally` on a signal. The `exit`
- * handler covers every end and stays synchronous. A caught signal ends the process with
- * `process.exit(128 + signal number)`, not a re-raise, so the `exit` handlers run: this one reaps
- * the group, and Playwright's closes its browser. SIGKILL cannot be caught and is the one path that
- * orphans a server.
- */
 export function reapPreviewGroupOnExit(proc) {
-  process.once('exit', () => killPreviewGroup(proc));
-  for (const signal of TERMINATING_SIGNALS) {
-    process.once(signal, () => process.exit(128 + constants.signals[signal]));
-  }
+  // A synchronous exit cannot wait for Vite's graceful shutdown.
+  const unregister = onHarnessExit((reason) =>
+    killPreviewGroup(proc, reason === 'exit' ? 'SIGKILL' : 'SIGTERM')
+  );
+  proc.once('exit', unregister);
 }
 
-/**
- * Kills the whole process group of `proc` (negative pid). `proc` is the shell of a `shell: true`
- * spawn, not the `pnpm` to `vite preview` grandchild that binds the port, which would outlive it
- * and hold this script's event loop open. ESRCH is swallowed: the group may already be gone.
- */
-export function killPreviewGroup(proc) {
+export async function killPreviewGroup(proc, signal = 'SIGTERM') {
+  if (proc.exitCode !== null || proc.signalCode !== null) return;
+  const stopped = once(proc, 'exit');
   try {
-    process.kill(-proc.pid, 'SIGTERM');
-  } catch {
-    /* already exited */
+    process.kill(process.platform === 'win32' ? proc.pid : -proc.pid, signal);
+  } catch (error) {
+    if (error.code !== 'ESRCH') throw error;
   }
+  await stopped;
 }
 
 export async function waitForServer(url, timeoutMs = 40000) {

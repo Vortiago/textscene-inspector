@@ -3,6 +3,7 @@
  * under test.
  */
 
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -96,7 +97,7 @@ export function assertWebBuildFresh() {
  * new fixture missing from it falls back and bakes a bogus baseline. Set VISUAL_SKIP_BUILD=1 to
  * reuse `dist/` while iterating locally.
  */
-export function ensureWebBuilt(log = console.log) {
+export function ensureWebBuilt(ownerPath, log = console.log) {
   const skip = process.env.VISUAL_SKIP_BUILD;
   if (skip !== undefined && !SKIP_BUILD_VALUES.has(skip.trim().toLowerCase())) {
     console.warn(`[preview] VISUAL_SKIP_BUILD="${skip}" not recognised — building anyway`);
@@ -107,9 +108,9 @@ export function ensureWebBuilt(log = console.log) {
     return;
   }
   log('[preview] building web previewer…');
-  const r = spawnSync('pnpm', ['--filter', '@textscene/web-previewer', 'build'], {
+  const worker = fileURLToPath(new URL('./buildPreview.mjs', import.meta.url));
+  const r = spawnSync(process.execPath, [worker, ownerPath], {
     cwd: REPO_ROOT,
-    shell: true,
     stdio: 'inherit',
   });
   if (r.status !== 0) {
