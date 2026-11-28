@@ -212,6 +212,43 @@ describe('the decal atlas', () => {
     warn.mockRestore();
   });
 
+  it('draws all five sources that fit when the fourth reaches past the bottom edge', () => {
+    const sizes = [
+      [480, 1504],
+      [992, 992],
+      [992, 992],
+      [992, 497],
+      [480, 1504],
+      [992, 1248],
+      [1248, 736],
+      [992, 992],
+    ] as const;
+    const sources = sizes.map(([width, height], index) =>
+      hold(new THREE.DataTexture(new Uint8Array(width * height * 4).fill(index + 1), width, height))
+    );
+
+    updateDecalAtlas(2048);
+
+    expect(sources.map((source) => Boolean(decalAtlasRect(source)))).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(decalAtlasRect(sources[3]!)).toEqual({
+      x: 16 / 2048,
+      y: 1552 / 2048,
+      width: 992 / 2048,
+      height: 497 / 2048,
+    });
+    const at = (2047 * 2048 + 16) * 4;
+    expect([...baseLevel().subarray(at, at + 4)]).toEqual([4, 4, 4, 4]);
+  });
+
   it('places nothing for a texture whose pixels cannot be read (error case)', () => {
     const texture = hold(new THREE.Texture());
 
