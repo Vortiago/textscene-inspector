@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { TscnParser } from '../parser/TscnParser';
 import { layerRawOverride } from './layerRawOverride';
 import { parsedNode, translated } from '../parser/testing/parserKit';
 import type { Camera3DProperties } from '../nodes/3d/camera3d/types';
@@ -9,6 +10,22 @@ import '../nodes/3d/camera3d/index';
 import '../nodes/windows/window/index';
 
 describe('layerRawOverride', () => {
+  it('applies canonical and deprecated spellings in their authored order, including repeated writes', () => {
+    const override = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://sprite.tscn" id="scene"]
+[ext_resource type="SpriteFrames" path="res://first.tres" id="first"]
+[ext_resource type="SpriteFrames" path="res://second.tres" id="second"]
+[ext_resource type="SpriteFrames" path="res://last.tres" id="last"]
+[node name="Sprite" instance=ExtResource("scene")]
+frames = ExtResource("first")
+sprite_frames = ExtResource("second")
+frames = ExtResource("last")`).nodes[0]!;
+    const base = parsedNode({ name: 'Sprite', type: 'AnimatedSprite2D' }, {});
+    const { rawProperties } = layerRawOverride(base, base, override.rawProperties);
+    expect(rawProperties.sprite_frames).toBe('ExtResource("last")');
+    expect(Object.keys(rawProperties)).toEqual(['sprite_frames']);
+  });
+
   it("parses the override with the base type's parser and keeps a base-only value", () => {
     const base = parsedNode({ name: 'Cam', type: 'Camera3D' }, { fov: '70.0', current: 'true' });
 

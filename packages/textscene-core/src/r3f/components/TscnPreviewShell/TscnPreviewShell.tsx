@@ -5,10 +5,9 @@
  * A narrow panel turns the dock into a bottom sheet that shows one half at a time
  * (ADR-0048).
  */
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { readPersistedViewport, ViewportModeProvider } from '../ViewportMode/ViewportModeContext.js';
 import { isBoolean, usePersistedState } from '../../hooks/usePersistedState.js';
-import { useSceneGraphs } from '../../hooks/useSceneGraphs.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
@@ -76,8 +75,7 @@ export function TscnPreviewShell({
   selected,
   onSelect,
 }: TscnPreviewShellProps) {
-  const { parsed, sceneGraph } = useSceneGraphs(scene);
-  const { sceneGraph: parsedGraph, error } = parsed;
+  const { sceneGraph, error } = useSyncExternalStore(scene.subscribe, scene.parse);
 
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
@@ -89,7 +87,7 @@ export function TscnPreviewShell({
   useEffect(() => {
     if (viewportError) heard.forget();
   }, [heard, viewportError]);
-  const hasScene = parsedGraph !== null;
+  const hasScene = sceneGraph !== null;
 
   // `treeShare` is the tree's fraction of the dock height (0..1). The dock
   // layout persists across sessions, a VS Code webview being a browser too.
@@ -138,7 +136,7 @@ export function TscnPreviewShell({
                 />
                 {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
                 {initialViewportMode === undefined && <WorkspaceAutoSelect scene={scene} />}
-                <PreviewSceneReset sceneGraph={parsedGraph} />
+                <PreviewSceneReset sceneGraph={sceneGraph} />
                 <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
                 <CaptureStateReporter
                   onCaptureStateChange={onCaptureStateChange}
@@ -174,7 +172,7 @@ export function TscnPreviewShell({
                       <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
                         <ViewportToolbar view={view} />
                       </div>
-                      <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
+                      <PreviewErrorBoundary onViewportErrorChange={setViewportError}>
                         <ViewportArea viewRef={setView} onStatusChange={heard.onStatusChange} />
                       </PreviewErrorBoundary>
                     </main>

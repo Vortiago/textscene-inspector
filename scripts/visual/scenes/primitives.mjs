@@ -62,6 +62,7 @@ export const PRIMITIVE_SCENES = [
   // A CopyTransformModifier3D copies the rotation of b2 onto b4, so the ribbon bends a second time.
   { name: 'copy-transform-modifier-3d-ribbon', file: 'unit-copy-transform-modifier-3d-ribbon.tscn' },
   { name: 'bone-attachment-3d-follow', file: 'unit-bone-attachment-3d-follow.tscn' },
+  { name: 'bone-attachment-3d-overrides', file: 'unit-bone-attachment-3d-overrides.tscn' },
   // The same ribbon and skeleton inside an instanced scene bend as they do in the host file.
   {
     name: 'mesh-instance-3d-skinned-ribbon-instanced',

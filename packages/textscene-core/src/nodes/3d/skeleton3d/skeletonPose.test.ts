@@ -63,6 +63,24 @@ function expectIdentity(transform: Transform3D | undefined): void {
 
 const CHAIN: Bone[] = [bone('b0', -1, [0, 0.5, 0]), bone('b1', 0, [0, -0.2, 0]), bone('b2', 1, [0, -0.2, 0])];
 
+it('preserves a loaded global across a sibling write and drops it when the parent moves', () => {
+  const bones = [bone('root', -1, [1, 0, 0]), bone('held', 0, [2, 0, 0]), bone('other', 0, [3, 0, 0])];
+  const poses = new BonePoses(
+    bones,
+    false,
+    undefined,
+    new Map([
+      [0, translation(5, 0, 0)],
+      [1, translation(9, 0, 0)],
+    ])
+  );
+  poses.setPose(2, translation(7, 0, 0));
+  expectOrigin(poses.globalPose(1), 9, 0, 0);
+  expectOrigin(poses.globalPose(2), 12, 0, 0);
+  poses.setPose(0, translation(1, 0, 0));
+  expectOrigin(poses.globalPose(1), 3, 0, 0);
+});
+
 describe('newBone', () => {
   it("starts a bone at Godot's defaults: enabled, identity pose, no parent (`skeleton_3d.h:105-113`)", () => {
     expect(newBone('b')).toEqual({

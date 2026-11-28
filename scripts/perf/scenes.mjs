@@ -3,7 +3,7 @@ const DUNGEON_ZOOM_NOTCHES = 12;
 
 /**
  * @type {Array<{ name: string, file: string, inGameFrame?: { width: number, height: number },
- *   writesEachFrame?: { parent: string, count: number }, zoomNotches?: number,
+ *   writesEachFrame?: { parent: string, count: number, dimension?: 2 | 3 }, zoomNotches?: number,
  *   gesture?: keyof typeof import('./cameraGestures.mjs').CAMERA_GESTURES }>}
  */
 export const BUDGET_SCENES = [
@@ -20,6 +20,12 @@ export const BUDGET_SCENES = [
     writesEachFrame: { parent: 'Coins', count: 1 },
   },
   { name: 'demo-2d-lights-and-shadows', file: 'demos/2d/lights_and_shadows/light_shadows.tscn' },
+  { name: 'dungeon', file: 'dungeon.tscn' },
+  {
+    name: 'dungeon-write-each-frame',
+    file: 'dungeon.tscn',
+    writesEachFrame: { parent: 'Floor', count: 1, dimension: 2 },
+  },
   { name: 'dungeon-pan', file: 'dungeon.tscn', gesture: 'pan-2d' },
   { name: 'dungeon-zoom', file: 'dungeon.tscn', gesture: 'zoom-2d' },
   { name: 'dungeon-zoomed-in', file: 'dungeon.tscn', zoomNotches: DUNGEON_ZOOM_NOTCHES },

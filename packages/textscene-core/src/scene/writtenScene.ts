@@ -1,10 +1,13 @@
 import { buildSceneGraph, type ParsedScene, type SceneGraph } from '../core/SceneGraph.js';
 import type { TscnExternalResource, TscnNode } from '../parser/types.js';
+import { overlayPropertyWrites } from '../parser/overridePropertyWrites.js';
 import { layerRawOverride } from '../resources/layerRawOverride.js';
 import { shareSeating } from '../parser/sceneTreeBuilder.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { joinPath } from '../utils/nodePath.js';
+import { perObject } from '../utils/perObject.js';
 import type { PropertyTexts, SceneWrites } from './sceneWrites.js';
+import { recordGraphWrites } from './writeRevisions.js';
 
 /** Where a write lands in the root file: on a node of it, or as an override heading below an instance. */
 type Landing =
@@ -78,7 +81,11 @@ export function isWritable(graph: SceneGraph, livePath: string): boolean {
 /** An instance or an override heading keeps the text alone, since the merge parses it. */
 function laid(node: TscnNode, texts: PropertyTexts): TscnNode {
   if (node.instance || node.overridesExistingNode) {
-    return { ...node, rawProperties: { ...node.rawProperties, ...texts }, rawPropertiesOrderReliable: false };
+    return {
+      ...node,
+      rawProperties: overlayPropertyWrites(node.rawProperties, texts),
+      rawPropertiesOrderReliable: false,
+    };
   }
   return { ...node, ...layerRawOverride(node, node, texts) };
 }
@@ -104,20 +111,45 @@ function overrideHeading(
   };
 }
 
-/** `nodes` with the node at index chain `at` replaced, every node off the chain kept. */
+function replacing<T>(items: readonly T[], index: number, item: T): T[] {
+  const copy = [...items];
+  copy[index] = item;
+  return copy;
+}
+
+// A replay reuses a parent while the child in its changed slot stays the same.
+const childSlots = perObject((_parent: TscnNode) => new Map<number, (child: TscnNode) => TscnNode>());
+
+function parentWithChild(parent: TscnNode, index: number, child: TscnNode): TscnNode {
+  const slots = childSlots(parent);
+  let withChild = slots.get(index);
+  if (!withChild) {
+    withChild = perObject((replacement: TscnNode) => ({
+      ...parent,
+      children: replacing(parent.children, index, replacement),
+    }));
+    slots.set(index, withChild);
+  }
+  return withChild(child);
+}
+
+// Two instances can share a file node while a host writes a different value at each live path.
+const replacementsOf = perObject((_node: TscnNode) =>
+  perObject((_texts: PropertyTexts) => new Map<string, TscnNode>())
+);
+
 function replacedAt(
   nodes: readonly TscnNode[],
   at: readonly number[],
   replace: (node: TscnNode) => TscnNode
 ): TscnNode[] {
-  const [index, ...below] = at;
-  return nodes.map((node, i) =>
-    i !== index
-      ? node
-      : below.length === 0
-        ? replace(node)
-        : { ...node, children: replacedAt(node.children, below, replace) }
-  );
+  function replaced(node: TscnNode, depth: number): TscnNode {
+    const index = at[depth];
+    if (index === undefined) return replace(node);
+    return parentWithChild(node, index, replaced(node.children[index]!, depth + 1));
+  }
+  const root = at[0]!;
+  return replacing(nodes, root, replaced(nodes[root]!, 1));
 }
 
 /** The node's path from the root, as a heading's `parent` spells it. */
@@ -136,18 +168,27 @@ function rootRelativePath(roots: readonly TscnNode[], at: readonly number[]): st
 function withWrite(roots: readonly TscnNode[], livePath: string, texts: PropertyTexts): readonly TscnNode[] {
   const landing = landingOf(roots, livePath);
   if (!landing) return roots;
-  if (landing.kind === 'node') return replacedAt(roots, landing.at, (node) => laid(node, texts));
-  const instancePath = rootRelativePath(roots, landing.at);
-  return replacedAt(roots, landing.at, (instance) => {
-    const existing = instance.children.findIndex(
-      (child) => child.name === landing.name && (child.instanceSubPath ?? '') === landing.subPath
-    );
-    const children =
-      existing >= 0
-        ? instance.children.map((child, i) => (i === existing ? laid(child, texts) : child))
-        : [...instance.children, overrideHeading(instancePath, landing.subPath, landing.name, texts)];
-    return { ...instance, children };
+  return replacedAt(roots, landing.at, (node) => {
+    const held = replacementsOf(node)(texts);
+    const previous = held.get(livePath);
+    if (previous) return previous;
+    const written =
+      landing.kind === 'node'
+        ? laid(node, texts)
+        : withOverride(node, rootRelativePath(roots, landing.at), landing, texts);
+    held.set(livePath, written);
+    return written;
   });
+}
+
+function withOverride(
+  instance: TscnNode,
+  instancePath: string,
+  landing: Extract<Landing, { kind: 'override' }>,
+  texts: PropertyTexts
+): TscnNode {
+  const heading = overrideHeading(instancePath, landing.subPath, landing.name, texts);
+  return { ...instance, children: [...instance.children, heading] };
 }
 
 function rootNodesOf(graph: SceneGraph): readonly TscnNode[] {
@@ -161,6 +202,10 @@ function writtenRoots(roots: readonly TscnNode[], writes: SceneWrites): readonly
   return shareSeating(nodes, roots, (reseated) => writtenRoots(reseated, writes));
 }
 
+const withResources = perObject((file: readonly TscnExternalResource[]) =>
+  perObject((extra: readonly TscnExternalResource[]) => [...file, ...extra])
+);
+
 /** Each node off a written path keeps its identity. */
 export function writtenSceneGraph(
   graph: SceneGraph,
@@ -173,7 +218,9 @@ export function writtenSceneGraph(
     ...root,
     nodes: writtenRoots(root.nodes, writes),
     externalResources:
-      resources.length === 0 ? root.externalResources : [...root.externalResources, ...resources],
+      resources.length === 0 ? root.externalResources : withResources(root.externalResources)(resources),
   };
-  return buildSceneGraph(scene);
+  const written = buildSceneGraph(scene);
+  recordGraphWrites(written, writes);
+  return written;
 }

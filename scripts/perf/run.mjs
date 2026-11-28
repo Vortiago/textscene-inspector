@@ -134,10 +134,10 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
 }
 
 /** Writes the position of `count` children of `parent` on every frame, as a host's code would. */
-async function startWritesEachFrame(page, { parent, count }) {
+async function startWritesEachFrame(page, { parent, count, dimension = 3 }) {
   await page.waitForFunction(() => window.textscene !== undefined);
   await page.evaluate(
-    ({ parentPath, writes }) => {
+    ({ parentPath, writes, dimensions }) => {
       const { scene, variant } = window.textscene;
       const children = scene.getNode(parentPath).getChildren();
       let frame = 0;
@@ -145,16 +145,17 @@ async function startWritesEachFrame(page, { parent, count }) {
         frame += 1;
         for (let i = 0; i < writes; i++) {
           const node = children[i % children.length];
-          void node.set(
-            'position',
-            variant(`Vector3(${i % 10}, ${(frame % 60) / 30}, ${Math.floor(i / 10)})`)
-          );
+          const x = i % 10;
+          const y = (frame % 60) / 30;
+          const position =
+            dimensions === 2 ? `Vector2(${x}, ${y})` : `Vector3(${x}, ${y}, ${Math.floor(i / 10)})`;
+          void node.set('position', variant(position));
         }
         requestAnimationFrame(writeFrame);
       };
       requestAnimationFrame(writeFrame);
     },
-    { parentPath: parent, writes: count }
+    { parentPath: parent, writes: count, dimensions: dimension }
   );
 }
 
@@ -173,7 +174,7 @@ async function steadyWork(page) {
     lastWindowAt = Date.now();
     const work = steady.observe(parseWorkCounts(snapshot), frames);
     if (work) {
-      console.log(`[perf]   frame interval ${snapshot.frameMs}`);
+      console.log(`[perf]   ${work.sceneRenders} scene renders/frame, frame interval ${snapshot.frameMs}`);
       return { work, reason: null };
     }
   }

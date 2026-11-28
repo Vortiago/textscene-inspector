@@ -15,6 +15,14 @@ const CORE_SRC = resolve(findRepoRoot(), 'packages/textscene-core/src');
 /** The readers of a live node that lay no patch over it, each with why its reads need none. */
 const NEEDS_NO_OVERLAY = new Map([
   [
+    'nodes/3d/skeleton/boneattachment3d/attachmentBindings.ts',
+    'Reads attachment setters and bone names during instantiation, before the scene passes.',
+  ],
+  [
+    'nodes/3d/skeleton/boneattachment3d/loadedSkeletonPose.ts',
+    'Reads the authored bone table before a scene pass runs.',
+  ],
+  [
     'nodes/animation/animationplayer/Component.tsx',
     'Asks whether the node a track names is a Skeleton3D, by type.',
   ],

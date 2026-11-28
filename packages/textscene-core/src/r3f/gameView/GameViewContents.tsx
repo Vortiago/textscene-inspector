@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
-import { useSeatedRoots } from '../useLiveSceneTree.js';
+import { useRootScene } from '../hooks/useRootScene.js';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { SceneResourcesProvider } from '../SceneResourcesContext.js';
 import { EditedRootProvider } from '../contexts/InstanceOwnersContext.js';
+import { useDispatchRoots } from '../contexts/HierarchyContext.js';
 import { NodeDispatcher } from '../NodeDispatcher.js';
 import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
 import { ViewportMount } from '../../nodes/viewport/subviewport/Component.js';
@@ -28,9 +28,8 @@ export function GameViewContents() {
 }
 
 function RootViewport() {
-  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
-  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const nodes = useSeatedRoots();
+  const { rootScene, nodes } = useRootScene();
+  const dispatchRoots = useDispatchRoots(nodes);
   const { settings } = useProjectSettings();
   const projectWindow = useProjectRootWindow();
   const drawnWindow = useDrawnRootWindow(projectWindow);
@@ -51,7 +50,7 @@ function RootViewport() {
         >
           <EditedRootProvider editableInstances={rootScene.editableInstances}>
             <ViewportMount node={root} description={description}>
-              <NodeDispatcher nodes={nodes} />
+              <NodeDispatcher nodes={dispatchRoots} />
             </ViewportMount>
             <ControlRasterLayer
               nodes={rasterRoots}

@@ -4,7 +4,13 @@
  * merge both call it, so both answer alike what an override does to a node.
  */
 
-import { canonicalisePropertyBag } from '../godot/classdb/deprecated.js';
+import { canonicalisePropertyBag, resolveDeprecatedProperty } from '../godot/classdb/deprecated.js';
+import {
+  headingFile,
+  headingLine,
+  keepHeadingLine,
+  mapPropertyWrites,
+} from '../parser/overridePropertyWrites.js';
 import type { TscnNode } from '../parser/types.js';
 import type { ParsedHeading } from '../parser/utils.js';
 import { nodeRegistry, type NodeTypeRegistration } from '../core/NodeRegistry.js';
@@ -20,14 +26,24 @@ type Layered = Pick<TscnNode, 'properties' | 'rawProperties' | 'rawPropertiesOrd
 export function layerRawOverride(
   seat: TscnNode,
   base: Pick<TscnNode, 'type' | 'properties' | 'rawProperties' | 'rawPropertiesOrderReliable'>,
-  overrideRaw: Record<string, string>
+  overrideRaw: Record<string, string>,
+  phase: { beforeParenting?: boolean } = {}
 ): Layered {
-  const written = canonicalisePropertyBag(base.type, overrideRaw);
+  const written = mapPropertyWrites(overrideRaw, (key, value) =>
+    resolveDeprecatedProperty(base.type, key, value)
+  );
   const rawProperties = { ...canonicalisePropertyBag(base.type, base.rawProperties), ...written };
+  keepHeadingLine(seat.rawProperties, rawProperties);
   const { parser } = parserRegistrationOf(base.type);
   return {
     rawProperties,
-    properties: parser(headingOf(seat, base.type), rawProperties, { held: base.properties, written }),
+    properties: parser(headingOf(seat, base.type), rawProperties, {
+      held: base.properties,
+      written,
+      ...phase,
+      line: headingLine(overrideRaw),
+      file: headingFile(overrideRaw),
+    }),
     // An override that writes keys leaves neither file's order, so a file-order-sensitive
     // resolver falls back to editor save order (ADR-0035). One that writes none keeps the base's.
     rawPropertiesOrderReliable:

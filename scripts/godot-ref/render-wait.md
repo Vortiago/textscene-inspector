@@ -1,11 +1,11 @@
 # The render wait
 
-The Godot capture harness saves a 3D, 2D or root picture only after `_await_rendered` in
-`run.mjs` sees nothing pending. Godot signals none of the pending work, so the wait reads what
-each kind changes. It returns when the picture, the pending counters and the global transforms have
-held still for `RENDER_QUIET_FRAMES` frames in a row. A scene that never settles is captured with a
-warning at process frame `NEVER_SETTLES_CAPTURE_FRAME`, counted from the frame the scene enters.
-That capture is the harness frame, which the previewer's `HARNESS_CAPTURE` names.
+The Godot capture harness calls `_await_rendered` in `run.mjs` before it saves a 3D, 2D or root
+picture. When the wait runs, the picture must repeat and the pending counters and global
+transforms must stay unchanged for both `RENDER_QUIET_FRAMES` frames and `RENDER_QUIET_MSEC`
+milliseconds. If the scene never settles, the harness warns and saves the picture at process
+frame `NEVER_SETTLES_CAPTURE_FRAME`, counted from the frame the scene enters. That capture is the
+harness frame, which the previewer's `HARNESS_CAPTURE` names.
 
 ## What is pending
 
@@ -24,8 +24,13 @@ made later, such as a viewport's target, moves `RENDERING_INFO_TEXTURE_MEM_USED`
 
 **Temporal volumetric fog.** The fog mixes `temporal_reprojection_amount` of a history that starts
 black (`volumetric_fog_process.glsl:683`, `fog.cpp:482`). It jitters each frame by `frame % 16`
-(`fog.cpp:1113`). The picture must repeat the one a jitter cycle earlier, so the wait compares each
-picture with the one `FOG_JITTER_CYCLE_FRAMES` frames back.
+(`fog.cpp:1113`).
+
+**Screen-space indirect lighting (SSIL).** SSIL samples mip level 5 of the previous frame
+(`ssil.glsl:211`). Godot clears the frame history to black when it creates the texture
+(`ss_effects.cpp:394`). The lighting shader adds the SSIL result to ambient light
+(`scene_forward_clustered.glsl:2165-2175`). Godot copies the internal colour texture into the
+frame history for the next draw (`render_forward_clustered.cpp:2414-2417`).
 
 **Moving transforms.** The tree is paused and the time scale is 0, so game logic stops. A
 transform notification still runs (`scene_tree.cpp:193-204`), so a RemoteTransform relay cycle
@@ -38,7 +43,9 @@ A Skeleton2D with a modification stack keeps processing through the pause, as th
 stack on the bones (`skeleton_2d.cpp:630-639`). Its children stay paused. A stack that never
 settles runs the whole wait too.
 
-**Anything else.** Any other change shows in the picture, which must repeat the one before it.
+**Picture comparison.** The wait compares consecutive pictures unless volumetric fog uses temporal
+reprojection. With that fog history, the wait compares each picture with the one
+`FOG_JITTER_CYCLE_FRAMES` frames back.
 
 ## The time scale
 
@@ -47,8 +54,9 @@ step the main loop hands the renderer (`main.cpp:4841,4990-4994`). A sprite that
 30 ms would then decide the picture, so the wait sets `Engine.time_scale` to 0. The process quits
 after it saves the picture, so nothing restores the scale.
 
-With `--no-previews` the harness does not freeze the scene, so the wait stays out of its way: only
-a fog history draws on there.
+The harness always runs the wait in preview mode and in `--mode in-game`. With `--no-previews`,
+it runs the wait only when the active `Environment` enables SSIL or volumetric fog with temporal
+reprojection. Other scenes keep their runtime time scale.
 
 ## The quiet window
 

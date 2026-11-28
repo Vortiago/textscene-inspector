@@ -33,10 +33,10 @@ import { GODOT_EULER_ORDER } from '../../../r3f/animation/restPoseTracks';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { useAnimatedBonePoses } from '../../../r3f/contexts/AnimatedBonePosesContext';
 import { usePushedWrites } from '../../../r3f/animation/usePushedWrites';
-import { useByValue } from '../../../r3f/hooks/useByValue';
+import { sameElements } from '../../../utils/sameElements';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { resolveLiveEntry } from '../../../r3f/liveSceneTree';
-import { useSharedLiveTree } from '../../../r3f/useLiveSceneTree';
+import { useLiveTreeSelection, type SharedLiveTree } from '../../../r3f/useLiveSceneTree';
 import { resolveAnimations } from './animationResolver';
 import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
 import { AnimationLoopMode } from '../../../godot/scene/animation.js';
@@ -95,19 +95,13 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // Whether a track path names a Skeleton3D decides if its subname is a bone (`animation_mixer.cpp:795`).
   // Without a scene graph a path with one subname is taken for a bone. The split keys on the
   // answer, not the tree, so a scene that loads elsewhere does not rebuild the mixer.
-  const liveTree = useSharedLiveTree();
-  const skeletonPaths = useByValue(
-    useMemo(
-      () =>
-        boneCandidatePaths(animations, scenePathOf).filter(
-          (scenePath) =>
-            liveTree === null ||
-            resolveLiveEntry(scenePath, liveTree.roots, liveTree.ctx)?.node.type === 'Skeleton3D'
-        ),
-      [animations, scenePathOf, liveTree]
-    ),
-    (a, b) => a.length === b.length && a.every((path, i) => path === b[i])
+  const candidates = useMemo(() => boneCandidatePaths(animations, scenePathOf), [animations, scenePathOf]);
+  const skeletonsIn = useCallback(
+    ({ roots, ctx }: SharedLiveTree) =>
+      candidates.filter((path) => resolveLiveEntry(path, roots, ctx)?.node.type === 'Skeleton3D'),
+    [candidates]
   );
+  const skeletonPaths = useLiveTreeSelection(skeletonsIn, sameElements) ?? candidates;
   const trackScene = useMemo<TrackScene>(() => {
     const skeletons = new Set(skeletonPaths);
     return { scenePathOf, isSkeleton: (scenePath) => skeletons.has(scenePath) };

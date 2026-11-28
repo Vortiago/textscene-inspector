@@ -1,3 +1,5 @@
+import { recordPropertyWrites } from './writeRevisions.js';
+
 /** The writers whose values lie over the file, lowest first: the host's `set`, then the animated patch. */
 const WRITE_LAYERS = ['host', 'animated'] as const;
 
@@ -33,7 +35,10 @@ export class WriteStore {
       texts.set(property, text);
     }
     const next = new Map(this.laid);
-    next.set(path, this.layEach(path));
+    const previous = this.laid.get(path);
+    const laid = this.layEach(path);
+    recordPropertyWrites(previous, laid, written);
+    next.set(path, laid);
     this.laid = next;
   }
 

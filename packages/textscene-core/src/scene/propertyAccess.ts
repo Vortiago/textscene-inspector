@@ -17,6 +17,8 @@ import type { SceneTreeNode } from './sceneRuntime.js';
 import type { PropertyTexts } from './sceneWrites.js';
 
 export { derivedPropertiesOf };
+export { isWritable } from './writtenScene.js';
+export { SceneProperties } from './sceneProperties.js';
 
 /** What `set` does with one property of one node. */
 export type SetOutcome =
