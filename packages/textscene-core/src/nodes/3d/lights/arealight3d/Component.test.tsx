@@ -74,7 +74,7 @@ const gradientRenderers: Renderer[] = [];
 
 afterEach(async () => {
   for (const renderer of gradientRenderers.splice(0)) await renderer.unmount();
-  updateAreaLightAtlas();
+  updateAreaLightAtlas(4096);
 });
 
 async function createWithGradient(node: TscnNode): Promise<Renderer> {
@@ -92,7 +92,7 @@ async function createWithGradient(node: TscnNode): Promise<Renderer> {
 
 /** Where the light pass finds the rendered light's texture in the atlas. */
 function placementOf(renderer: Renderer) {
-  updateAreaLightAtlas();
+  updateAreaLightAtlas(4096);
   return areaTexturePlacement(instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight')));
 }
 
@@ -297,7 +297,7 @@ describe('<AreaLight3D>', () => {
     const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
 
     await renderer.unmount();
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     expect(areaTexturePlacement(light)).toEqual(untexturedPlacement());
   });

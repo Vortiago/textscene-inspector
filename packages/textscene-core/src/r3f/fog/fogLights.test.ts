@@ -160,7 +160,7 @@ describe('FogLightRows.pack', () => {
   it("gives a textured area light its texture's place in the atlas and its highest mip", () => {
     const texture = new THREE.DataTexture(new Uint8Array(64 * 64 * 4).fill(255), 64, 64);
     holdAreaTexture(texture);
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
     const light = area();
     Object.assign(light.userData, areaTextureUserData(texture));
 

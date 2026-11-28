@@ -64,7 +64,7 @@ Level 0 copies each texture into its rectangle over transparent black. Each next
 
 The projection samples `uv * rect.size + rect.position` of the atlas, linear between levels. So its rim blends the transparent border, and a small level blends a neighbouring texture, as in Godot. The minified red and green checker projects a dark yellow, as in Godot.
 
-A texture that would push the atlas past the GPU's `MAX_TEXTURE_SIZE` stays out, the last to join first, with a console warning. Godot has no such limit.
+A texture that would push the atlas past the GPU's `MAX_TEXTURE_SIZE` stays out, the last to join first, with a logged warning. Godot has no such limit.
 
 ## Filter
 

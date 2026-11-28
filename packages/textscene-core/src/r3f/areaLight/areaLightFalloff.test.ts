@@ -155,7 +155,7 @@ describe('writeAreaLightUniforms', () => {
     Object.assign(light.userData, areaTextureUserData(texture));
     const scene = new THREE.Scene();
     scene.add(light);
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     write(scene);
     releaseAreaTexture(texture);

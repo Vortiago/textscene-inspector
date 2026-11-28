@@ -21,6 +21,8 @@ The 1×1 panel of the energy scene with a red-to-blue gradient as its `area_text
 
 An `AtlasTexture` as the `area_texture` colours the light with its whole sheet, not its region, as Godot does. Godot reads the texture by its RID, which is the sheet's.
 
+The previewer logs a warning when the atlas would exceed the GPU texture size limit. The last textures to join stay out until they fit.
+
 ## Shadow
 <!-- compare: image=unit-area-light3d status=done fixture=unit-area-light3d.tscn -->
 

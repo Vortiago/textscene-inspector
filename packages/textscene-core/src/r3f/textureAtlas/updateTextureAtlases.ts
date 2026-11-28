@@ -14,7 +14,7 @@ let frameLoops = 0;
 
 export function updateTextureAtlases(gl: THREE.WebGLRenderer): void {
   updateDecalAtlas(gl.capabilities.maxTextureSize);
-  updateAreaLightAtlas();
+  updateAreaLightAtlas(gl.capabilities.maxTextureSize);
 }
 
 /** Declares that this component's frame loop calls `updateTextureAtlases` before each frame's renders. */

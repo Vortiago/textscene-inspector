@@ -8,13 +8,13 @@ describe('areaTextureMipmaps', () => {
 
     const mipmaps = areaTextureMipmaps(128, 128, [{ image, x: 0, y: 0, width: 128, height: 128 }]);
 
-    expect(mipmaps.map((mip) => mip[0])).toEqual(new Array(AREA_LIGHT_ATLAS_MIPMAPS).fill(255));
+    expect(mipmaps.map((mip) => mip.data[0])).toEqual(new Array(AREA_LIGHT_ATLAS_MIPMAPS).fill(255));
   });
 
   it('leaves every mip clear without a texture (edge case)', () => {
     const mipmaps = areaTextureMipmaps(128, 128, []);
 
-    expect(mipmaps.every((mip) => mip.every((byte) => byte === 0))).toBe(true);
+    expect(mipmaps.every((mip) => mip.data.every((byte) => byte === 0))).toBe(true);
   });
 
   it('stops blurring a texture once its mip falls below one texel (error case)', () => {
@@ -22,6 +22,6 @@ describe('areaTextureMipmaps', () => {
 
     const mipmaps = areaTextureMipmaps(256, 256, [{ image, x: 0, y: 0, width: 2, height: 2 }]);
 
-    expect([mipmaps[1]![0], mipmaps[2]![0]]).toEqual([255, 0]);
+    expect([mipmaps[1]!.data[0], mipmaps[2]!.data[0]]).toEqual([255, 0]);
   });
 });

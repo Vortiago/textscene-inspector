@@ -35,6 +35,43 @@ describe('packCells', () => {
     ]);
   });
 
+  it('spans several heights, splits the last span and keeps the leftmost tie', () => {
+    const cells = [
+      [3, 7],
+      [2, 6],
+      [1, 5],
+      [4, 4],
+      [3, 3],
+      [6, 2],
+      [2, 1],
+      [2, 1],
+    ] as const;
+    const layout = packCells(
+      cells.map(([width, height]) => ({ width, height })),
+      8,
+      UNIT_BORDER
+    );
+    expect(layout.positions.map(({ x, y }) => [x, y])).toEqual([
+      [0, 0],
+      [3, 0],
+      [5, 0],
+      [3, 6],
+      [0, 7],
+      [0, 10],
+      [6, 10],
+      [6, 11],
+    ]);
+  });
+
+  it.each(['width', 'height'] as const)('fits alternating half-size and wider strips by %s', (span) => {
+    const cells = Array.from({ length: 500 }, (_, index) => ({
+      width: 1,
+      height: 1,
+      [span]: index % 2 === 0 ? 130 : 128,
+    }));
+    expect(packCells(cells, 8, UNIT_BORDER, 256).positions).toHaveLength(341);
+  });
+
   it('keeps equal cells in the order given', () => {
     const cell = { width: 3, height: 3 };
 
