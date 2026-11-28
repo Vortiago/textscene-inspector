@@ -499,7 +499,11 @@ describe('Extension', () => {
       const [, resourceWatcher, projectFileWatcher] = createWatcher.mock.results.map(
         (result) => result.value
       );
-      expect(TscnDiagnostics).toHaveBeenCalledWith(resourceWatcher, projectFileWatcher);
+      expect(TscnDiagnostics).toHaveBeenCalledWith(
+        expect.objectContaining({ rootOf: expect.any(Function), onDidInvalidate: expect.any(Function) }),
+        resourceWatcher,
+        projectFileWatcher
+      );
     });
 
     it('routes a changed project file to the panel for re-fetch', async () => {
