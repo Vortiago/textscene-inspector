@@ -15,7 +15,7 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-import { mipSize } from '../../resources/processing/mipChain.js';
+import { mipSize, type MipLevel } from '../../resources/processing/mipChain.js';
 import { channelToByte, sRGBChannelToLinear } from '../../utils/colorSpace.js';
 import type { GodotImage } from '../textureAtlas/godotImage.js';
 import {
@@ -152,11 +152,10 @@ function blurred(source: Pixels, width: number, height: number): Pixels {
   );
 }
 
-/** Writes `pixels` into `mip`, `mipWidth` texels wide, at `x`, `y`. */
-function store(mip: Uint8Array, mipWidth: number, pixels: Pixels, x: number, y: number): void {
+function store(mip: MipLevel, pixels: Pixels, x: number, y: number): void {
   for (let row = 0; row < pixels.height; row++) {
     for (let column = 0; column < pixels.width * 4; column++) {
-      mip[((y + row) * mipWidth + x) * 4 + column] = channelToByte(
+      mip.data[((y + row) * mip.width + x) * 4 + column] = channelToByte(
         pixels.data[row * pixels.width * 4 + column]!
       );
     }
@@ -164,24 +163,18 @@ function store(mip: Uint8Array, mipWidth: number, pixels: Pixels, x: number, y: 
 }
 
 /** `raw`'s mips past 0, each blurred from the one before (`:3528-3575`). */
-function storeBlurredMips(
-  mipmaps: Uint8Array[],
-  atlasWidth: number,
-  atlasHeight: number,
-  placed: PlacedTexture,
-  raw: Pixels
-) {
+function storeBlurredMips(mipmaps: readonly MipLevel[], placed: PlacedTexture, raw: Pixels) {
+  const base = mipmaps[0]!;
   let previous = quantised(stretched(raw, placed.width, placed.height));
   for (let level = 1; level < mipmaps.length; level++) {
-    const mipWidth = mipSize(atlasWidth, level);
-    const mipHeight = mipSize(atlasHeight, level);
-    const width = Math.floor((placed.width * mipWidth) / atlasWidth);
-    const height = Math.floor((placed.height * mipHeight) / atlasHeight);
+    const mip = mipmaps[level]!;
+    const width = Math.floor((placed.width * mip.width) / base.width);
+    const height = Math.floor((placed.height * mip.height) / base.height);
     if (Math.min(width, height) < 1) return;
     previous = blurred(previous, width, height);
-    const x = Math.floor((placed.x * mipWidth) / atlasWidth);
-    const y = Math.floor((placed.y * mipHeight) / atlasHeight);
-    store(mipmaps[level]!, mipWidth, rgbDecoded(previous), x, y);
+    const x = Math.floor((placed.x * mip.width) / base.width);
+    const y = Math.floor((placed.y * mip.height) / base.height);
+    store(mip, rgbDecoded(previous), x, y);
   }
 }
 
@@ -190,15 +183,16 @@ export function areaTextureMipmaps(
   width: number,
   height: number,
   textures: readonly PlacedTexture[]
-): Uint8Array[] {
-  const mipmaps = Array.from(
-    { length: AREA_LIGHT_ATLAS_MIPMAPS },
-    (_, level) => new Uint8Array(mipSize(width, level) * mipSize(height, level) * 4)
-  );
+): MipLevel[] {
+  const mipmaps = Array.from({ length: AREA_LIGHT_ATLAS_MIPMAPS }, (_, level) => {
+    const mipWidth = mipSize(width, level);
+    const mipHeight = mipSize(height, level);
+    return { width: mipWidth, height: mipHeight, data: new Uint8Array(mipWidth * mipHeight * 4) };
+  });
   for (const placed of textures) {
     const raw = pixelsOf(placed.image);
-    store(mipmaps[0]!, width, stretched(rgbDecoded(raw), placed.width, placed.height), placed.x, placed.y);
-    storeBlurredMips(mipmaps, width, height, placed, raw);
+    store(mipmaps[0]!, stretched(rgbDecoded(raw), placed.width, placed.height), placed.x, placed.y);
+    storeBlurredMips(mipmaps, placed, raw);
   }
   return mipmaps;
 }

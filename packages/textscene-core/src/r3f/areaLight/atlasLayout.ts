@@ -20,7 +20,7 @@ import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import { packCells, type CellSize } from '../textureAtlas/atlasPacking.js';
 import type { GodotImage } from '../textureAtlas/godotImage.js';
 import type { ImageSize } from '../../resources/formats/image/imagePixels.js';
-import { mipSize, type MipLevel } from '../../resources/processing/mipChain.js';
+import type { MipLevel } from '../../resources/processing/mipChain.js';
 import type { AtlasLayout } from '../textureAtlas/fitAtlas.js';
 import { areaTextureMipmaps } from './atlasMipmaps.js';
 import { AREA_LIGHT_ATLAS_MIPMAPS } from '../../godot/rendering/lights/areaLightAtlas.js';
@@ -83,9 +83,5 @@ export function areaAtlasLevels(
   images: readonly GodotImage[]
 ): MipLevel[] {
   const placed = rects.map((rect, index) => ({ ...rect, image: images[index]! }));
-  return areaTextureMipmaps(width, height, placed).map((data, level) => ({
-    data,
-    width: mipSize(width, level),
-    height: mipSize(height, level),
-  }));
+  return areaTextureMipmaps(width, height, placed);
 }

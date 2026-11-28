@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { r3fStateProbe } from './testing/R3FStateProbe';
+import { reportsMaxTextureSize } from './testing/reportsMaxTextureSize';
+import * as areaAtlas from './areaLight/areaLightAtlas';
 import { useSceneShadowFit } from './SceneShadowFitter';
 import { ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas';
 import { ROOT_POSITIONAL_SHADOW_ATLAS, VIEWPORT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport';
@@ -35,6 +38,39 @@ describe('useSceneShadowFit and its viewport’s atlas', () => {
     await renderer.update(<FitScene scene={scene} atlas={{ ...VIEWPORT_POSITIONAL_SHADOW_ATLAS }} />);
     expect(dispose).not.toHaveBeenCalled();
     dispose.mockRestore();
+  });
+
+  it('reads the replacement renderer limit without releasing the scene light pass', async () => {
+    const scene = new THREE.Scene();
+    const root = r3fStateProbe();
+    const replacement = r3fStateProbe();
+    const firstCanvas = await ReactThreeTestRenderer.create(
+      <>
+        <FitScene scene={scene} atlas={ROOT_POSITIONAL_SHADOW_ATLAS} />
+        <root.Probe />
+      </>,
+      { beforeReturn: reportsMaxTextureSize(256) }
+    );
+    const secondCanvas = await ReactThreeTestRenderer.create(<replacement.Probe />, {
+      beforeReturn: reportsMaxTextureSize(512),
+    });
+    const original = root.state().gl;
+    const update = vi.spyOn(areaAtlas, 'updateAreaLightAtlas');
+    const dispose = vi.spyOn(ViewportShadowAtlas.prototype, 'dispose');
+    try {
+      root.state().gl.render(scene, new THREE.PerspectiveCamera());
+      await ReactThreeTestRenderer.act(async () => root.state().set({ gl: replacement.state().gl }));
+      root.state().gl.render(scene, new THREE.PerspectiveCamera());
+
+      expect(update.mock.calls).toEqual([[256], [512]]);
+      expect(dispose).not.toHaveBeenCalled();
+    } finally {
+      dispose.mockRestore();
+      update.mockRestore();
+      await ReactThreeTestRenderer.act(async () => root.state().set({ gl: original }));
+      await firstCanvas.unmount();
+      await secondCanvas.unmount();
+    }
   });
 
   it('builds the light pass again for new atlas settings (edge case)', async () => {

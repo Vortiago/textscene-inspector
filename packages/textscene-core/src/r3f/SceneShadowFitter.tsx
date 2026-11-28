@@ -71,7 +71,7 @@ function prepareSceneLights(
 
 /** The light pass before each render of `scene`, in `atlas` outside a viewport pass. Null runs nothing. */
 export function useSceneShadowFit(scene: THREE.Scene | null, atlas: PositionalShadowAtlasSettings): void {
-  const gl = useThree((state) => state.gl);
+  const getState = useThree((state) => state.get);
   const settings = useByValue(atlas, sameData);
   useEffect(() => {
     if (!scene) return undefined;
@@ -82,7 +82,7 @@ export function useSceneShadowFit(scene: THREE.Scene | null, atlas: PositionalSh
         camera,
         renderUnderWay()?.shadowAtlas ?? ownAtlas,
         performance.now(),
-        gl.capabilities.maxTextureSize
+        getState().gl.capabilities.maxTextureSize
       )
     );
     return () => {
@@ -91,7 +91,7 @@ export function useSceneShadowFit(scene: THREE.Scene | null, atlas: PositionalSh
       releaseSoftShadowSearch(scene);
       ownAtlas.dispose();
     };
-  }, [scene, settings, gl]);
+  }, [scene, settings, getState]);
 }
 
 /** Mounted once per 3D canvas, for the canvas's own scene. */

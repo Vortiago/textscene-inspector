@@ -44,7 +44,12 @@ export function createTextureAtlas<Placement>(
   holders.markChanged();
 
   function update(maxTextureSize: number): void {
-    if (maxTextureSize !== state.previousLimit) holders.markChanged();
+    if (
+      maxTextureSize !== state.previousLimit &&
+      (state.leftTexturesOut || Math.max(texture.image.width, texture.image.height) > maxTextureSize)
+    ) {
+      holders.markChanged();
+    }
     const changed = holders.takeChanged();
     if (!changed) return;
     const readable = readableTextures(changed);

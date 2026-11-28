@@ -97,6 +97,18 @@ describe('the shared atlas lifecycle', () => {
     expect(atlas.placement(second)).toBe(0);
   });
 
+  it('keeps the same upload across alternating renderer limits that fit every source', () => {
+    const { atlas, levels } = rowAtlas();
+    atlas.hold(texture(4));
+    atlas.update(8);
+    const version = atlas.texture().version;
+
+    for (const limit of [4, 16, 4, 8]) atlas.update(limit);
+
+    expect(levels).toHaveBeenCalledTimes(1);
+    expect(atlas.texture().version).toBe(version);
+  });
+
   it('refits the same sources when another renderer has a different limit', () => {
     const { atlas } = rowAtlas();
     const sources = [texture(4), texture(4)];
