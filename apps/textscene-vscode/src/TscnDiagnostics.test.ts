@@ -16,10 +16,10 @@ import {
 } from './TscnDiagnostics';
 import { createMockDiagnosticCollection, createMockFileData, createMockUri } from './test-setup';
 import { HOST_PATH_CASE } from './hostPathCase';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import {
   ANY_PATH_PATTERN,
   EXTENSION_LIST_PATTERN,
-  GDEXTENSION_PATTERN,
   PROJECT_FILE_PATTERN,
   RESOURCE_FILES_PATTERN,
   SCAN_STOP_FILES_PATTERN,
@@ -202,6 +202,7 @@ describe('TscnDiagnostics', () => {
   /** Diagnostics over the mocked collection, fed by a resource watcher the test's mock creates. */
   function newDiagnostics(): TscnDiagnostics {
     return new TscnDiagnostics(
+      createWorkspaceResRoots(),
       vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN),
       vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN),
       collection as unknown as vscode.DiagnosticCollection
@@ -215,6 +216,7 @@ describe('TscnDiagnostics', () => {
 
   it('creates its own diagnostic collection when none is injected', () => {
     const diagnostics = new TscnDiagnostics(
+      createWorkspaceResRoots(),
       vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN),
       vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN)
     );
@@ -645,50 +647,6 @@ describe('TscnDiagnostics', () => {
       diagnostics.dispose();
     });
 
-    it("roots the provider of a scene outside every project at the scene's own directory", async () => {
-      (vscode.workspace.fs.stat as Mock).mockRejectedValue(new Error('Not found'));
-      const diagnostics = newDiagnostics();
-
-      const provider = await diagnostics.providerFor(createMockUri('/workspace/isometric/dungeon.tscn'));
-
-      expect(provider?.resRoot.fsPath).toBe('/workspace/isometric');
-      diagnostics.dispose();
-    });
-
-    it('roots the provider of a scene inside a project at the project, not the scene directory', async () => {
-      const diagnostics = newDiagnostics();
-
-      const provider = await diagnostics.providerFor(createMockUri('/workspace/scenes/level.tscn'));
-
-      expect(provider?.resRoot.fsPath).toBe('/workspace');
-      diagnostics.dispose();
-    });
-
-    it('shares a provider between the loose scenes of one directory, and only those', async () => {
-      (vscode.workspace.fs.stat as Mock).mockRejectedValue(new Error('Not found'));
-      const diagnostics = newDiagnostics();
-
-      const [dungeon, player, elsewhere] = await Promise.all(
-        [
-          '/workspace/isometric/dungeon.tscn',
-          '/workspace/isometric/player.tscn',
-          '/workspace/other/a.tscn',
-        ].map((path) => diagnostics.providerFor(createMockUri(path)))
-      );
-
-      expect(player).toBe(dungeon);
-      expect(elsewhere).not.toBe(dungeon);
-      diagnostics.dispose();
-    });
-
-    it('gives no provider outside every workspace folder', async () => {
-      (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue(undefined);
-      const diagnostics = newDiagnostics();
-
-      expect(await diagnostics.providerFor(createMockUri('/elsewhere/dungeon.tscn'))).toBeNull();
-      diagnostics.dispose();
-    });
-
     it('publishes nothing again while an edit leaves the list as it is shown', async () => {
       const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
@@ -831,8 +789,6 @@ describe('TscnDiagnostics', () => {
     type WatcherEvent = (uri: vscode.Uri) => void;
     interface Watcher {
       pattern: string;
-      /** The `ignoreCreateEvents`, `ignoreChangeEvents` and `ignoreDeleteEvents` arguments, as passed. */
-      ignores: [boolean?, boolean?, boolean?];
       fire: Record<'change' | 'create' | 'delete', WatcherEvent[]>;
       dispose: Mock;
     }
@@ -864,10 +820,9 @@ describe('TscnDiagnostics', () => {
 
     /** The patterns of the file watchers that report `fsPath`, as the file watcher would route it. */
     function filePatternsFor(fsPath: string): string[] {
-      if (fsPath.endsWith('/project.godot')) return [PROJECT_FILE_PATTERN, SCAN_STOP_FILES_PATTERN];
-      if (fsPath.endsWith('/.gdignore')) return [SCAN_STOP_FILES_PATTERN];
+      if (fsPath.endsWith('/project.godot')) return [PROJECT_FILE_PATTERN];
+      if (fsPath.endsWith('/.gdignore') || fsPath.toLowerCase().endsWith('.gdextension')) return [];
       if (fsPath.endsWith('/extension_list.cfg')) return [EXTENSION_LIST_PATTERN];
-      if (fsPath.toLowerCase().endsWith('.gdextension')) return [GDEXTENSION_PATTERN];
       return [RESOURCE_FILES_PATTERN];
     }
 
@@ -918,27 +873,24 @@ describe('TscnDiagnostics', () => {
       }
       savedTextDocuments = vscode.workspace.textDocuments as vscode.TextDocument[];
       watchers = [];
-      (vscode.workspace.createFileSystemWatcher as Mock).mockImplementation(
-        (pattern: string, ...ignores: Watcher['ignores']) => {
-          const watcher: Watcher = {
-            pattern,
-            ignores,
-            fire: { change: [], create: [], delete: [] },
-            dispose: vi.fn(),
-          };
-          watchers.push(watcher);
-          const on = (kind: keyof Watcher['fire']) => (handler: WatcherEvent) => {
-            watcher.fire[kind].push(handler);
-            return { dispose: vi.fn() };
-          };
-          return {
-            onDidChange: on('change'),
-            onDidCreate: on('create'),
-            onDidDelete: on('delete'),
-            dispose: watcher.dispose,
-          };
-        }
-      );
+      (vscode.workspace.createFileSystemWatcher as Mock).mockImplementation((pattern: string) => {
+        const watcher: Watcher = {
+          pattern,
+          fire: { change: [], create: [], delete: [] },
+          dispose: vi.fn(),
+        };
+        watchers.push(watcher);
+        const on = (kind: keyof Watcher['fire']) => (handler: WatcherEvent) => {
+          watcher.fire[kind].push(handler);
+          return { dispose: vi.fn() };
+        };
+        return {
+          onDidChange: on('change'),
+          onDidCreate: on('create'),
+          onDidDelete: on('delete'),
+          dispose: watcher.dispose,
+        };
+      });
       (vscode.workspace.getWorkspaceFolder as Mock).mockImplementation(folderOf);
       (vscode.workspace.fs.stat as Mock).mockImplementation((uri: vscode.Uri) =>
         ['/workspace/project.godot', '/workspace/tree.glb'].includes(uri.fsPath)
@@ -954,29 +906,15 @@ describe('TscnDiagnostics', () => {
       (vscode.workspace.fs.stat as Mock).mockResolvedValue({ type: 1, size: 0, ctime: 0, mtime: 0 });
     });
 
-    it('watches the GDExtension list, .gdextension files, scan stop files and deleted paths itself, and glTF files and project.godot through the extension’s watchers', () => {
+    it('owns one watcher for changes to the GDExtension list', () => {
       const diagnostics = newDiagnostics();
 
-      expect(watchers.map((w) => w.pattern).sort()).toEqual(
-        [
-          RESOURCE_FILES_PATTERN,
-          PROJECT_FILE_PATTERN,
-          EXTENSION_LIST_PATTERN,
-          GDEXTENSION_PATTERN,
-          SCAN_STOP_FILES_PATTERN,
-          ANY_PATH_PATTERN,
-        ].sort()
-      );
-      diagnostics.dispose();
-    });
-
-    it('watches every path for deletes only', () => {
-      const diagnostics = newDiagnostics();
-      const anyPath = watchers.find((w) => w.pattern === ANY_PATH_PATTERN)!;
-
-      expect(anyPath.ignores).toEqual([true, true, false]);
-      expect(anyPath.fire.create).toEqual([]);
-      expect(anyPath.fire.change).toEqual([]);
+      expect(watchers.map((w) => w.pattern)).toEqual([
+        ANY_PATH_PATTERN,
+        RESOURCE_FILES_PATTERN,
+        PROJECT_FILE_PATTERN,
+        EXTENSION_LIST_PATTERN,
+      ]);
       diagnostics.dispose();
     });
 
@@ -1011,7 +949,7 @@ describe('TscnDiagnostics', () => {
         const before = [level, elsewhere].map(lintsOf);
 
         deleteFolder('/workspace/addons/gltf_ext');
-        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+        await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
         expect([level, elsewhere].map(lintsOf)).toEqual([before[0]! + 1, before[1]]);
         diagnostics.dispose();
@@ -1026,24 +964,24 @@ describe('TscnDiagnostics', () => {
 
         // The probe reads the GDExtension list at `res://.godot/extension_list.cfg`.
         deleteFolder('/workspace/.godot');
-        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+        await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
         expect(lintsOf(level)).toBe(before + 1);
         diagnostics.dispose();
       });
 
-      it('re-lints nothing when no read or listed path is under it', async () => {
+      it('retains a project change when another filesystem event overtakes its walk', async () => {
         const level = sceneUsingTree('/workspace/scenes');
         open(level);
         const diagnostics = newDiagnostics();
         await settleWalks();
         const before = lintsOf(level);
 
-        deleteFolder('/workspace/addons/unrelated');
-        deleteFolder('/workspace/addons/gltf');
-        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+        deleteFolder('/workspace/addons/gltf_ext');
+        deleteFolder('/other/addons/unrelated');
+        await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
-        expect(lintsOf(level)).toBe(before);
+        expect(lintsOf(level)).toBe(before + 1);
         diagnostics.dispose();
       });
 
@@ -1081,7 +1019,7 @@ describe('TscnDiagnostics', () => {
         const before = [level, plain, elsewhere].map(lintsOf);
 
         fire(kind, '/workspace/addons/gltf/bin/Gltf.GDExtension');
-        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+        await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
         expect([level, plain, elsewhere].map(lintsOf)).toEqual([before[0]! + 1, before[1], before[2]]);
         diagnostics.dispose();
@@ -1096,7 +1034,7 @@ describe('TscnDiagnostics', () => {
       const before = lintsOf(level);
 
       fire('change', '/workspace/bin/a.gdextension');
-      vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+      await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
       expect(lintsOf(level)).toBe(before);
       diagnostics.dispose();
@@ -1114,7 +1052,7 @@ describe('TscnDiagnostics', () => {
         const before = [level, plain, elsewhere].map(lintsOf);
 
         fire(kind, '/workspace/addons/gltf/.gdignore');
-        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+        await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
         expect([level, plain, elsewhere].map(lintsOf)).toEqual([before[0]! + 1, before[1], before[2]]);
         diagnostics.dispose();
@@ -1132,6 +1070,40 @@ describe('TscnDiagnostics', () => {
       await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
       expect(lintsOf(level)).toBe(before + 1);
+      diagnostics.dispose();
+    });
+
+    it('uses the project root on creation and the scene directory again on deletion', async () => {
+      const project = '/workspace/project.godot';
+      const looseTree = '/workspace/scenes/tree.glb';
+      const projectTree = '/workspace/tree.glb';
+      let hasProject = false;
+      let mtime = 0;
+      (vscode.workspace.fs.stat as Mock).mockImplementation(async (uri: vscode.Uri) => {
+        if (uri.path === (hasProject ? projectTree : looseTree) || (hasProject && uri.path === project)) {
+          return { type: vscode.FileType.File, size: 1, ctime: 0, mtime };
+        }
+        throw new Error('Not found');
+      });
+      const reads = () =>
+        (vscode.workspace.fs.readFile as Mock).mock.calls
+          .map(([uri]) => uri.path)
+          .filter((path) => path.endsWith('tree.glb'));
+      open(sceneUsingTree('/workspace/scenes'));
+      const diagnostics = newDiagnostics();
+      await settleWalks();
+      expect(reads()).toEqual([looseTree]);
+
+      hasProject = true;
+      fire('create', project);
+      await settleWalks();
+      expect(reads()).toEqual([looseTree, projectTree]);
+
+      hasProject = false;
+      mtime++;
+      fire('delete', project);
+      await settleWalks();
+      expect(reads()).toEqual([looseTree, projectTree, looseTree]);
       diagnostics.dispose();
     });
 
@@ -1225,9 +1197,9 @@ describe('TscnDiagnostics', () => {
         const before = [level, plain, elsewhere, readme].map(lintsOf);
 
         fire(kind, '/workspace/tree.glb');
-        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS - 1);
+        await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS - 1);
         expect(lintsOf(level)).toBe(before[0]);
-        vi.advanceTimersByTime(1);
+        await vi.advanceTimersByTimeAsync(1);
 
         expect([level, plain, elsewhere, readme].map(lintsOf)).toEqual([before[0]! + 1, ...before.slice(1)]);
         diagnostics.dispose();
@@ -1245,7 +1217,7 @@ describe('TscnDiagnostics', () => {
       const before = lintsOf(level);
 
       fire('change', '/workspace/TREE.GLB');
-      vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+      await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
       expect(lintsOf(level)).toBe(before + 1);
       diagnostics.dispose();
@@ -1261,7 +1233,7 @@ describe('TscnDiagnostics', () => {
         const before = lintsOf(level);
 
         fire('change', '/workspace/TREE.glb');
-        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+        await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
         expect(lintsOf(level)).toBe(before);
         diagnostics.dispose();
@@ -1277,7 +1249,7 @@ describe('TscnDiagnostics', () => {
       const before = [level, plain].map(lintsOf);
 
       fire('change', '/workspace/.godot/extension_list.cfg');
-      vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+      await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
       expect([level, plain].map(lintsOf)).toEqual([before[0]! + 1, before[1]]);
       diagnostics.dispose();
@@ -1291,13 +1263,13 @@ describe('TscnDiagnostics', () => {
       const before = lintsOf(level);
 
       fire('change', '/elsewhere/tree.glb');
-      vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+      await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
       expect(lintsOf(level)).toBe(before);
       diagnostics.dispose();
     });
 
-    it('re-lints nothing while diagnostics are disabled', () => {
+    it('re-lints nothing while diagnostics are disabled', async () => {
       mockDiagnosticsConfig({ enabled: false });
       const level = sceneUsingTree('/workspace/scenes');
       open(level);
@@ -1305,16 +1277,17 @@ describe('TscnDiagnostics', () => {
 
       fire('change', '/workspace/tree.glb');
       fire('change', '/workspace/project.godot');
-      vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+      await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
       expect(lintsOf(level)).toBe(0);
       diagnostics.dispose();
     });
 
-    it('walks again and re-lints each document under a project.godot that changes, and no other', async () => {
+    it('re-lints only documents that read a changed project file and keeps their root', async () => {
       const level = sceneUsingTree('/workspace/scenes');
+      const plain = makeTscnDocument(VALID_TSCN, '/workspace/plain.tscn');
       const elsewhere = sceneUsingTree('/other');
-      open(level, elsewhere);
+      open(level, plain, elsewhere);
       // The walk from `scenes/` asks its own directory first. The plugin probe stamps only the root's project file.
       const projectFileChecks = () =>
         (vscode.workspace.fs.stat as Mock).mock.calls.filter(
@@ -1327,13 +1300,13 @@ describe('TscnDiagnostics', () => {
       fire('change', '/workspace/tree.glb');
       await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
       expect(projectFileChecks()).toBe(1);
-      const before = [level, elsewhere].map(lintsOf);
+      const before = [level, plain, elsewhere].map(lintsOf);
 
       fire('change', '/workspace/project.godot');
-      await settleWalks();
+      await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
-      expect(projectFileChecks()).toBe(2);
-      expect([level, elsewhere].map(lintsOf)).toEqual([before[0]! + 1, before[1]]);
+      expect(projectFileChecks()).toBe(1);
+      expect([level, plain, elsewhere].map(lintsOf)).toEqual([before[0]! + 1, ...before.slice(1)]);
       diagnostics.dispose();
     });
 
@@ -1354,7 +1327,7 @@ describe('TscnDiagnostics', () => {
       expect(glbReads()).toBe(1);
 
       fire('change', '/workspace/project.godot');
-      await settleWalks();
+      await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
 
       expect(glbReads()).toBe(1);
       diagnostics.dispose();
@@ -1362,11 +1335,11 @@ describe('TscnDiagnostics', () => {
 
     it('disposes the watchers it creates with itself, and leaves the resource and project watchers to their owner', () => {
       const diagnostics = newDiagnostics();
-      const ownedElsewhere = [RESOURCE_FILES_PATTERN, PROJECT_FILE_PATTERN];
+      const ownedElsewhere = [ANY_PATH_PATTERN, RESOURCE_FILES_PATTERN, PROJECT_FILE_PATTERN];
 
       diagnostics.dispose();
 
-      expect(watchers).toHaveLength(6);
+      expect(watchers).toHaveLength(4);
       for (const watcher of watchers) {
         expect(watcher.dispose).toHaveBeenCalledTimes(ownedElsewhere.includes(watcher.pattern) ? 0 : 1);
       }
