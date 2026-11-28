@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass';
 import { opaquePrepassOf } from '../materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from '../materials/surfaceDepthMaterial';
-import { beginStep, endStep } from '../frameProfile/frameProfile';
+import { withFrameStep } from '../frameProfile/frameProfile';
 import { drawSurface, visibleSurfaces } from '../opaqueSurfaces';
 import { createFirstOpaqueSentinel, type OpaqueSentinel } from '../opaqueSentinel';
 
@@ -23,11 +23,11 @@ export function createDepthPrepassSentinel(): OpaqueSentinel {
 
 /** Draws the depth prepass of every surface of `scene` that `camera` sees. */
 function drawDepthPrepass(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
-  beginStep(renderer, 'Depth prepass');
-  for (const surface of visibleSurfaces(scene, camera, drawsPrepass)) {
-    drawSurface(renderer, scene, camera, surface, prepassMaterialOf(surface.material));
-  }
-  endStep(renderer, 'Depth prepass');
+  withFrameStep(renderer, 'Depth prepass', () => {
+    for (const surface of visibleSurfaces(scene, camera, drawsPrepass)) {
+      drawSurface(renderer, scene, camera, surface, prepassMaterialOf(surface.material));
+    }
+  });
 }
 
 function drawsPrepass(material: THREE.Material): boolean {

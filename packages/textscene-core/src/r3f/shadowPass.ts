@@ -22,7 +22,7 @@ import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
 import { positionalShadowAtlas, positionalShadowAtlasBuild } from './positionalShadow/shadowAtlasTarget.js';
 import { perObject } from '../utils/perObject.js';
-import { beginStep, countShadowDraws, endStep } from './frameProfile/frameProfile.js';
+import { countShadowDraws, withFrameStep } from './frameProfile/frameProfile.js';
 import type { RenderStep } from './frameProfile/frameStats.js';
 
 /**
@@ -109,13 +109,13 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     const areas = draws ? collected(lights, isSlottedAreaLight) : NO_LIGHTS;
     // Three's pass draws no map with none to draw (r187 `WebGLShadowMap.js:94-97`).
     const isTimed = draws && lights.length > 0 && !isReading;
-    if (isTimed) beginStep(renderer, 'Shadows');
-    allocatePositionalShadowAtlas(renderer);
-    threePass.draw(lights, scene, camera);
-    copyOmniShadows(renderer, copy, copied);
-    drawProjectedShadows(threePass, projected, scene, camera);
-    drawAreaShadows(threePass, areas, scene, camera);
-    if (isTimed) endStep(renderer, 'Shadows');
+    withFrameStep(renderer, isTimed ? 'Shadows' : null, () => {
+      allocatePositionalShadowAtlas(renderer);
+      threePass.draw(lights, scene, camera);
+      copyOmniShadows(renderer, copy, copied);
+      drawProjectedShadows(threePass, projected, scene, camera);
+      drawAreaShadows(threePass, areas, scene, camera);
+    });
     if (isReading) {
       readMaps(readers, scene, camera);
     } else {
@@ -162,9 +162,9 @@ function readMapsTimed(
   camera: THREE.Camera
 ): void {
   if (!readers.has(scene)) return;
-  beginStep(renderer, READ_STEP);
-  readMaps(readers, scene, camera);
-  endStep(renderer, READ_STEP);
+  withFrameStep(renderer, READ_STEP, () => {
+    readMaps(readers, scene, camera);
+  });
 }
 
 /** Copies each light's cube into the atlas. Each copy leaves the render target as it found it. */

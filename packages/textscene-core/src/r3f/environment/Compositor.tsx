@@ -8,7 +8,8 @@ import { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription';
 import { drawWorld, type WorldRender } from '../viewportRender/worldRender';
-import { SubscriberStep } from '../frameProfile/FrameProfiler';
+import { withFrameStep } from '../frameProfile/frameProfile';
+import { useViewShow } from '../viewShow/ViewShowContext';
 import { useToneMapPass } from './toneMapPass';
 import { useDrawingBufferSize } from '../useDrawingBufferSize';
 
@@ -32,9 +33,12 @@ export function Compositor() {
     () => ({ viewport: root, shadowAtlas: null, canvasView: null }),
     [root]
   );
-  useFrame(({ scene, camera }) => {
-    drawWorld(render, () => toneMap.drawWorld(scene, camera));
-    toneMap.toneMap();
+  const isTimed = useViewShow().performance;
+  useFrame(({ gl, scene, camera }) => {
+    withFrameStep(gl, isTimed ? 'Compositor' : null, () => {
+      drawWorld(render, () => toneMap.drawWorld(scene, camera));
+      toneMap.toneMap();
+    });
   }, COMPOSITOR_PRIORITY);
-  return <SubscriberStep step="Compositor" priority={COMPOSITOR_PRIORITY} />;
+  return null;
 }

@@ -14,7 +14,7 @@ import {
   type PassMeshRole,
 } from './itemLightList.js';
 import { listWindow, windowScissor } from './lightListWindow.js';
-import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { withFrameStep } from '../frameProfile/frameProfile.js';
 import type { LightPassInputs } from './lightPassInputs.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 
@@ -181,10 +181,7 @@ export function renderLightLists({
       scene.matrixWorldAutoUpdate = previousAutoUpdate;
     }
   };
-  beginStep(gl, '2D lights');
-  try {
+  withFrameStep(gl, '2D lights', () => {
     inputs.drawIfChanged({ camera, lists, passMeshes, canvasModulate, resolution, windows }, draw);
-  } finally {
-    endStep(gl, '2D lights');
-  }
+  });
 }

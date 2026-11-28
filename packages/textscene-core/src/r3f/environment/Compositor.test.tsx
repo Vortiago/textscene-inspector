@@ -23,6 +23,10 @@ import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { InWorld } from '../testing/InWorld';
 import { DEPTH_COMPONENT24, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
 import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
+import { innermostStep } from '../frameProfile/frameProfile';
+import { startFrameProfile } from '../frameProfile/frameProfile.testkit';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
+import type { RenderStep } from '../frameProfile/frameStats';
 import { renderUnderWay, type WorldRender } from '../viewportRender/worldRender';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
@@ -34,6 +38,7 @@ interface Draw {
   autoClear: boolean;
   render: WorldRender | null;
   mipmapBias: number;
+  step: RenderStep | null;
 }
 
 interface MountOptions {
@@ -62,7 +67,11 @@ async function mount({
   content = new THREE.Object3D(),
   Wrapper = Fragment,
   context = null,
-}: MountOptions = {}): Promise<{ renderer: Renderer; nextFrame: () => Promise<Draw[]> }> {
+}: MountOptions = {}): Promise<{
+  gl: THREE.WebGLRenderer;
+  renderer: Renderer;
+  nextFrame: () => Promise<Draw[]>;
+}> {
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
     <Wrapper>
@@ -85,6 +94,7 @@ async function mount({
         onRender: (bound, scene) =>
           draws.push({
             bound,
+            step: innermostStep(captured.current!),
             scene,
             autoClear: captured.current!.autoClear,
             render: renderUnderWay(),
@@ -95,7 +105,7 @@ async function mount({
     );
     return draws;
   };
-  return { renderer, nextFrame };
+  return { gl: captured.current!, renderer, nextFrame };
 }
 
 function namesOf(draws: Draw[]): (string | null)[] {
@@ -120,6 +130,19 @@ describe('<Compositor> on the root canvas', () => {
     expect(draws[0]?.bound?.texture.type).toBe(THREE.HalfFloatType);
     expect(draws[0]?.scene).toBe(renderer.scene.instance);
     expect(draws.at(-1)?.bound).toBeNull();
+  });
+
+  it.each([false, true])('profiles its own draws when performance is enabled: %s', async (performance) => {
+    const { gl, renderer, nextFrame } = await mount({
+      Wrapper: ({ children }) => <ViewShowProvider show={{ performance }}>{children}</ViewShowProvider>,
+    });
+    const profile = startFrameProfile(gl, () => {});
+    profile.beginFrame(0);
+    const draws = await nextFrame();
+    expect(draws.map(({ step }) => step)).toEqual(performance ? ['Compositor', 'Compositor'] : [null, null]);
+    expect(innermostStep(gl)).toBeNull();
+    profile.stop();
+    await renderer.unmount();
   });
 
   it('resizes the world buffer in place when the canvas resizes', async () => {

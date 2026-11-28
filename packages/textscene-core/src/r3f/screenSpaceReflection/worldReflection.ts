@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import type { ScreenSpaceReflection } from '../../resources/environment/types.js';
-import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { withFrameStep } from '../frameProfile/frameProfile.js';
 import { leaveSlot } from '../sharedTexture.js';
 import type { PrepassBuffers } from '../screenSpaceEffects/prepassBuffers.js';
 import { FittedBuffers } from '../screenSpaceEffects/fittedBuffers.js';
@@ -67,9 +67,9 @@ export class WorldReflection {
       isOrthogonal: (camera as THREE.OrthographicCamera).isOrthographicCamera === true,
       ssr,
     };
-    beginStep(renderer, 'Screen-space reflection');
-    traceReflection(renderer, prepass, buffers, inputs);
-    endStep(renderer, 'Screen-space reflection');
+    withFrameStep(renderer, 'Screen-space reflection', () => {
+      traceReflection(renderer, prepass, buffers, inputs);
+    });
   }
 
   /**
