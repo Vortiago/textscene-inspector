@@ -71,11 +71,12 @@ AnimationTree dominant-clip playhead guard added 10 B.
   fails when they hold a module loaded only on demand, that is a dynamic `import()` target or a
   module no static import from the entry reaches. The web previewer job checks this for the dev
   edition, and `pnpm build:pages` checks it for the public edition. Only the public edition also
-  fails over a gzipped ceiling, 1,303,447 B, which a change raises by its measured growth as above.
+  fails over a gzipped ceiling, 1,304,025 B, which a change raises by its measured growth as above.
   The 2D pan and zoom with no scene render and the scene-render count added 62 B to it, and the
   2D light pass that keeps its buffers while its inputs hold (ADR-0095) added 502 B, and its review fixes 543 B.
   Replaying instanced BoneAttachment3D setters and retaining the bone poses they read adds 3,072 B.
   The shared decal and area light atlas owner and its fitting raised the public first paint from
   1,303,024 B to 1,303,447 B, an increase of 423 B and 129 B above the previous ceiling.
+  Keeping each resource decode with its live scene or file added 578 B, from 1,303,447 B to 1,304,025 B.
   The dev first paint holds the generated fixture manifest, which grows with each fixture. The three.js chunk holds only the three.js build, so
   the addons a dynamic `import()` reaches stay out of it.

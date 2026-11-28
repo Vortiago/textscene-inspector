@@ -11,7 +11,7 @@ export interface CacheSource<T> {
   getCached: (path: string) => T | null | undefined;
 }
 
-// A saved reader can identify its source without keeping the loader alive.
+// The identity token holds no reference to its loader.
 const identityOf = perObject((_source: object) => ({}));
 
 /** @canonical The owner shared by readers of one file cache */
