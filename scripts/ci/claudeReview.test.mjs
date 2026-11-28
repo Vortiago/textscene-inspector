@@ -12,7 +12,12 @@ const temp = mkdtempSync(join(tmpdir(), 'claude-review-'));
 const script = join(temp, 'verify.cjs');
 writeFileSync(script, verify.run);
 afterAll(() => rmSync(temp, { recursive: true, force: true }));
-const target = `owner/repo/pull/12 (git diff ${'a'.repeat(40)}...${'b'.repeat(40)})`;
+const diff = `git diff ${'a'.repeat(40)}...${'b'.repeat(40)}`;
+const target = `owner/repo/pull/12 (${diff})`;
+const request = workflow.jobs.review.steps
+  .find((step) => step.id === 'claude')
+  .with.prompt.replace('/code-review high --comment ', '')
+  .replace('${{ steps.review.outputs.target }}', target);
 const run = { session_id: 'session', task_id: 'review', run_id: 'run' };
 const start = {
   ...run,
@@ -21,7 +26,7 @@ const start = {
   description: '/code-review',
   task_type: 'local_agent',
   spawn_depth: 1,
-  prompt: `Review target: \`${target}\`\n\nReview instructions`,
+  prompt: `Review target: \`${request}\`\n\nReview instructions`,
 };
 const config = join(temp, 'config');
 const transcript = join(
@@ -58,15 +63,32 @@ const finding = {
   failure_scenario: 'Example input.',
 };
 
-function check(messages, answer = '[]') {
+const identity = { sessionId: run.session_id, agentId: run.task_id };
+const call = { type: 'tool_use', id: 'call', name: 'Bash', input: { command: diff } };
+const output = {
+  type: 'tool_result',
+  tool_use_id: call.id,
+  is_error: false,
+  content: 'diff --git a/foo b/foo',
+};
+function inspection(request = call, response = output) {
+  return [
+    { ...identity, type: 'assistant', message: { content: [request] } },
+    { ...identity, type: 'user', message: { content: [response] } },
+  ];
+}
+
+function check(messages, answer = '[]', reads = inspection()) {
   const entry = {
     type: 'assistant',
-    sessionId: run.session_id,
-    agentId: run.task_id,
+    ...identity,
     message: { role: 'assistant', stop_reason: 'end_turn', content: [{ type: 'text', text: answer }] },
   };
-  writeFileSync(transcript, [entry, { type: 'attachment' }].map((row) => JSON.stringify(row)).join('\n'));
-  writeFileSync(foreignTranscript, JSON.stringify(entry));
+  writeFileSync(
+    transcript,
+    [...reads, entry, { type: 'attachment' }].map((row) => JSON.stringify(row)).join('\n')
+  );
+  writeFileSync(foreignTranscript, readFileSync(transcript));
   const file = join(temp, 'execution.json');
   if (messages) writeFileSync(file, JSON.stringify(messages));
   const summary = join(temp, 'summary.md');
@@ -76,6 +98,7 @@ function check(messages, answer = '[]') {
       CLAUDE_CONFIG_DIR: config,
       EXECUTION_FILE: messages ? file : '',
       REVIEW_TARGET: target,
+      REVIEW_DIFF: diff,
       GITHUB_STEP_SUMMARY: summary,
     },
     encoding: 'utf8',
@@ -85,11 +108,13 @@ function check(messages, answer = '[]') {
 
 describe('the hosted Claude review', () => {
   it.each([
-    ['[]', '0 findings'],
+    ['[]', '0 findings', inspection(call, { ...output, content: '(Bash completed with no output)' })],
+    ['No issues.\n```json\n[]\n```\nFinished.', '0 findings'],
     [JSON.stringify([finding]), '1 finding'],
+    ['Reviewed.\n```json\n' + JSON.stringify([finding]) + '\n```\nPosted.', '1 finding'],
     ['```json\n' + JSON.stringify([finding, finding]) + '\n```', '2 findings'],
-  ])('reports the completed task’s count in the log and summary', (answer, count) => {
-    const checked = check([start, completed, result], answer);
+  ])('reports the completed task’s count in the log and summary', (answer, count, reads) => {
+    const checked = check([start, completed, result], answer, reads);
     expect(checked.status).toBe(0);
     const receipt = `Claude reviewed ${target}: ${count}.`;
     expect(checked.stdout.trim()).toBe(receipt);
@@ -119,9 +144,44 @@ describe('the hosted Claude review', () => {
       'task transcript',
     ],
     ['wrapper wording as the task answer', [start, completed, result], 'findings array', result.result],
+    [
+      'ambiguous JSON findings',
+      [start, completed, result],
+      'findings array',
+      '```json\n[]\n```\n```json\n[]\n```',
+    ],
+    ['missing diff read', [start, completed, result], 'git diff', '[]', []],
+    [
+      'failed diff read',
+      [start, completed, result],
+      'git diff',
+      '[]',
+      inspection(call, { ...output, is_error: true }),
+    ],
+    [
+      'wrong range',
+      [start, completed, result],
+      'git diff',
+      '[]',
+      inspection({ ...call, input: { command: 'git diff HEAD' } }),
+    ],
+    [
+      'unrelated tool result',
+      [start, completed, result],
+      'git diff',
+      '[]',
+      inspection(call, { ...output, tool_use_id: 'x' }),
+    ],
+    [
+      'background diff',
+      [start, completed, result],
+      'git diff',
+      '[]',
+      inspection({ ...call, input: { command: diff, run_in_background: true } }),
+    ],
     ['malformed finding', [start, completed, result], 'findings array', '[{}]'],
-  ])('rejects a %s', (_reason, messages, expected, answer) => {
-    const checked = check(messages, answer);
+  ])('rejects a %s', (_reason, messages, expected, answer, reads) => {
+    const checked = check(messages, answer, reads);
     expect(checked.status).toBe(1);
     expect(checked.stderr).toContain(`::error::${target}: `);
     expect(checked.stderr).toContain(expected);
