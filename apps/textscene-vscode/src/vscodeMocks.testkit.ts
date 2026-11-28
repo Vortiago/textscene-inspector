@@ -13,24 +13,23 @@ import type * as vscode from 'vscode';
 export { mockWorkspace } from './vscodeWorkspaceMock.testkit';
 export { mockWindow } from './vscodeWindowMock.testkit';
 
-/**
- * Typed as the real `Uri`, so it passes wherever the API asks for one, though
- * its `with` spy returns `undefined` where the interface promises a `Uri`. No
- * caller calls `with`.
- */
 export function createMockUri(fsPath: string): vscode.Uri {
+  return createMockUriForScheme(fsPath, 'file', '');
+}
+
+export function createMockUriForScheme(fsPath: string, scheme: string, authority: string): vscode.Uri {
   const normalizedPath = fsPath.replace(/\\/g, '/');
 
   return {
-    fsPath: fsPath,
+    fsPath,
     path: normalizedPath,
-    scheme: 'file',
-    authority: '',
+    scheme,
+    authority,
     query: '',
     fragment: '',
-    with: vi.fn(),
-    toString: () => `file://${normalizedPath}`,
-    toJSON: () => ({ fsPath, path: normalizedPath, scheme: 'file' }),
+    with: vi.fn(({ path }: { path?: string }) => createMockUriForScheme(path ?? fsPath, scheme, authority)),
+    toString: () => `${scheme}://${authority}${normalizedPath}`,
+    toJSON: () => ({ fsPath, path: normalizedPath, scheme }),
   } as unknown as vscode.Uri;
 }
 

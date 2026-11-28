@@ -5,10 +5,9 @@
 
 import * as vscode from 'vscode';
 import { resPathOccurrences } from '@textscene/core/languageFeatures';
-import { existingResFile } from './existingResFile';
-import { resRootOf } from './resRoot';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
+import type { WorkspaceResRoots } from './resRoots/workspaceResRoots';
 
 export class TscnResourceDocumentLink extends vscode.DocumentLink {
   constructor(
@@ -21,6 +20,8 @@ export class TscnResourceDocumentLink extends vscode.DocumentLink {
 }
 
 export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<TscnResourceDocumentLink> {
+  constructor(private readonly roots: WorkspaceResRoots) {}
+
   /** Computes ranges only, from the engine's scan, with no IO. */
   provideDocumentLinks(
     document: vscode.TextDocument,
@@ -31,19 +32,13 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
     );
   }
 
-  /**
-   * Resolves the link the user hovers or clicks against the document's `res://` root. A document outside every
-   * workspace folder gets no target. Nor does a path that climbs out of the root, a missing file or a directory, since
-   * none names a file to open. The `tscn-lsp` server answers the same. The walk runs on each resolve, a few `stat`s,
-   * so a `project.godot` created later counts at once.
-   */
+  /** Resolves the link against the document's current `res://` root. */
   async resolveDocumentLink(
     link: TscnResourceDocumentLink,
     _token: vscode.CancellationToken
   ): Promise<TscnResourceDocumentLink | undefined> {
-    const resRoot = await resRootOf(link.documentUri);
-    if (!resRoot) return undefined;
-    const target = await existingResFile(resRoot, link.resourcePath);
+    const root = await this.roots.rootOf(link.documentUri);
+    const target = await root?.existingFile(link.resourcePath);
     if (!target) return undefined;
     link.target = target;
     return link;

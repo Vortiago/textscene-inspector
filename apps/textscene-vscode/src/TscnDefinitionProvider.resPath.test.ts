@@ -6,6 +6,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { createMockDocument } from './TscnDefinitionProvider.testkit';
 import { createMockUri, vscode as vscodeMocks } from './test-setup';
 
@@ -26,7 +27,7 @@ function arrangeWorkspace(files: readonly string[]): void {
 
 async function definitionOnPath(): Promise<vscode.Location | null> {
   const document = createMockDocument(LINE, '/workspace/scenes/door.tscn');
-  return new TscnDefinitionProvider().provideDefinition(
+  return new TscnDefinitionProvider(createWorkspaceResRoots()).provideDefinition(
     document,
     new vscode.Position(0, LINE.indexOf('art/')),
     TOKEN
