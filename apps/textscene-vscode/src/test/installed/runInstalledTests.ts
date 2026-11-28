@@ -87,7 +87,23 @@ function prepareCleanProfile(paths: InstalledLaunchPaths): void {
   writeSmokeProject(paths.workspaceRoot);
 }
 
-main().catch((err) => {
-  console.error('Failed to run tests:', err);
-  process.exit(1);
-});
+async function exitAfterLogs(code: number): Promise<never> {
+  await Promise.all(
+    [process.stdout, process.stderr].map(
+      (stream) => new Promise<void>((resolve) => stream.write('', () => resolve()))
+    )
+  );
+  process.exit(code);
+}
+
+main()
+  .then(() => {
+    // An interrupted VS Code download can leave a tar child holding the event loop open.
+    const resources = process.getActiveResourcesInfo();
+    console.log('Active Node resources after installed tests:', resources.join(', ') || 'none');
+    return exitAfterLogs(0);
+  })
+  .catch((err) => {
+    console.error('Failed to run tests:', err);
+    return exitAfterLogs(1);
+  });
