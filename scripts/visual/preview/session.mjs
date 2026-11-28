@@ -20,9 +20,9 @@ export async function withPreviewBrowser(
 ) {
   const release = await acquireBuildLock({ portEnvName });
   try {
-    ensureWebBuilt();
+    ensureWebBuilt(release.ownerPath);
     await assertPortFree(port, portEnvName);
-    const { proc, baseUrl } = startPreview(port);
+    const { proc, baseUrl } = startPreview(port, release.ownerPath);
     let browser;
     try {
       await waitForServer(`${baseUrl}/`);

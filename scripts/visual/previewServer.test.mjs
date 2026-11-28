@@ -403,7 +403,7 @@ ${keepAlive ? 'setTimeout(() => {}, 120000);' : 'proc.unref();'}
     expect(reaped).toBe(true);
   }, 20000);
 
-  it('waits until the preview process closes its listener', async () => {
+  it('waits until the preview process exits after SIGTERM', async () => {
     const child = spawn(
       process.execPath,
       [
@@ -425,6 +425,22 @@ ${keepAlive ? 'setTimeout(() => {}, 120000);' : 'proc.unref();'}
     }
   });
 
+  it('stops Vite by its own pid on Windows', async () => {
+    const proc = Object.assign(new EventEmitter(), { pid: 4242, exitCode: null, signalCode: null });
+    const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform');
+    try {
+      Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
+      const stopped = killPreviewGroup(proc);
+      proc.emit('exit');
+      await stopped;
+      expect(kill).toHaveBeenCalledWith(4242, 'SIGTERM');
+    } finally {
+      Object.defineProperty(process, 'platform', platform);
+      kill.mockRestore();
+    }
+  });
+
   it('is the teardown startPreview registers for the group it spawns', () => {
     const proc = Object.assign(new EventEmitter(), { pid: 4242, exitCode: null, signalCode: null });
     spawn.mockReturnValueOnce(proc);
@@ -433,6 +449,9 @@ ${keepAlive ? 'setTimeout(() => {}, 120000);' : 'proc.unref();'}
     const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
     try {
       startPreview(1);
+      const [executable, args] = spawn.mock.lastCall;
+      expect(executable).toBe(process.execPath);
+      expect(args.find((arg) => arg.endsWith('vite.js'))).toMatch(/vite[/\\]bin[/\\]vite\.js$/);
       const handlers = Object.fromEntries([...once.mock.calls, ...on.mock.calls]);
       expect(Object.keys(handlers).sort()).toEqual(['SIGHUP', 'SIGINT', 'SIGTERM', 'exit']);
       handlers.exit();

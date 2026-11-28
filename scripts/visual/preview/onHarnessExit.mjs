@@ -24,9 +24,11 @@ export function onHarnessExit(cleanup) {
   }
   cleanups.add(cleanup);
   return () => {
-    cleanups.delete(cleanup);
-    if (cleanups.size) return;
-    process.off('exit', onExit);
-    for (const signal of signals) process.off(signal, onSignal);
+    if (!cleanups.delete(cleanup)) return false;
+    if (!cleanups.size) {
+      process.off('exit', onExit);
+      for (const signal of signals) process.off(signal, onSignal);
+    }
+    return true;
   };
 }

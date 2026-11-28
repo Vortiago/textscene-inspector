@@ -3,12 +3,13 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
+  renameSync,
   rmdirSync,
   statSync,
-  unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { onHarnessExit } from './onHarnessExit.mjs';
 import { REPO_ROOT } from './paths.mjs';
@@ -52,7 +53,7 @@ export function buildLockState(text, ageMs, runs) {
 
 function removeOwner(lock, file) {
   try {
-    if (file) unlinkSync(join(lock, file));
+    if (file) rmSync(join(lock, file), { force: true });
     // A competing waiter can already own this path. Only an empty directory is safe to remove.
     rmdirSync(lock);
   } catch (error) {
@@ -60,7 +61,23 @@ function removeOwner(lock, file) {
   }
 }
 
-function tryAcquire(lock, file, owner) {
+function publishOwner(lock, file) {
+  const owner = {
+    pid: process.pid,
+    command: process.argv.join(' ').replace(/[\r\n]+/g, ' '),
+    startedAt: new Date().toISOString(),
+  };
+  const staging = join(lock, `${file}.tmp`);
+  try {
+    writeFileSync(staging, JSON.stringify(owner), { flag: 'wx' });
+    // A waiter that read partial JSON can only remove the staging name, never the published record.
+    renameSync(staging, join(lock, file));
+  } finally {
+    rmSync(staging, { force: true });
+  }
+}
+
+function tryAcquire(lock, file) {
   try {
     mkdirSync(lock);
   } catch (error) {
@@ -68,7 +85,7 @@ function tryAcquire(lock, file, owner) {
     throw error;
   }
   try {
-    writeFileSync(join(lock, file), JSON.stringify(owner), { flag: 'wx' });
+    publishOwner(lock, file);
     // A waiter can remove an old empty directory between mkdir and the write. Verify sole ownership.
     const files = readdirSync(lock);
     if (files.length === 1 && files[0] === file) return true;
@@ -84,7 +101,8 @@ function tryAcquire(lock, file, owner) {
 
 function inspectLock(lock) {
   try {
-    const [file] = readdirSync(lock);
+    const files = readdirSync(lock);
+    const file = files.find((name) => name.startsWith('harness-')) ?? files[0];
     const path = file ? join(lock, file) : lock;
     let text = '';
     if (file) {
@@ -102,13 +120,36 @@ function inspectLock(lock) {
   }
 }
 
+function pruneStaleOwners(lock) {
+  for (;;) {
+    const current = inspectLock(lock);
+    if (current?.state !== 'stale') return current;
+    removeOwner(lock, current.file);
+  }
+}
+
 function releaseOnExit(lock, file) {
   const unregister = onHarnessExit(release);
   function release() {
-    unregister();
+    if (!unregister()) return;
     removeOwner(lock, file);
+    pruneStaleOwners(lock);
   }
-  return release;
+  return Object.assign(release, { ownerPath: join(lock, file) });
+}
+
+export function joinBuildLock(ownerPath) {
+  const lock = dirname(ownerPath);
+  const file = `${randomUUID()}.json`;
+  try {
+    publishOwner(lock, file);
+    // A child spawned before a takeover can start after it. It must still see its own generation.
+    statSync(ownerPath);
+  } catch (error) {
+    removeOwner(lock, file);
+    throw error;
+  }
+  return releaseOnExit(lock, file);
 }
 
 export async function acquireBuildLock({
@@ -123,22 +164,13 @@ export async function acquireBuildLock({
   const cache = join(root, 'node_modules', '.cache');
   mkdirSync(cache, { recursive: true });
   const lock = join(cache, 'textscene-harness.lock');
-  const file = `${randomUUID()}.json`;
-  const owner = {
-    pid: process.pid,
-    command: process.argv.join(' ').replace(/[\r\n]+/g, ' '),
-    startedAt: new Date().toISOString(),
-  };
+  const file = `harness-${randomUUID()}.json`;
   const deadline = performance.now() + waitMs;
   let announced = false;
   for (;;) {
-    if (tryAcquire(lock, file, owner)) return releaseOnExit(lock, file);
-    const current = inspectLock(lock);
+    if (tryAcquire(lock, file)) return releaseOnExit(lock, file);
+    const current = pruneStaleOwners(lock);
     if (!current) continue;
-    if (current.state === 'stale') {
-      removeOwner(lock, current.file);
-      continue;
-    }
     const holder = current.owner;
     const description = holder
       ? `PID ${holder.pid} (${holder.command}, started ${holder.startedAt})`

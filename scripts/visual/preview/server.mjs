@@ -33,15 +33,24 @@ export async function assertPortFree(port, envVarName = 'VISUAL_PORT') {
   }
 }
 
-export function startPreview(port) {
-  // The pnpm executable shim replaces itself with Vite, so exit confirms the listening process stopped.
+export function startPreview(port, ownerPath) {
+  // The child is the listening process on Windows and POSIX.
   const cwd = join(REPO_ROOT, 'apps/textscene-web');
   const proc = spawn(
-    join(cwd, 'node_modules/.bin/vite'),
-    ['preview', '--port', String(port), '--strictPort'],
+    process.execPath,
+    [
+      '--import',
+      new URL('./childBuildLock.mjs', import.meta.url).href,
+      join(cwd, 'node_modules/vite/bin/vite.js'),
+      'preview',
+      '--port',
+      String(port),
+      '--strictPort',
+    ],
     {
       cwd,
-      stdio: 'ignore',
+      env: { ...process.env, TEXTSCENE_PREVIEW_LOCK_OWNER: ownerPath, TEXTSCENE_PREVIEW_SERVER: '1' },
+      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
       detached: true,
     }
   );
@@ -61,7 +70,7 @@ export async function killPreviewGroup(proc, signal = 'SIGTERM') {
   if (proc.exitCode !== null || proc.signalCode !== null) return;
   const stopped = once(proc, 'exit');
   try {
-    process.kill(-proc.pid, signal);
+    process.kill(process.platform === 'win32' ? proc.pid : -proc.pid, signal);
   } catch (error) {
     if (error.code !== 'ESRCH') throw error;
   }

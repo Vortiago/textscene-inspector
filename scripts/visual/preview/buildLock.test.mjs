@@ -1,4 +1,5 @@
 import { expect, it, onTestFinished, vi } from 'vitest';
+import fs from 'node:fs';
 import {
   existsSync,
   mkdirSync,
@@ -13,7 +14,26 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { acquireBuildLock, buildLockState } from './buildLock.mjs';
+import { acquireBuildLock, buildLockState, joinBuildLock } from './buildLock.mjs';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, writeFileSync: vi.fn(actual.writeFileSync) };
+});
+
+it('keeps the live record when a waiter removes a record it read during the write', async () => {
+  const { root } = checkout();
+  let partial;
+  writeFileSync.mockImplementationOnce((path, contents, options) => {
+    fs.writeFileSync(path, '', options);
+    partial = path;
+    fs.writeFileSync(path, contents);
+  });
+  const release = await acquireBuildLock({ root });
+  onTestFinished(release);
+  rmSync(partial, { force: true });
+  expect(existsSync(release.ownerPath)).toBe(true);
+});
 
 it('waits for the first harness to release the same working copy', async () => {
   const { root } = checkout();
@@ -136,7 +156,7 @@ it('takes over a dead process without releasing the next holder', async () => {
   expect(existsSync(lock)).toBe(true);
 });
 
-it('admits one process at a time after simultaneous stale lock reads', async () => {
+it('admits four contenders one at a time after the holder dies', async () => {
   const { root, lock } = checkout();
   const { child, exited } = await childHolder(root);
   child.kill('SIGKILL');
@@ -166,3 +186,40 @@ it('admits one process at a time after simultaneous stale lock reads', async () 
   expect(results).toEqual(Array(4).fill([0, null]));
   expect(existsSync(lock)).toBe(false);
 }, 15_000);
+
+it('keeps a build step and its children under the lock after the harness exits', async () => {
+  const { root, lock } = checkout();
+  const harness = await acquireBuildLock({ root });
+  const build = joinBuildLock(harness.ownerPath);
+  harness();
+  const step = joinBuildLock(build.ownerPath);
+  build();
+  vi.stubEnv('HARNESS_LOCK_WAIT_MS', '0');
+  onTestFinished(() => vi.unstubAllEnvs());
+  try {
+    await expect(acquireBuildLock({ root })).rejects.toThrow(/lock held/);
+  } finally {
+    step();
+  }
+  expect(existsSync(lock)).toBe(false);
+});
+
+it('refuses a delayed child after a new harness takes the working copy', async () => {
+  const { root } = checkout();
+  const first = await acquireBuildLock({ root });
+  first();
+  const next = await acquireBuildLock({ root });
+  onTestFinished(next);
+  expect(() => joinBuildLock(first.ownerPath)).toThrow(/ENOENT/);
+  expect(existsSync(next.ownerPath)).toBe(true);
+});
+
+it('removes the record of a force-stopped child when its harness releases', async () => {
+  const { root, lock } = checkout();
+  const harness = await acquireBuildLock({ root });
+  const child = spawn(process.execPath, ['-e', '']);
+  await once(child, 'exit');
+  writeFileSync(join(lock, 'child.json'), JSON.stringify({ ...owner, pid: child.pid }));
+  harness();
+  expect(existsSync(lock)).toBe(false);
+});
