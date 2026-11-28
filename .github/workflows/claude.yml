@@ -141,6 +141,7 @@ jobs:
           git -C godot-4.7.2 sparse-checkout set scene modules servers core
 
       # A question waits for an answer that never comes, so the config denies the question tool.
+      # Warming keeps the prompt cache while one command runs past the cache's five minutes.
       - name: Install OpenCode
         run: |
           npm install --global @opencode/cli@2.4.2
@@ -148,6 +149,7 @@ jobs:
           {
             "$schema": "https://opencode.ai/config.json",
             "update": "disable",
+            "warming": true,
             "permissions": [{ "action": "question", "resource": "*", "effect": "deny" }]
           }
           JSON
