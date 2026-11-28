@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import type { ScreenSpaceAmbientOcclusion } from '../../resources/environment/types.js';
 import type { SsaoProjectSettings } from '../../godot/rendering/environment/screenSpaceAmbientOcclusion.js';
-import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { withFrameStep } from '../frameProfile/frameProfile.js';
 import { leaveSlot } from '../sharedTexture.js';
 import type { PrepassBuffers } from '../screenSpaceEffects/prepassBuffers.js';
 import { FittedBuffers } from '../screenSpaceEffects/fittedBuffers.js';
@@ -42,9 +42,9 @@ export class WorldOcclusion {
     const { quality, isHalfSize, ssilQuality, isSsilHalfSize } = project;
     const shaping = { quality, isHalfSize, ssilQuality, isSsilHalfSize };
     const buffers = this.buffers.fit(renderer, { width, height, project: shaping });
-    beginStep(renderer, 'Screen-space ambient occlusion');
-    generateOcclusion(renderer, prepass, buffers, { projection: camera.projectionMatrix, ssao, project });
-    endStep(renderer, 'Screen-space ambient occlusion');
+    withFrameStep(renderer, 'Screen-space ambient occlusion', () => {
+      generateOcclusion(renderer, prepass, buffers, { projection: camera.projectionMatrix, ssao, project });
+    });
   }
 
   release(renderer: THREE.WebGLRenderer): void {

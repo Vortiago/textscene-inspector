@@ -1,12 +1,10 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { addAfterEffect, addEffect, useFrame, useThree } from '@react-three/fiber';
+import { addAfterEffect, addEffect, useThree } from '@react-three/fiber';
 import { useViewShow } from '../viewShow/ViewShowContext.js';
-import { beginStep, countSceneRender, endStep, startFrameCount, type FrameProfile } from './frameProfile.js';
+import { countSceneRender, startFrameCount, type FrameProfile } from './frameProfile.js';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import { timeSceneDraws } from './sceneDrawStep.js';
-import { VIEW_DRAW_COUNTER } from './viewDraw.js';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
-import type { RenderStep } from './frameStats.js';
 
 /** Mounted once in each top-level `<Canvas>`. Only `show.performance` times the steps: a GPU query each. */
 export function FrameProfiler(): null {
@@ -16,7 +14,7 @@ export function FrameProfiler(): null {
   const get = useThree((state) => state.get);
   const store = useViewStatusStore();
   // Godot's monitor counts the 3D scene render only, so a 2D view counts no object.
-  const counter = useCanvasWorkspace() === '3d' ? VIEW_DRAW_COUNTER : null;
+  const countsSurfaces = useCanvasWorkspace() === '3d';
   const [profile, setProfile] = useState<FrameProfile | null>(null);
 
   useEffect(() => {
@@ -26,7 +24,7 @@ export function FrameProfiler(): null {
     // Global effects bracket every root's subscribers and renders in R3F's loop.
     const stopBeginning = addEffect((timestamp) => profile.beginFrame(timestamp));
     const stopEnding = addAfterEffect(() => profile.endFrame());
-    const stopDrawing = timeSceneDraws(gl, scene, () => get().camera, counter);
+    const stopDrawing = timeSceneDraws(gl, scene, () => get().camera, countsSurfaces);
     return () => {
       stopDrawing();
       stopBeginning();
@@ -35,7 +33,7 @@ export function FrameProfiler(): null {
       setProfile(null);
       store.frameMeasured(null);
     };
-  }, [gl, scene, get, store, counter]);
+  }, [gl, scene, get, store, countsSurfaces]);
 
   // The count keeps running, so a switch of `show.performance` leaves `status().frame` in place.
   useEffect(() => {
@@ -44,21 +42,6 @@ export function FrameProfiler(): null {
     return () => profile.stopTimings();
   }, [profile, isTimed]);
 
-  return null;
-}
-
-/**
- * Times the `useFrame` subscribers at `priority` as `step`. R3F runs subscribers in priority order,
- * so a marker half a priority either side brackets every subscriber at `priority`. Mount it only
- * beside a subscriber with a positive priority: a positive marker turns off R3F's own render.
- */
-export function SubscriberStep({ step, priority }: { step: RenderStep; priority: number }) {
-  return useViewShow().performance ? <SubscriberStepMarkers step={step} priority={priority} /> : null;
-}
-
-function SubscriberStepMarkers({ step, priority }: { step: RenderStep; priority: number }): null {
-  useFrame(({ gl }) => beginStep(gl, step), priority - 0.5);
-  useFrame(({ gl }) => endStep(gl, step), priority + 0.5);
   return null;
 }
 

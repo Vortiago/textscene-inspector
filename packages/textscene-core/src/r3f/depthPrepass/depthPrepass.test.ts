@@ -129,10 +129,13 @@ describe('createDepthPrepassSentinel', () => {
 });
 
 describe('the depth prepass under a frame profile', () => {
-  it('times its draws as the Depth prepass step', () => {
+  it.each([false, true])('times only its draws when a surface throws: %s', (throws) => {
     let time = 0;
     const renderer = {
-      renderBufferDirect: () => (time += 1),
+      renderBufferDirect: () => {
+        time += 1;
+        if (throws) throw new Error('surface draw failed');
+      },
       ...profiledRendererMembers(),
     } as unknown as THREE.WebGLRenderer;
     const sentinel = createDepthPrepassSentinel();
@@ -144,12 +147,17 @@ describe('the depth prepass under a frame profile', () => {
     const stats = profiledWindow(
       renderer,
       () => time,
-      () => sentinel.mesh.onBeforeRender(...args)
+      () => {
+        const draw = () => sentinel.mesh.onBeforeRender(...args);
+        if (throws) expect(draw).toThrow('surface draw failed');
+        else draw();
+        time += 1;
+      }
     );
 
     expect(stepCpuMs(stats)).toEqual([
-      ['Depth prepass', 2],
-      ['Other', 0],
+      ['Depth prepass', throws ? 1 : 2],
+      ['Other', 1],
     ]);
   });
 });

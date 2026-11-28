@@ -1,26 +1,30 @@
 import { describe, expect, it } from 'vitest';
+import { fireSceneRenderEnd } from '../testing/fireSceneRender';
 import * as THREE from 'three';
-import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
-import { beginStep, countShadowDraws, endStep } from './frameProfile';
+import { withFrameStep, countShadowDraws } from './frameProfile';
 import { cpuOnlyRenderer, profiledWindow, stepCpuMs } from './frameProfile.testkit';
 import { timeSceneDraws } from './sceneDrawStep';
-import { VIEW_DRAW_COUNTER, type ViewDrawCounter } from './viewDraw';
 
-/** A canvas draw timed with `counter`, the 3D view's unless a test names another. */
-function setup(counter: ViewDrawCounter | null = VIEW_DRAW_COUNTER) {
+function setup(countsSurfaces = true) {
   const renderer = cpuOnlyRenderer();
   const scene = new THREE.Scene();
   const canvasCamera = new THREE.PerspectiveCamera();
   const clock = { time: 0 };
-  /** A render of the scene through `camera` that takes 2 ms. */
-  const draw = (camera: THREE.Camera) => {
-    fireSceneRender(scene, camera);
+  renderer.render = (drawn, camera) => {
     clock.time += 2;
-    fireSceneRenderEnd(scene, camera);
+    fireSceneRenderEnd(drawn, camera);
   };
-  const stop = timeSceneDraws(renderer, scene, () => canvasCamera, counter);
+  const stop = timeSceneDraws(renderer, scene, () => canvasCamera, countsSurfaces);
+  const draw = (camera: THREE.Camera) => renderer.render(scene, camera);
   const window = (frame: () => void) => profiledWindow(renderer, () => clock.time, frame);
-  return { renderer, scene, canvasCamera, draw, stop, window };
+  return { renderer, scene, canvasCamera, draw, stop, window, clock };
+}
+
+function addBox(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
+  const geometry = new THREE.BoxGeometry();
+  const object = new THREE.Mesh(geometry);
+  scene.add(object);
+  renderer.renderLists.get(scene, 0).opaque.push({ object, geometry, group: null } as never);
 }
 
 describe('timeSceneDraws', () => {
@@ -40,9 +44,9 @@ describe('timeSceneDraws', () => {
   it('leaves a render inside another step, such as the 2D light pass, to that step (edge case)', () => {
     const { renderer, canvasCamera, draw, window } = setup();
     const stats = window(() => {
-      beginStep(renderer, '2D lights');
-      draw(canvasCamera);
-      endStep(renderer, '2D lights');
+      withFrameStep(renderer, '2D lights', () => {
+        draw(canvasCamera);
+      });
     });
     expect(stepCpuMs(stats)).toEqual([
       ['2D lights', 2],
@@ -53,14 +57,35 @@ describe('timeSceneDraws', () => {
   it("times the compositor's scene pass as the Scene draw step", () => {
     const { renderer, canvasCamera, draw, window } = setup();
     const stats = window(() => {
-      beginStep(renderer, 'Compositor');
-      draw(canvasCamera);
-      endStep(renderer, 'Compositor');
+      withFrameStep(renderer, 'Compositor', () => {
+        draw(canvasCamera);
+      });
     });
     expect(stepCpuMs(stats)).toEqual([
       ['Scene draw', 2],
       ['Compositor', 0],
       ['Other', 0],
+    ]);
+  });
+
+  it('closes the scene draw when the renderer throws inside the compositor', () => {
+    const { renderer, scene, canvasCamera, draw, clock, window } = setup();
+    addBox(renderer, scene);
+    scene.onAfterRender = () => {
+      throw new Error('draw failed');
+    };
+    const stats = window(() => {
+      withFrameStep(renderer, 'Compositor', () => {
+        expect(() => draw(canvasCamera)).toThrow('draw failed');
+        clock.time++;
+      });
+      clock.time++;
+    });
+    expect(stats).toMatchObject({ objectsPerFrame: 0, primitivesPerFrame: 0 });
+    expect(stepCpuMs(stats)).toEqual([
+      ['Scene draw', 2],
+      ['Compositor', 1],
+      ['Other', 1],
     ]);
   });
 
@@ -73,19 +98,15 @@ describe('timeSceneDraws', () => {
 
 describe('the objects and primitives a canvas draw counts', () => {
   /** The setup with a box in the render list, and a shadow pass that makes `shadowDraws` draw calls. */
-  function withBox(counter?: ViewDrawCounter | null) {
-    const context = setup(counter);
+  function withBox(countsSurfaces = true) {
+    const context = setup(countsSurfaces);
     const { renderer, canvasCamera } = context;
-    const geometry = new THREE.BoxGeometry();
-    const object = new THREE.Mesh(geometry);
-    context.scene.add(object);
-    renderer.renderLists.get(context.scene, 0).opaque.push({ object, geometry, group: null } as never);
+    addBox(renderer, context.scene);
     const shadowPass = (shadowDraws: number) =>
       countShadowDraws(renderer, () => (renderer.info.render.calls += shadowDraws));
     const drawWithShadows = (shadowDraws: number) => {
-      fireSceneRender(context.scene, canvasCamera);
-      shadowPass(shadowDraws);
-      fireSceneRenderEnd(context.scene, canvasCamera);
+      context.scene.onAfterRender = () => shadowPass(shadowDraws);
+      context.draw(canvasCamera);
     };
     return { ...context, shadowPass, drawWithShadows };
   }
@@ -109,16 +130,16 @@ describe('the objects and primitives a canvas draw counts', () => {
   });
 
   it('counts nothing of a 2D canvas draw, which has no counter (edge case)', () => {
-    const { canvasCamera, draw, window } = withBox(null);
+    const { canvasCamera, draw, window } = withBox(false);
     expect(window(() => draw(canvasCamera))).toMatchObject({ objectsPerFrame: 0, primitivesPerFrame: 0 });
   });
 
   it("counts no draw of another view's shadow pass, such as a sub-viewport's (edge case)", () => {
     const { renderer, shadowPass, window } = withBox();
     const stats = window(() => {
-      beginStep(renderer, 'SubViewports');
-      shadowPass(6);
-      endStep(renderer, 'SubViewports');
+      withFrameStep(renderer, 'SubViewports', () => {
+        shadowPass(6);
+      });
     });
     expect(stats.objectsPerFrame).toBe(0);
   });
