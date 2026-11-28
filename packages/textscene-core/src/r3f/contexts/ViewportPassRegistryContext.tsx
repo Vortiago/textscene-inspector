@@ -23,7 +23,7 @@ import { GateClock, renderingPassIds, type GatedPass, type PassGate } from '../v
 import { useOptionalHierarchy } from './HierarchyContext.js';
 import { useTreeOrder, type TreeOrder } from './TreeOrderContext.js';
 import { useSceneAssetsSettled } from '../useSceneAssetsSettled.js';
-import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { withFrameStep } from '../frameProfile/frameProfile.js';
 import { updateTextureAtlases, useTextureAtlasFrame } from '../textureAtlas/updateTextureAtlases.js';
 import { createExternalStore, type ExternalStore } from '../../utils/externalStore.js';
 import { useExternalStoreSelection, useExternalStoreValue } from '../hooks/createExternalStore.js';
@@ -236,16 +236,16 @@ export function ViewportPassOrchestrator(): null {
     updateTextureAtlases(gl);
     const frame = clock.begin(isLoaded);
     if (order.length === 0) return;
-    beginStep(gl, 'SubViewports');
-    const rendering = renderingPassIds(gated, frame);
-    for (const id of order) {
-      const pass = passes.get(id);
-      if (!pass || cycles.has(id)) continue;
-      if (pass.gate && !rendering.has(id)) continue;
-      pass.render();
-      clock.spend(id);
-    }
-    endStep(gl, 'SubViewports');
+    withFrameStep(gl, 'SubViewports', () => {
+      const rendering = renderingPassIds(gated, frame);
+      for (const id of order) {
+        const pass = passes.get(id);
+        if (!pass || cycles.has(id)) continue;
+        if (pass.gate && !rendering.has(id)) continue;
+        pass.render();
+        clock.spend(id);
+      }
+    });
     markSampled(clock, passes);
   });
 

@@ -9,7 +9,7 @@ import { drawKeyedObjects } from '../canvasKeyWindow';
 import { drawOffscreen } from '../offscreen/draw';
 import { withScenePose } from '../sceneRenderCamera';
 import { perObject } from '../../utils/perObject';
-import { beginStep, endStep } from '../frameProfile/frameProfile';
+import { withFrameStep } from '../frameProfile/frameProfile';
 import { clipOfCamera } from '../viewportRender/viewportLightPassHost';
 import type { CanvasClip } from '../lighting2d/lightPassHost';
 import {
@@ -88,15 +88,12 @@ function drawFittedGroups(
       (group): group is ClippingEntry => group.kind === 'clip' && group.readsBuffer && drawing.has(group)
     )
     .sort((a, b) => a.window.from - b.window.from);
-  beginStep(gl, 'Canvas groups');
-  try {
+  withFrameStep(gl, 'Canvas groups', () => {
     for (const group of outermost) {
       if (drawing.has(group) && group.kind === 'composite')
         withFrozenMatrices(scene, () => fillBuffer(gl, keyed, scene, camera, group, frame, inertOwners));
     }
-  } finally {
-    endStep(gl, 'Canvas groups');
-  }
+  });
   // A CLIP_ONLY owner with no listed child is skipped (`renderer_canvas_render_rd.cpp:841-843`).
   const skippedOwners = outermost.filter(
     (group) => group.kind === 'clip' && group.clip.mode === 'clipOnly' && !drawing.has(group)

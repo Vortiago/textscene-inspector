@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { copyTexels, reversedTexelRows, type TexelPlacement, type TexelTransfer } from '../texelCopy';
 import { takeOutputLikeDrawingBuffer } from '../outputTarget';
-import { beginStep, endStep } from '../frameProfile/frameProfile';
+import { withFrameStep } from '../frameProfile/frameProfile';
 import { drawOffscreen } from '../offscreen/draw';
 import type { CanvasColorSpace } from '../canvasColorSpace';
 import { drawCanvasGroups } from '../canvasGroup/canvasGroupPass';
@@ -24,12 +24,9 @@ function copyToTarget(
   target: THREE.WebGLRenderTarget | null,
   transfer: TexelTransfer
 ): void {
-  beginStep(gl, 'Canvas copy');
-  try {
+  withFrameStep(gl, 'Canvas copy', () => {
     copyTexels(gl, frame.texture, target, frame.rowsReversed(), transfer);
-  } finally {
-    endStep(gl, 'Canvas copy');
-  }
+  });
 }
 
 /**

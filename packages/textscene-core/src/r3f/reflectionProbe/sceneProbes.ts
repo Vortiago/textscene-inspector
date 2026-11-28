@@ -22,7 +22,7 @@ import {
 import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext.js';
 import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
 import { drawOffscreen } from '../offscreen/draw.js';
-import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { withFrameStep } from '../frameProfile/frameProfile.js';
 import { observeSceneCamera, observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { holdSceneRows, type SceneRows } from '../sceneRows/sceneRows.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
@@ -133,9 +133,9 @@ export class SceneProbes {
     this.markCapturesStale(clearColor);
     const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
     if (stale !== -1) {
-      beginStep(this.renderer, 'Reflection probes');
-      this.capture(probes[stale]!, stale, atlas, clearColor, viewport);
-      endStep(this.renderer, 'Reflection probes');
+      withFrameStep(this.renderer, 'Reflection probes', () => {
+        this.capture(probes[stale]!, stale, atlas, clearColor, viewport);
+      });
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
     if (stale !== -1 || !sameElements(captured, this.packed)) this.pack(captured);
