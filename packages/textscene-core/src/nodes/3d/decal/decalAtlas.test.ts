@@ -1,3 +1,4 @@
+import * as logger from '../../../logger';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -199,7 +200,7 @@ describe('the decal atlas', () => {
   });
 
   it('draws the decals that fit a smaller GPU texture and warns with both sizes (edge case)', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const fits = hold(dataTexture(64));
     const overflows = hold(dataTexture(300));
 
@@ -230,7 +231,7 @@ describe('the decal atlas', () => {
   });
 
   it('draws a texture it left out for size once another decal releases its room (edge case)', () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
     // Each 64 x 64 texture is 3 x 3 cells, two to a row of 8 columns: four fit 256 texels, a fifth needs 512.
     const textures = [0, 1, 2, 3, 4].map((shade) => hold(dataTexture(64, [shade, shade, shade, 255])));
     updateDecalAtlas(256);

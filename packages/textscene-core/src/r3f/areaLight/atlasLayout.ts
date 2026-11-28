@@ -19,7 +19,10 @@ import { fractionOfAtlas } from '../textureAtlas/atlasFraction.js';
 import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import { packCells, type CellSize } from '../textureAtlas/atlasPacking.js';
 import type { GodotImage } from '../textureAtlas/godotImage.js';
-import { areaTextureMipmaps, type PlacedTexture } from './atlasMipmaps.js';
+import type { ImageSize } from '../../resources/formats/image/imagePixels.js';
+import { mipSize, type MipLevel } from '../../resources/processing/mipChain.js';
+import type { AtlasLayout } from '../textureAtlas/fitAtlas.js';
+import { areaTextureMipmaps } from './atlasMipmaps.js';
 import { AREA_LIGHT_ATLAS_MIPMAPS } from '../../godot/rendering/lights/areaLightAtlas.js';
 
 /** Where a light finds its texture in the atlas. */
@@ -28,15 +31,6 @@ export interface AreaTexturePlacement {
   rect: Readonly<AtlasRect>;
   /** The highest mip the shader reads (`cone_angle` in the light buffer). */
   maxMipmap: number;
-}
-
-/** The atlas's linear RGBA8 mips, largest first, each first row the top row. */
-export interface AreaLightAtlas {
-  width: number;
-  height: number;
-  mipmaps: Uint8Array[];
-  /** One for each image, in the order given. */
-  placements: AreaTexturePlacement[];
 }
 
 /** Each texture takes whole cells of this side, plus one cell of border (`texture_storage.cpp:3361`). */
@@ -50,7 +44,7 @@ interface Cell extends CellSize {
 }
 
 /** A texture's cells, and the texels it fills: whole cells, or a power of two below one cell (`:3373-3383`). */
-function cellOf(image: GodotImage): Cell {
+function cellOf(image: ImageSize): Cell {
   const cellsX = Math.ceil(image.width / BORDER);
   const cellsY = Math.ceil(image.height / BORDER);
   return {
@@ -62,29 +56,36 @@ function cellOf(image: GodotImage): Cell {
 }
 
 /** Godot's `cone_angle` for an area light: the mips the texture's shorter side holds, up to the atlas's. */
-function maxMipmapOf(texture: PlacedTexture): number {
+function maxMipmapOf(texture: AtlasRect): number {
   const shorter = Math.max(Math.min(texture.width, texture.height), 1);
   return Math.min(Math.floor(Math.log2(shorter)), AREA_LIGHT_ATLAS_MIPMAPS) - 1;
 }
 
-/**
- * The atlas of `images`, in the order Godot adds them. With no image, the atlas is one blank cell
- * that still holds every mip (`:3460-3463`).
- */
-export function buildAreaLightAtlas(images: readonly GodotImage[]): AreaLightAtlas {
-  const cells = images.map(cellOf);
+// texture_storage.cpp:3345-3468
+export function buildAreaLightAtlas(sizes: readonly ImageSize[]): AtlasLayout {
+  const cells = sizes.map(cellOf);
   const { width, height, positions } = packCells(cells, 1, BORDER);
-  const placed = cells.map((cell, index): PlacedTexture => ({
-    image: images[index]!,
+  const rects = cells.map((cell, index) => ({
     x: positions[index]!.x * BORDER,
     y: positions[index]!.y * BORDER,
     width: cell.pixelWidth,
     height: cell.pixelHeight,
   }));
-  const placements = placed.map((texture): AreaTexturePlacement => ({
-    rect: fractionOfAtlas(texture, { width, height }),
-    maxMipmap: maxMipmapOf(texture),
+  return { width, height, rects };
+}
+
+export function areaPlacement(rect: AtlasRect, layout: AtlasLayout): AreaTexturePlacement {
+  return { rect: fractionOfAtlas(rect, layout), maxMipmap: maxMipmapOf(rect) };
+}
+
+export function areaAtlasLevels(
+  { width, height, rects }: AtlasLayout,
+  images: readonly GodotImage[]
+): MipLevel[] {
+  const placed = rects.map((rect, index) => ({ ...rect, image: images[index]! }));
+  return areaTextureMipmaps(width, height, placed).map((data, level) => ({
+    data,
+    width: mipSize(width, level),
+    height: mipSize(height, level),
   }));
-  const mipmaps = areaTextureMipmaps(width, height, placed);
-  return { width, height, mipmaps, placements };
 }
