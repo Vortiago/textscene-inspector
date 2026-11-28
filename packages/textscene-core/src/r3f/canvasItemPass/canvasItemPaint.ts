@@ -85,8 +85,7 @@ export function canvasPaintPassFrom(start: PaintRange): LiveScenePass<CanvasItem
   const key = `${start.base}:${start.size}`;
   let pass = passesByStart.get(key);
   if (!pass) {
-    // Each parse owns its last completed pass. An external scene shared by several views
-    // therefore retains neither an enclosing view's paths nor its paint ranges.
+    // Each parse owns its last completed pass, so a cached instance keeps no enclosing view's paint.
     const previousOf = perObject((_file: object) => ({ paints: new Map<string, CanvasItemPaint>() }));
     pass = (tree, snapshot) => {
       const headings = sceneHeadings(tree.roots);
