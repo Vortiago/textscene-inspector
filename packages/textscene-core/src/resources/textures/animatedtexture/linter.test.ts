@@ -87,6 +87,8 @@ describe('AnimatedTexture setters', () => {
   );
 
   it.each([
+    ['"a"', '"\ufeffa"'],
+    ['"\ufeffa"', '"a"'],
     ['true', '"true"'],
     ['@"a"', '"a"'],
     ['1e21', '"1000000000000000000000.0"'],

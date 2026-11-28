@@ -1,3 +1,4 @@
+import { fileString } from '../string/fileString.js';
 import { decimalFloat } from './decimalFloat.js';
 import { integerToken } from './integerToken.js';
 import { VARIANT_TYPE, variantTypeName } from './variantType.js';
@@ -15,7 +16,6 @@ import { DEFAULT_COLOR, htmlColor } from '../math/color.js';
 const T = VARIANT_TYPE;
 const NON_ASCII = /[\u0080-\uFFFF]/;
 const utf8Encoder = new TextEncoder();
-const utf8Decoder = new TextDecoder('utf-8', { ignoreBOM: true });
 
 type Token =
   | { kind: 'curlyOpen' | 'curlyClose' | 'bracketOpen' | 'bracketClose' | 'parenOpen' | 'parenClose' }
@@ -140,9 +140,7 @@ class Tokens {
     }
     if (lead) throw new ParseError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
     if (!this.fileStream || !NON_ASCII.test(text)) return text;
-    // variant_parser.cpp:399-404, ustring.cpp:1695-1716
-    const bytes = Uint8Array.from(text, (c) => (c.codePointAt(0)! <= 255 ? c.charCodeAt(0) : 32));
-    return utf8Decoder.decode(bytes);
+    return fileString(text);
   }
 
   private escaped(): number {

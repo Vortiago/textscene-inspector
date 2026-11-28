@@ -8,7 +8,8 @@ const NUMBER_TOKEN = new RegExp(`^${FLOAT_PATTERN_SOURCE}$`);
 
 // resource_format_text.cpp:488, :566
 export function headingResourceId(token: string): string | null {
-  if (STRING_TOKEN.test(token) && !token.includes('\\')) return token.slice(1, -1);
+  // Plain ASCII strings already contain their loader ID.
+  if (/^"[\x20-\x21\x23-\x5b\x5d-\x7e]*"$/.test(token)) return token.slice(1, -1);
   const read = readVariant(token, { fileStream: true });
   return 'value' in read ? stringify(read.value) : null;
 }
