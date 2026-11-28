@@ -22,7 +22,13 @@ import { perObject } from '../utils/perObject.js';
  */
 function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: InstanceScopes) {
   const rehomed = rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content);
-  return { ...layerRawOverride(instanceNode, root, rehomed.raw), scope: rehomed.scope };
+  return {
+    ...layerRawOverride(instanceNode, root, rehomed.raw, {
+      beforeParenting: true,
+      writerScene: scopes.outer.instancedScenePaths?.at(-1),
+    }),
+    scope: rehomed.scope,
+  };
 }
 
 /** What the caller's scene cache lets a collapse do. */

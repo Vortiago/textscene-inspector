@@ -18,16 +18,15 @@ import {
   sameTransform3D,
   type Transform3D,
 } from '../../../../godot/math/transform3d.js';
-import { nodePathLiteral } from '../../../../godot/variant/variantParser.js';
+import { attachmentBindings } from './attachmentBindings.js';
 import type { LiveLink, LiveTree } from '../../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D } from '../../../../r3f/liveGlobalTransform.js';
-import { resolveLiteralOnLiveTree } from '../../../../r3f/nodePathUniqueNames.js';
 import { liveNodePatches } from '../../../../r3f/liveNodePatches.js';
 import { liveScenePassResults, type LiveScenePass } from '../../../../r3f/liveScenePass.js';
 import type { NodePatch, NodePatches } from '../../../../r3f/nodePatch.js';
 import { posedSkeletonOf } from '../../skeleton3d/skeletonBindings.js';
 import type { AnimatedPose } from '../../skeleton3d/skeletonPose.js';
-import type { BoneAttachment3DProperties } from './types.js';
+import type { PosedSkeleton } from '../../skeleton3d/skeletonBindings.js';
 
 /** Where a bound BoneAttachment3D stands, which its component takes for its own transform. */
 export interface BoneAttachmentSeat {
@@ -46,6 +45,10 @@ export interface BoneAttachmentSeat {
   localUnder(pose: AnimatedPose | null): Transform3D;
 }
 
+interface PlacedSeat extends BoneAttachmentSeat {
+  source?: PosedSkeleton;
+}
+
 /**
  * The seat of every BoneAttachment3D of `tree` bound to a bone, by the attachment's live path. An
  * empty `external_skeleton` under a BoneAttachment3D parent takes the parent's external skeleton,
@@ -53,7 +56,7 @@ export interface BoneAttachmentSeat {
  * wrote, where Godot's `on_skeleton_update` leaves it too.
  */
 export const seatBoneAttachments: LiveScenePass<BoneAttachmentSeat> = (tree, snapshot) => {
-  const seats = new Map<string, BoneAttachmentSeat>();
+  const seats = new Map<string, PlacedSeat>();
   // What each ancestor stands on, held as the property patches the transform walk reads: where a
   // RemoteTransform has moved a node, then each seat of this pass, parents first as the fold runs.
   const patches = liveScenePassResults(liveNodePatches, tree, snapshot);
@@ -90,10 +93,10 @@ export const seatBoneAttachments: LiveScenePass<BoneAttachmentSeat> = (tree, sna
  * live path, so a load that leaves a node's seat as it was hands back the same seat and its reader
  * does not re-render. The entries clear when nothing holds the node any more.
  */
-const previousSeats = perObject(() => new Map<string, BoneAttachmentSeat>());
+const previousSeats = perObject(() => new Map<string, PlacedSeat>());
 
 /** `seats`, each one replaced by the seat the node had before where the two hold the same content. */
-function keptSeats(tree: LiveTree, seats: Map<string, BoneAttachmentSeat>): Map<string, BoneAttachmentSeat> {
+function keptSeats(tree: LiveTree, seats: Map<string, PlacedSeat>): Map<string, PlacedSeat> {
   for (const [path, seat] of seats) {
     const node = tree.at(path)?.step.node;
     if (!node) continue;
@@ -103,6 +106,7 @@ function keptSeats(tree: LiveTree, seats: Map<string, BoneAttachmentSeat>): Map<
       kept &&
       kept.skeletonPath === seat.skeletonPath &&
       kept.bone === seat.bone &&
+      kept.source === seat.source &&
       sameTransform3D(kept.global, seat.global) &&
       sameAsks(kept, seat)
     ) {
@@ -131,25 +135,29 @@ function seatOf(
   placed: Map<string, NodePatch>,
   globalAt: (path: string) => Transform3D,
   parentInverseAt: (path: string) => Transform3D,
-  seats: Map<string, BoneAttachmentSeat>
+  seats: Map<string, PlacedSeat>
 ): void {
   const node = link.step.node;
   if (node.type !== 'BoneAttachment3D') return;
-  const properties = node.properties as BoneAttachment3DProperties;
-  // `override_pose` leaves the node at its authored transform and pushes that onto the bone
-  // instead (`bone_attachment_3d.cpp:313-317`), where the push to the bone itself is another
-  // slice's work, not this pass's.
-  if (properties.overridePose) return;
-  const skeleton = skeletonOf(properties, link.path, tree);
-  if (!skeleton) return;
+  const binding = attachmentBindings(tree).bindings.get(link.path)!;
+  const { bone, skeleton } = binding;
+  if (!skeleton || bone < 0) {
+    if (binding.heldLocal) {
+      const local = binding.heldLocal;
+      const parent = parentPathOf(link.path);
+      placed.set(link.path, { transform: local });
+      seats.set(link.path, {
+        skeletonPath: skeleton?.path ?? '',
+        bone: -1,
+        global: parent ? multiplyTransform3D(globalAt(parent), local) : local,
+        localUnder: () => local,
+      });
+    }
+    return;
+  }
   const posed = posedSkeletonOf(skeleton, tree, patches);
-  // bone_idx at 0 or more wins; a negative one takes the first bone of the name, and a name no
-  // bone carries leaves the node unbound (`_check_bind`, bone_attachment_3d.cpp:117-126).
-  const bone = properties.boneIdx >= 0 ? properties.boneIdx : posed.findBone(properties.boneName);
-  if (bone < 0) return;
   const pose = posed.globalPose(bone);
-
-  if (!properties.useExternalSkeleton) {
+  if (!binding.external) {
     // `set_transform(bone_global_pose)` (:311): the pose is the local transform, and the parent
     // that carries it is the skeleton the seat came off.
     const parentPath = parentPathOf(link.path);
@@ -157,6 +165,7 @@ function seatOf(
     placed.set(link.path, { transform: pose });
     seats.set(link.path, {
       skeletonPath: skeleton.path,
+      source: posed,
       bone,
       global: multiplyTransform3D(parentGlobal, pose),
       localUnder: (animated) => posed.globalPoseUnder(bone, animated),
@@ -172,6 +181,7 @@ function seatOf(
   placed.set(link.path, { transform: local });
   seats.set(link.path, {
     skeletonPath: skeleton.path,
+    source: posed,
     bone,
     global,
     localUnder: (animated) =>
@@ -180,46 +190,4 @@ function seatOf(
         multiplyTransform3D(skeletonGlobal, posed.globalPoseUnder(bone, animated))
       ),
   });
-}
-
-/**
- * The skeleton `get_skeleton` reaches (`bone_attachment_3d.cpp:128-142`): the parent while
- * `use_external_skeleton` is off, else the node `external_skeleton` names. An empty path takes the
- * nearest BoneAttachment3D ancestor's external skeleton instead, each empty one walking up
- * (`_update_external_skeleton_cache`, `:56-85`), and no Skeleton3D out of either is no skeleton.
- */
-function skeletonOf(properties: BoneAttachment3DProperties, path: string, tree: LiveTree): LiveLink | null {
-  if (!properties.useExternalSkeleton) {
-    const parentPath = parentPathOf(path);
-    const parent = parentPath ? tree.at(parentPath) : null;
-    return parent?.step.node.type === 'Skeleton3D' ? parent : null;
-  }
-  if (pathTextOf(properties.externalSkeleton) !== '') {
-    return skeletonAt(path, properties.externalSkeleton!, tree);
-  }
-  for (let parentPath = parentPathOf(path); parentPath; parentPath = parentPathOf(parentPath)) {
-    const parent = tree.at(parentPath);
-    if (parent?.step.node.type !== 'BoneAttachment3D') return null;
-    const inherited = parent.step.node.properties as BoneAttachment3DProperties;
-    if (pathTextOf(inherited.externalSkeleton) !== '') {
-      return skeletonAt(parent.path, inherited.externalSkeleton!, tree);
-    }
-  }
-  return null;
-}
-
-/** The Skeleton3D the `external_skeleton` literal names from the node at `from`, or null. */
-function skeletonAt(from: string, literal: string, tree: LiveTree): LiveLink | null {
-  const resolved = resolveLiteralOnLiveTree(from, literal, tree);
-  const skeleton = resolved === null ? null : tree.at(resolved);
-  return skeleton?.step.node.type === 'Skeleton3D' ? skeleton : null;
-}
-
-/**
- * The path text an `external_skeleton` value stores: empty for an unset key and `NodePath("")`.
- */
-function pathTextOf(literal: string | undefined): string {
-  if (literal === undefined) return '';
-  // A value of no known spelling stores its trimmed text, which the resolver reads as a path too.
-  return nodePathLiteral(literal) ?? literal.trim();
 }

@@ -1,5 +1,6 @@
 import { buildSceneGraph, type ParsedScene, type SceneGraph } from '../core/SceneGraph.js';
 import type { TscnExternalResource, TscnNode } from '../parser/types.js';
+import { overlayPropertyWrites } from '../parser/overridePropertyWrites.js';
 import { layerRawOverride } from '../resources/layerRawOverride.js';
 import { shareSeating } from '../parser/sceneTreeBuilder.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
@@ -78,7 +79,11 @@ export function isWritable(graph: SceneGraph, livePath: string): boolean {
 /** An instance or an override heading keeps the text alone, since the merge parses it. */
 function laid(node: TscnNode, texts: PropertyTexts): TscnNode {
   if (node.instance || node.overridesExistingNode) {
-    return { ...node, rawProperties: { ...node.rawProperties, ...texts }, rawPropertiesOrderReliable: false };
+    return {
+      ...node,
+      rawProperties: overlayPropertyWrites(node.rawProperties, texts),
+      rawPropertiesOrderReliable: false,
+    };
   }
   return { ...node, ...layerRawOverride(node, node, texts) };
 }

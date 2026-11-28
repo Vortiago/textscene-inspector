@@ -289,7 +289,14 @@ function foldOverride(
   const overrideScope = scopeOf(override, existingScope);
   const { raw, scope } = rehomeOverride(override.rawProperties, overrideScope, existingScope);
   const layered =
-    Object.keys(raw).length === 0 ? existing : { ...existing, ...layerRawOverride(existing, existing, raw) };
+    Object.keys(raw).length === 0
+      ? existing
+      : {
+          ...existing,
+          ...layerRawOverride(existing, existing, raw, {
+            writerScene: overrideScope.instancedScenePaths?.at(-1),
+          }),
+        };
   const children = attachAll(layered.children, override.children, overrideScope, scope);
   const copy = [...siblings];
   copy[index] = scope === siblingScope ? { ...layered, children } : { ...layered, children, scope };

@@ -8,6 +8,9 @@ export interface OverrideLayer<Properties> {
   held: Properties;
   /** The keys the override writes, in its file's order. */
   written: Record<string, string>;
+  beforeParenting?: boolean;
+  writerScene?: string;
+  line?: number;
 }
 
 /**

@@ -257,14 +257,17 @@ export class BonePoses {
   private readonly bones: Bone[];
   /** Written only by `globals`; every setter and `reset` clear it. */
   private cache: Transform3D[] | undefined;
+  private retained?: Map<number, Transform3D>;
 
   constructor(
     bones: readonly Bone[],
     private readonly showRestOnly: boolean,
-    readonly rig = new SkeletonRig(bones)
+    readonly rig = new SkeletonRig(bones),
+    private readonly loadedGlobals?: ReadonlyMap<number, Transform3D>
   ) {
     // A copy of the list only: `write` replaces a bone and never changes one.
     this.bones = [...bones];
+    this.retainGlobals(loadedGlobals);
   }
 
   /** Puts every bone back to the pose of the file, so the next frame edits a pose as `new` would. */
@@ -272,7 +275,12 @@ export class BonePoses {
     this.rig.bones.forEach((bone, index) => {
       this.bones[index] = bone;
     });
+    this.retainGlobals(this.loadedGlobals);
+  }
+
+  retainGlobals(globals?: ReadonlyMap<number, Transform3D>): void {
     this.cache = undefined;
+    this.retained = globals?.size ? new Map(globals) : undefined;
   }
 
   /** `Skeleton3D::get_bone_count`. */
@@ -398,6 +406,13 @@ export class BonePoses {
     const bone = this.bones[index];
     if (!bone) return;
     this.bones[index] = { ...bone, ...change };
+    if (this.retained) {
+      const dirty = new Set([index]);
+      for (const child of this.rig.order) {
+        if (dirty.has(this.parentOf(child))) dirty.add(child);
+      }
+      for (const child of dirty) this.retained.delete(child);
+    }
     this.cache = undefined;
   }
 
@@ -408,7 +423,9 @@ export class BonePoses {
       const bone = this.bones[index]!;
       const parent = parentOf(bone, this.bones.length);
       const isPosed = bone.enabled && !this.showRestOnly;
-      poses[index] = standOn(parent < 0 ? null : poses[parent]!, isPosed ? poseOf(bone) : bone.rest);
+      poses[index] =
+        this.retained?.get(index) ??
+        standOn(parent < 0 ? null : poses[parent]!, isPosed ? poseOf(bone) : bone.rest);
     }
     this.cache = poses;
     return poses;
