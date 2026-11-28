@@ -15,6 +15,7 @@
  */
 
 import { fitAtlas } from './fitAtlas.js';
+import { cellCapacity } from './cellCapacity.js';
 import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
 
 /** A block of whole cells to place. */
@@ -66,15 +67,6 @@ function packInto(blocks: readonly Block[], columns: number, positions: CellPosi
 interface Block {
   index: number;
   size: CellSize;
-}
-
-function cellCapacity(cells: readonly CellSize[], side: number): number {
-  let area = 0;
-  for (const [index, cell] of cells.entries()) {
-    area += cell.width * cell.height;
-    if (cell.width > side || cell.height > side || area > side * side) return index;
-  }
-  return cells.length;
 }
 
 /**
