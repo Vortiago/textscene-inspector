@@ -1,32 +1,15 @@
-/**
- * The preview's ResourceProvider: it loads resources from the workspace filesystem. A `res://` path resolves under the
- * scene's `res://` root, the one the editor features use (`findResRootIn`). Any other path resolves under the scene's
- * own directory, as Godot resolves a relative path (`resource_format_text.cpp:490-513`).
- */
-
 import * as vscode from 'vscode';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
 import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
-import {
-  forwardSlashes,
-  isSamePath,
-  isWithinRoot,
-  pathKey,
-  RES_SCHEME,
-  resRelativePath,
-} from '@textscene/core/resources/resPath';
-import { directoryOf, findResRootIn } from '../resRoot';
+import { forwardSlashes, isWithinRoot, pathKey, RES_SCHEME } from '@textscene/core/resources/resPath';
+import type { WorkspaceResRoot, WorkspaceResRoots } from '../resRoots/workspaceResRoots';
 import { HOST_PATH_CASE } from '../hostPathCase';
 import { readWorkspaceFile } from '../readWorkspaceFile';
 
 export class VSCodeResourceProvider implements ResourceProvider {
-  /**
-   * Written by the first `resRoot` call, and kept for this provider's lifetime. A promise, so the loads a scene starts
-   * at once share one walk.
-   */
-  private resRootLookup: Promise<vscode.Uri | null> | null = null;
+  private servedRoot: WorkspaceResRoot | null = null;
 
   /**
    * The exact `res://` string a `loadResource` call resolved to, by the key of its fsPath in the host's path case.
@@ -36,8 +19,9 @@ export class VSCodeResourceProvider implements ResourceProvider {
   private servedResources = new Map<string, string>();
 
   constructor(
-    private workspaceRoot: vscode.Uri,
-    private documentUri: vscode.Uri
+    private readonly roots: WorkspaceResRoots,
+    private readonly workspaceRoot: vscode.Uri,
+    private readonly documentUri: vscode.Uri
   ) {}
 
   async loadResource(resourcePath: string, type?: string, maxBytes?: number): Promise<string | ArrayBuffer> {
@@ -89,9 +73,9 @@ export class VSCodeResourceProvider implements ResourceProvider {
    * workspace so no root exists. For a file the preview never loaded, whose creation or removal still edits a folder listing.
    */
   async resPathOf(fileUri: vscode.Uri): Promise<string | null> {
-    const root = await this.resRoot().catch(() => null);
+    const root = await this.roots.rootOf(this.documentUri).catch(() => null);
     if (root === null) return null;
-    const rootPath = forwardSlashes(root.fsPath);
+    const rootPath = forwardSlashes(root.uri.fsPath);
     const filePath = forwardSlashes(fileUri.fsPath);
     if (filePath === rootPath || !isWithinRoot(rootPath, filePath, HOST_PATH_CASE)) return null;
     return `${RES_SCHEME}${filePath.slice(rootPath.length).replace(/^\//, '')}`;
@@ -102,32 +86,22 @@ export class VSCodeResourceProvider implements ResourceProvider {
     return [...this.servedResources.values()];
   }
 
-  /**
-   * Whether a walk now finds another `res://` root than the cached one, after a `project.godot` was created, moved or
-   * deleted: the extension forgets the shared answers on that event first. False before any load cached a root, since
-   * no resource was then resolved against one.
-   */
   async hasResRootMoved(): Promise<boolean> {
-    if (!this.resRootLookup) {
-      return false;
-    }
-    const [cachedRoot, currentRoot] = await Promise.all([
-      this.resRootLookup,
-      findResRootIn(this.workspaceRoot, this.documentUri),
-    ]);
-    return !isSameRoot(currentRoot, cachedRoot);
+    const servedRoot = this.servedRoot;
+    return servedRoot !== null && (await this.roots.rootOf(this.documentUri)) !== servedRoot;
   }
 
-  /** The scene's `res://` root, cached for this provider's lifetime. `hasResRootMoved` tells the owner when to replace it. */
-  private async resRoot(): Promise<vscode.Uri> {
-    this.resRootLookup ??= findResRootIn(this.workspaceRoot, this.documentUri);
-    const root = await this.resRootLookup;
-    if (root === null) {
+  private async resolveResPath(resourcePath: string): Promise<vscode.Uri> {
+    const root = await this.roots.rootOf(this.documentUri);
+    if (!root) {
       throw new Error(
         `expected ${this.documentUri.fsPath} inside the workspace ${this.workspaceRoot.fsPath}`
       );
     }
-    return root;
+    const uri = root.uriOf(resourcePath);
+    if (!uri) throw new Error(`Path traversal detected: ${resourcePath} climbs out of the res:// root`);
+    this.servedRoot = root;
+    return uri;
   }
 
   /**
@@ -137,7 +111,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
    */
   private async resolve(resourcePath: string): Promise<vscode.Uri> {
     const resolvedUri = resourcePath.startsWith(RES_SCHEME)
-      ? vscode.Uri.joinPath(await this.resRoot(), resRootRelativePath(resourcePath))
+      ? await this.resolveResPath(resourcePath)
       : vscode.Uri.joinPath(directoryOf(this.documentUri), resourcePath);
     if (!isWithinRoot(this.workspaceRoot.fsPath, resolvedUri.fsPath, HOST_PATH_CASE)) {
       throw new Error(`Path traversal detected: ${resourcePath} resolves outside workspace bounds`);
@@ -146,16 +120,6 @@ export class VSCodeResourceProvider implements ResourceProvider {
   }
 }
 
-/** `resPath` relative to its `res://` root. It throws for a path whose `..` climbs out of the root. */
-function resRootRelativePath(resPath: string): string {
-  const relativePath = resRelativePath(resPath);
-  if (relativePath === null) {
-    throw new Error(`Path traversal detected: ${resPath} climbs out of the res:// root`);
-  }
-  return relativePath;
-}
-
-/** Whether `a` and `b` are one root, or both no root. */
-function isSameRoot(a: vscode.Uri | null, b: vscode.Uri | null): boolean {
-  return a === null || b === null ? a === b : isSamePath(a.fsPath, b.fsPath, HOST_PATH_CASE);
+function directoryOf(documentUri: vscode.Uri): vscode.Uri {
+  return vscode.Uri.joinPath(documentUri, '..');
 }

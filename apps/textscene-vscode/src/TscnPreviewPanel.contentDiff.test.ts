@@ -7,6 +7,7 @@
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { openReadyPreviewPanel, settle } from './previewPanel.testkit';
 import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
 
@@ -69,7 +70,11 @@ describe('TscnPreviewPanel _loadTscnContent error path', () => {
     (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('EACCES: permission denied'));
 
     expect(() =>
-      TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'))
+      TscnPreviewPanel.create(
+        createMockUri('/extension'),
+        createMockUri('/workspace/scene.tscn'),
+        createWorkspaceResRoots()
+      )
     ).not.toThrow();
     await settle();
 
