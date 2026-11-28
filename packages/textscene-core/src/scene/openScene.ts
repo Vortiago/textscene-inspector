@@ -1,6 +1,6 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
-import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import type { TscnInternalResource } from '../parser/types.js';
 import { fileExtension } from '../resources/fileExtension.js';
 import { findSubResource } from '../resources/SubResourceResolver.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
@@ -14,7 +14,6 @@ import { SceneListeners } from './sceneListeners.js';
 import { SceneNodes } from './sceneNodes.js';
 import type { CameraState } from './viewportCameras.js';
 import type { ScenePropertyState } from './loadPropertyAccess.js';
-import type { SceneWrites } from './sceneWrites.js';
 import { createSceneRuntime, type SceneRuntime, type SceneTree } from './sceneRuntime.js';
 import { variantOf, type Variant } from './variant.js';
 
@@ -68,14 +67,6 @@ export interface Scene {
   cameras(): ReadonlyMap<string, CameraState>;
 }
 
-/** `written` of one parse, writes and resources: the graph is built again only when one of them moves. */
-interface WrittenGraph {
-  readonly parse: ParseResult;
-  readonly writes: SceneWrites;
-  readonly resources: readonly TscnExternalResource[];
-  readonly graph: SceneGraph | null;
-}
-
 /** A section's class and texts, as a class's `_get` reads a resource. */
 function sectionOf(section: TscnInternalResource | null): LoadedResource | null {
   return section && { type: section.type, properties: section.data };
@@ -88,7 +79,6 @@ export function openScene({
 }: OpenSceneOptions): Scene {
   let currentSource = source;
   let parsed: ParseResult | null = null;
-  let written: WrittenGraph | null = null;
   /** Written only by `runtime`: made at the first lookup, so a scene no host asks of loads no tree. */
   let sceneRuntime: SceneRuntime | null = null;
   /** Written only by `dispose`: a read of the files after it would build a runtime that nothing disposes. */
@@ -148,16 +138,8 @@ export function openScene({
     provider,
     parse,
     written() {
-      const current = parse();
-      const store = properties.current;
-      if (!store) return current.sceneGraph;
-      const writes = store.writes();
-      const resources = store.resources();
-      if (written?.parse !== current || written.writes !== writes || written.resources !== resources) {
-        const laid = current.sceneGraph && store.writtenGraph(current.sceneGraph);
-        written = { parse: current, writes, resources, graph: laid };
-      }
-      return written.graph;
+      const current = graph();
+      return current && (properties.current?.writtenGraph(current) ?? current);
     },
     setSource(next) {
       if (next === currentSource) return;

@@ -16,9 +16,18 @@ import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 /** The id prefix of a file `scene.load` gave, which no Godot-written id starts with. */
 const LOADED_ID_PREFIX = 'textscene_load_';
 
+/** The inputs and result of the most recent write replay. */
+interface WrittenGraph {
+  readonly parsed: SceneGraph;
+  readonly writes: SceneWrites;
+  readonly resources: readonly TscnExternalResource[];
+  readonly result: SceneGraph;
+}
+
 /** The host's reads and writes of the properties of the scene's nodes, by live path. */
 export class SceneProperties {
   private readonly store = new WriteStore();
+  private written: WrittenGraph | null = null;
   /** Written only by `derivedAt`, keyed by live path with its class, since a load can seat another class. */
   private readonly derived = new Map<string, { type: string; properties: DerivedProperties | null }>();
   /** Written only by `unknownProperty`: each name warned of, once for the scene's life. */
@@ -42,16 +51,18 @@ export class SceneProperties {
     return this.store.current();
   }
 
-  /** The files the writes name, which the written graph adds to the root scene's own. */
-  resources(): readonly TscnExternalResource[] {
-    return this.loadedList;
-  }
-
-  writtenGraph(graph: SceneGraph): SceneGraph {
-    return writtenSceneGraph(graph, this.writes(), this.resources());
+  writtenGraph(parsed: SceneGraph): SceneGraph {
+    const writes = this.writes();
+    const resources = this.loadedList;
+    const last = this.written;
+    if (last?.parsed === parsed && last.writes === writes && last.resources === resources) return last.result;
+    const result = writtenSceneGraph(parsed, writes, resources);
+    this.written = { parsed, writes, resources, result };
+    return result;
   }
 
   clear(): void {
+    this.written = null;
     this.store.clear();
     this.derived.clear();
     this.loaded.clear();

@@ -8,12 +8,7 @@
 import { createContext, useContext, useMemo, useCallback } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { liveTreeOf, type LiveTreeContext } from './liveSceneTree.js';
-import {
-  seatedRootsOf,
-  useLiveTreeSelection,
-  useProjectTreeSettings,
-  type SharedLiveTree,
-} from './useLiveSceneTree.js';
+import { useLiveTreeSelection, useProjectTreeSettings, type SharedLiveTree } from './useLiveSceneTree.js';
 import { canvasScopesOf } from './canvasScopes.js';
 import { NOTHING_CACHED } from './cacheSources.js';
 import { useByValue } from './hooks/useByValue.js';
@@ -44,7 +39,7 @@ export function useCanvasModulateColor(nodes?: readonly TscnNode[]): Rgba {
   const project = useProjectTreeSettings();
   const select = useCallback(
     (live: SharedLiveTree) =>
-      canvasScopesOf(liveTreeOf(nodes ?? seatedRootsOf(live), live.ctx)).modulate ?? WHITE_MODULATE,
+      canvasScopesOf(liveTreeOf(nodes ?? live.roots, live.ctx)).modulate ?? WHITE_MODULATE,
     [nodes]
   );
   const liveColor = useLiveTreeSelection(select, sameData);

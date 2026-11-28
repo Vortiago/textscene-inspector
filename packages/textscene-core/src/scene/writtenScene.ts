@@ -182,14 +182,8 @@ function withOverride(
   landing: Extract<Landing, { kind: 'override' }>,
   texts: PropertyTexts
 ): TscnNode {
-  const existing = instance.children.findIndex(
-    (child) => child.name === landing.name && (child.instanceSubPath ?? '') === landing.subPath
-  );
-  const children =
-    existing >= 0
-      ? replacing(instance.children, existing, laid(instance.children[existing]!, texts))
-      : [...instance.children, overrideHeading(instancePath, landing.subPath, landing.name, texts)];
-  return { ...instance, children };
+  const heading = overrideHeading(instancePath, landing.subPath, landing.name, texts);
+  return { ...instance, children: [...instance.children, heading] };
 }
 
 function rootNodesOf(graph: SceneGraph): readonly TscnNode[] {

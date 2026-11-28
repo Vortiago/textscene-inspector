@@ -55,6 +55,13 @@ const WITH_INSTANCE = `[gd_scene format=3]
 [node name="Enemy" parent="." instance=ExtResource("1")]
 `;
 
+const WITH_OVERRIDE = `${WITH_INSTANCE}
+[node name="Body" parent="Enemy"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[editable path="Enemy"]
+`;
+
 const boxScene = () => openScene({ source: BOX_SCENE, provider, rootScenePath: 'res://main.tscn' });
 
 async function drawn(scene: Scene) {
@@ -166,17 +173,20 @@ describe('a write of the host', () => {
     expect(seen.at(-1)).toBe(text);
   });
 
-  it('reaches a node inside an instance as an override', async () => {
+  it.each([
+    ['without an override', WITH_INSTANCE, [0, 0, 0]],
+    ['with an authored override', WITH_OVERRIDE, [0, 2, 0]],
+  ] as const)('reaches an instance child %s', async (_case, source, initialPosition) => {
     const files: Record<string, string> = { 'res://enemy.tscn': SUB_SCENE };
     const scene = openScene({
-      source: WITH_INSTANCE,
+      source,
       provider: { loadResource: async (path) => files[path] ?? null },
       rootScenePath: 'res://main.tscn',
     });
     const renderer = await drawn(scene);
     await vi.waitFor(async () => {
       await renderer.advanceFrames(1, 16);
-      expect(scene.getNodeOrNull('Enemy/Body')).not.toBeNull();
+      expect(cubePosition(renderer)).toEqual(initialPosition);
     });
     await act(async () => {
       await scene.getNode('Enemy/Body').set('position', variant('Vector3(0, 3, 0)'));
