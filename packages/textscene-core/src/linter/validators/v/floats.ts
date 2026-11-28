@@ -39,6 +39,7 @@ export const floatCombinators = {
           accepts(
             createNumericRangeValidator({
               propertyName: name,
+              float32: opts.float32,
               min: opts.min ?? null,
               max: opts.max ?? null,
               enforcedMin: opts.enforcedMin,

@@ -37,6 +37,7 @@ export function resolveDeclaration(
   // A hop counter, not a visited Set, which allocates on every call. ClassDB
   // ancestry is acyclic, so the bound only stops a malformed hand-built
   // registry from spinning.
+  let fallback: PropertyValidator | null = null;
   let type: string | undefined = nodeType;
   for (let hops = 0; type !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
     const removals = tables.unavailable.get(type);
@@ -49,11 +50,14 @@ export function resolveDeclaration(
     // Checked after the removal at the same hop, and before moving up: a
     // removal is not inherited past a descendant that re-declares the key.
     const validator = findOwnValidator(tables, type, propertyKey);
-    if (validator) return validator;
+    if (validator) {
+      if (!validator.preferCaptured) return validator;
+      fallback ??= validator;
+    }
 
     type = tables.baseOf(type);
   }
-  return null;
+  return fallback;
 }
 
 /**

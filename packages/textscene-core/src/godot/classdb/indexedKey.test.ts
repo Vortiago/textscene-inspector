@@ -4,23 +4,35 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { declaredLeafResolver, firstSegment, indexedElements, visitIndexedKeys } from './indexedKey.js';
+import {
+  type IndexParse,
+  declaredLeafResolver,
+  firstSegment,
+  indexedElements,
+  visitIndexedKeys,
+} from './indexedKey.js';
 
 /** A class that declares no leaf, so every leaf keeps its own text. */
 const NO_DECLARED_LEAVES = declaredLeafResolver([]);
 
 /** Every visit `visitIndexedKeys` makes, as its five arguments. */
-function visits(
-  properties: Record<string, string>,
-  prefix: string,
-  indexParse: 'is_valid_int' | 'to_int'
-): unknown[][] {
+function visits(properties: Record<string, string>, prefix: string, indexParse: IndexParse): unknown[][] {
   const seen: unknown[][] = [];
   visitIndexedKeys(properties, prefix, indexParse, (...args) => seen.push(args));
   return seen;
 }
 
 describe('visitIndexedKeys', () => {
+  it('visits only exact decimal itos names without int32 wrapping', () => {
+    const properties = Object.fromEntries(
+      ['0', '1', '00', '-0', '+1', '01', 'x', '', '4294967296', '99999999999999999999999'].map((i) => [
+        `frame_${i}/texture`,
+        'null',
+      ])
+    );
+    expect(visits(properties, 'frame_', 'itos').map((row) => row[2])).toEqual([0, 1, 4294967296]);
+  });
+
   it('visits each key that names an element, in file order, with the index Godot stores', () => {
     expect(visits({ 'item_1/text': '"a"', 'item_+0/icon': 'null' }, 'item_', 'is_valid_int')).toEqual([
       ['item_1/text', '1', 1, 'text', '"a"'],

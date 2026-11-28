@@ -26,7 +26,9 @@ interface NumericBounds {
 }
 
 /** The bounds plus a grounding that may cite an `is_finite` guard. */
-export interface FloatOpts extends NumericBounds, FiniteGrounding {}
+export interface FloatOpts extends NumericBounds, FiniteGrounding {
+  float32?: true;
+}
 
 /**
  * The same bounds, without `finite`: an INT slot cannot hold a non-finite in

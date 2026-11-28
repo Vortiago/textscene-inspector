@@ -11,6 +11,17 @@ import { toInt32, toUint32 } from '../variant/intWidth.js';
 export const IS_VALID_INT_SOURCE = String.raw`[+-]?\d+`;
 export const IS_VALID_INT_RE = new RegExp(`^${IS_VALID_INT_SOURCE}$`);
 
+// ustring.cpp:1501-1538, :5145-5147
+export const UNSIGNED_ITOS_SOURCE = '(?:0|[1-9][0-9]*)';
+const UNSIGNED_ITOS = new RegExp(`^${UNSIGNED_ITOS_SOURCE}$`);
+
+/** @canonical read the exact non-negative index expressed by a generated Godot property name */
+export function generatedPropertyIndex(text: string): number | null {
+  if (!UNSIGNED_ITOS.test(text)) return null;
+  const index = Number(text);
+  return Number.isSafeInteger(index) ? index : null;
+}
+
 /**
  * One `"…"` string literal as the tokenizer scans it: `\` takes the next character, whatever it is,
  * and the next unescaped `"` ends the string (`variant_parser.cpp:276-290`). A source with no

@@ -32,7 +32,7 @@ interface ResourceRuleMeta {
 export interface ResourceRule {
   readonly meta: ResourceRuleMeta;
   /** The findings for one section's raw property bag. */
-  check(data: Readonly<Record<string, string>>): ResourceFinding[];
+  check(data: Readonly<Record<string, string>>, id?: string): ResourceFinding[];
 }
 
 class ResourceRuleRegistry {

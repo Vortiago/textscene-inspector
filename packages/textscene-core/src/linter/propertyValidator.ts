@@ -41,6 +41,8 @@ export type PropertyValidator = ((key: string, value: string, line: number) => P
    * `grounding` instead. `formatOnlyCorpus.ledger.test.mjs` measures the claim.
    */
   formatOnly?: boolean;
+  /** ClassDB checks bound properties before this wildcard handles missing keys. */
+  preferCaptured?: true;
 
   /**
    * The per-sub-property validators a wildcard dispatcher such as

@@ -110,7 +110,7 @@ function handRolledKeyGrammar(source: string): string | null {
  * are the scans such rules use, and only a behaviour test holds them to it.
  */
 const COMPOSES_BUILDER = /\b(?:indexedKeyRegex|indexedElements|visitIndexedKeys)\(/;
-const NAMES_A_PARSE = /'(?:to_int|is_valid_int)'/;
+const NAMES_A_PARSE = /'(?:to_int|is_valid_int|itos)'/;
 
 /**
  * Reading an index with `Number` or `parseInt`, under either parse. Godot stores `to_int()` in an
@@ -227,6 +227,11 @@ describe('Godot indexed-key grammar', () => {
    * every `to_int` segment. A shape that stopped substituting would leave all above green.
    */
   it('admits the spellings each engine parse resolves, and no others', () => {
+    const generated = indexedKeyRegex('^frame_(#)/', 'itos');
+    for (const index of ['0', '1', '255']) expect(generated.exec(`frame_${index}/texture`)?.[1]).toBe(index);
+    for (const index of ['00', '01', '+1', '-0', 'x', ''])
+      expect(generated.test(`frame_${index}/texture`)).toBe(false);
+
     const validInt = indexedKeyRegex('^item_(#)/', 'is_valid_int');
     // `PropertyListHelper` gates on `String::is_valid_int()` (`property_list_helper.cpp:53-55`),
     // which skips one leading sign, `+` as readily as `-` (ustring.cpp:4752), then

@@ -20,6 +20,8 @@ export interface SetterFact {
 export interface PropertyFacts {
   readonly setter?: SetterFact;
   readonly width?: IntWidth;
+  /** The C++ setter compares a float argument after the Variant narrows it. */
+  readonly float32?: true;
   readonly message?: string;
   /** `KEEP_WIDTH`, where the capture holds only `Keep Width`. */
   readonly labels?: Readonly<Record<number, string>>;

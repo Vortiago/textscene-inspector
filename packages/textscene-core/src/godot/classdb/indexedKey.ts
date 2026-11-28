@@ -1,25 +1,17 @@
-/** How Godot resolves an indexed property key: `item_0/text`, `settings/2/joints/1/bone`. */
+import {
+  generatedPropertyIndex,
+  IS_VALID_INT_RE,
+  IS_VALID_INT_SOURCE,
+  stringToInt,
+  UNSIGNED_ITOS_SOURCE,
+} from '../string/string.js';
 
-import { IS_VALID_INT_RE, IS_VALID_INT_SOURCE, stringToInt } from '../string/string.js';
+export type IndexParse = 'is_valid_int' | 'to_int' | 'itos';
 
-/**
- * Which of Godot's two index resolutions a class uses, the union `indexedFamilyValidator`'s
- * `indexParse` takes. `'is_valid_int'`: `PropertyListHelper` gates before converting
- * (`property_list_helper.cpp:53-55`), so rejected text yields no index. `'to_int'`: a hand-rolled
- * list reads `get_slicec('/', n).to_int()` ungated (`bone_twist_disperser_3d.cpp:37`), so any text names an element.
- */
-export type IndexParse = 'is_valid_int' | 'to_int';
-
-/**
- * The text each parse admits at an index, as regex source. `is_valid_int` is {@link IS_VALID_INT_RE}'s
- * body: one optional sign, `+` or `-` (`ustring.cpp:4752`), then digits. `to_int` skips what it cannot
- * use (`ustring.cpp:2280-2293`), so it takes the whole segment and {@link stringToInt} reads it.
- * That segment may be empty: `"".to_int()` is 0 (`ustring.cpp:2304-2305`), so `settings//leaf` is
- * element 0.
- */
 const INDEX_SOURCE: Readonly<Record<IndexParse, string>> = {
   is_valid_int: `(?:${IS_VALID_INT_SOURCE})`,
-  to_int: '(?:[^/]*)',
+  to_int: '(?:[^/]*)', // ustring.cpp:2304-2305
+  itos: UNSIGNED_ITOS_SOURCE,
 };
 
 /**
@@ -32,12 +24,14 @@ export function indexedKeyRegex(shape: string, indexParse: IndexParse): RegExp {
   return new RegExp(shape.replaceAll('#', INDEX_SOURCE[indexParse]));
 }
 
-/**
- * Calls `visit` for every key of a family that names an element, in file order, with the `int` Godot
- * stores as `index` ({@link stringToInt}): `5`, `+5` and `05` all name element 5. A key with no index
- * or no leaf, a refused index text and a negative index name none. A callback, not a list: a caller
- * that filters would otherwise allocate a record per key of a 200,000-key family only to drop it.
- */
+/** @canonical read a Godot property index under the binding's index grammar */
+export function parsePropertyIndex(text: string, parse: IndexParse): number | null {
+  if (parse === 'itos') return generatedPropertyIndex(text);
+  if (parse === 'is_valid_int' && !IS_VALID_INT_RE.test(text)) return null;
+  return stringToInt(text);
+}
+
+// Preserve file order so later writes to the same slot win.
 export function visitIndexedKeys(
   properties: Readonly<Record<string, string>>,
   prefix: string,
@@ -54,13 +48,8 @@ export function visitIndexedKeys(
     const indexText = key.slice(prefix.length, slash);
     const leaf = key.slice(slash + 1);
     if (leaf === '') continue;
-    // `layer_9/tile_data/x` gives the index text `9/tile_data`, so `_set` builds no layer 9, and an
-    // empty index is no int either. Under `to_int` an empty index is element 0.
-    if (indexParse === 'is_valid_int' && !IS_VALID_INT_RE.test(indexText)) continue;
-    const index = stringToInt(indexText);
-    // A negative index never lands: `_get_property` refuses it (`property_list_helper.cpp:58`) and
-    // each hand-rolled `_set` has its own `ERR_FAIL_INDEX_V`, which phase 1 reports.
-    if (index < 0) continue;
+    const index = parsePropertyIndex(indexText, indexParse);
+    if (index === null || index < 0) continue;
     visit(key, indexText, index, leaf, properties[key]!);
   }
 }

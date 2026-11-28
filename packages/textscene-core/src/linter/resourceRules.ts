@@ -13,6 +13,7 @@ import type { Diagnostic, SourceLines } from './types.js';
 
 interface ResourceSection {
   readonly built: BuiltSection;
+  readonly id?: string;
   readonly name: string;
   readonly type: string;
   readonly data: Readonly<Record<string, string>>;
@@ -21,6 +22,7 @@ interface ResourceSection {
 function resourceSections(scene: RawScene): ResourceSection[] {
   const sections: ResourceSection[] = scene.internalResources.map((resource) => ({
     built: resource,
+    id: resource.id,
     name: resource.id,
     type: resource.type,
     data: resource.data,
@@ -52,7 +54,7 @@ function checkSection(
 ): void {
   const heading = headingLocation(lines, section.built);
   try {
-    for (const { arm, message, property } of rule.check(section.data)) {
+    for (const { arm, message, property } of rule.check(section.data, section.id)) {
       if (!rule.meta.emits.includes(arm)) {
         throw new Error(`reported '${arm.ruleName}', which its emits does not declare`);
       }

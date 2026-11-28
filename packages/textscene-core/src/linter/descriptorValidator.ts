@@ -171,9 +171,13 @@ function floatValidator(descriptor: PropertyDescriptor): PropertyValidator {
     const ends = radianEnds(range);
     return v.float(name, { ...ends, ...grounding(descriptor, ends) });
   }
-  refuseFacts(descriptor, ['setter', 'message']);
+  refuseFacts(descriptor, ['setter', 'message', 'float32']);
+  if (descriptor.facts?.float32 && !descriptor.facts.setter) {
+    throw new Error(`The float32 comparison of ${name} requires a setter fact`);
+  }
   const { min, max } = range ?? {};
   return v.float(name, {
+    float32: descriptor.facts?.float32,
     min,
     max,
     message: descriptor.facts?.message,

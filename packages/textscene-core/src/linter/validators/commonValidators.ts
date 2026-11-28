@@ -145,6 +145,7 @@ interface NumericRangeSpec {
    * without that ceiling needs this declaration.
    */
   width?: IntWidth;
+  float32?: true;
   /**
    * The setter's floor, below `min`. Anything under it errors whatever
    * `minSeverity` says, and the band up to `min` still reports at that tier.
@@ -254,12 +255,13 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
 
     // The setter's own ends first: they are the more severe tier, and the band
     // between them and the hint's ends is what the outer checks below report.
+    const setterValue = spec.float32 ? Math.fround(num) : num;
     const refusal =
-      enforcedEndRefusal(propertyName, enforcedMin, 'min', num, enforcedMessage) ??
-      enforcedEndRefusal(propertyName, enforcedMax, 'max', num, enforcedMessage);
+      enforcedEndRefusal(propertyName, enforcedMin, 'min', setterValue, enforcedMessage) ??
+      enforcedEndRefusal(propertyName, enforcedMax, 'max', setterValue, enforcedMessage);
     if (refusal) return propertyError(key, line, refusal, errorCodeValue);
 
-    if (min !== null && num < min) {
+    if (min !== null && (valueSeverity === 'error' ? setterValue : num) < min) {
       // The per-node linter tests assert this wording.
       let defaultMsg: string;
       if (max !== null) {
@@ -272,7 +274,7 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
       return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, valueSeverity);
     }
 
-    if (max !== null && num > max) {
+    if (max !== null && (maxSeverity === 'error' ? setterValue : num) > max) {
       const defaultMsg =
         min !== null
           ? `Property '${propertyName}' must be between ${min} and ${max} (got ${num})`

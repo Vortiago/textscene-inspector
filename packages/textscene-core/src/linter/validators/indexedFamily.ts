@@ -1,15 +1,12 @@
-/**
- * One dispatcher for Godot's indexed property arrays (`item_0/text`, `option_2/name`), keyed
- * `vformat("%s%d/%s", prefix, i, name)` (`property_list_helper.cpp:149`) with the index glued to
- * the prefix. The high end (an index past the live element count) is a bound against a sibling
- * count no property validator sees, so ADR-0032 leaves it to a semantic rule.
- */
-
 import { keyShapeError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import { IS_VALID_INT_RE, stringToInt } from '../../godot/string/string.js';
-import { declaredLeafResolver, type IndexParse, type LeafResolver } from '../../godot/classdb/indexedKey.js';
+import {
+  declaredLeafResolver,
+  parsePropertyIndex,
+  type IndexParse,
+  type LeafResolver,
+} from '../../godot/classdb/indexedKey.js';
 import type { IndexedFamily } from '../../godot/classdb/indexedFamily.js';
 import { negativeIndexError } from '../reportedIndices.js';
 
@@ -33,16 +30,9 @@ export interface IndexedFamilyOptions {
   leaves: Readonly<Record<string, PropertyValidator>>;
   /** Error code for a key whose shape or leaf name is unrecognised. */
   unknownCode: string;
-  /**
-   * Which of Godot's two index parses this class uses. `'is_valid_int'`, every `PropertyListHelper`
-   * family, drops the write unless the index `is_valid_int()` (`property_list_helper.cpp:53-55`).
-   * `'to_int'`, a hand-rolled `_set`'s bare `get_slicec('/', 1).to_int()`, skips non-digits
-   * (`ustring.cpp:2268-2298`), so `"a1b2"` lands on 12 and only the leaf lookup can refuse.
-   */
-  // State it explicitly, with the `file:line` of the class's own `_set`: a taken default reads
-  // the same as an unchecked one. A negative index is refused under both parses
-  // (`property_list_helper.cpp:58` and each class's own `ERR_FAIL_INDEX_V`).
   indexParse: IndexParse;
+  /** The first index for which the engine binds no property. */
+  indexLimit?: { readonly value: number; readonly at: string };
   /**
    * The family's noun, spliced into `Unknown <describes> property: "…"`. Keep it
    * a bare singular noun (`setting`, `item`, `filter`), since it reads as prose.
@@ -86,51 +76,35 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
   const unknown = (key: string, line: number): ReturnType<PropertyValidator> =>
     keyShapeError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
 
-  /**
-   * Godot refuses to resolve a negative index under either parse, so `_set` treats the key as
-   * unrecognised and the write never lands. The index is the one Godot stores: `to_int` reads
-   * `settings/a-1/…` as -1, and the `int` keeps the low 32 bits, so `4294967296` is 0.
-   */
-  const refuseNegative = negativeIndex
-    ? (indexText: string, key: string, line: number) =>
-        negativeIndexError(indexText, key, line, negativeIndex.message, negativeIndex.code)
-    : (indexText: string, key: string, line: number) =>
-        stringToInt(indexText) < 0 ? unknown(key, line) : null;
-
-  /**
-   * The leaf a key reaches: {@link declaredLeafResolver} for a hand-rolled `_set`, and the exact
-   * leaf for `PropertyListHelper`, whose last-`/` cut (property_list_helper.cpp:47) makes a tail
-   * fail `is_valid_int`. hasOwnProperty, so `toString` cannot resolve an inherited function.
-   */
-  const resolveLeaf: LeafResolver = gatesOnValidInt
-    ? (leafName) => (Object.prototype.hasOwnProperty.call(leaves, leafName) ? leafName : null)
-    : declaredLeafResolver(Object.keys(leaves));
+  const resolveLeaf: LeafResolver =
+    opts.indexParse !== 'to_int'
+      ? (leafName) => (Object.prototype.hasOwnProperty.call(leaves, leafName) ? leafName : null)
+      : declaredLeafResolver(Object.keys(leaves));
 
   const validator = accepts((key, value, line) => {
-    // The first `/` past the prefix ends the index, and the rest is the leaf: a
-    // hand-rolled override nests deeper than `PropertyListHelper`'s one segment
-    // (`property_list_helper.cpp:47`), as `TwoBoneIK3D`'s
-    // `settings/<i>/end_bone/direction` does.
     const slash = key.indexOf('/', prefix.length);
     if (!key.startsWith(prefix) || slash < 0) return unknown(key, line);
     const indexText = key.slice(prefix.length, slash);
     const leafName = key.slice(slash + 1);
     if (leafName === '') return unknown(key, line);
 
-    // A class that gates on `is_valid_int` has no index at all for text the regex rejects, the empty
-    // text included, so the key is unrecognised before an index is ever read. Under `to_int` an
-    // empty index is element 0 (`ustring.cpp:2304-2305`).
-    if (gatesOnValidInt && !IS_VALID_INT_RE.test(indexText)) return unknown(key, line);
-    const negative = refuseNegative(indexText, key, line);
-    if (negative) return negative;
-    // A non-negative index resolves to some setting and the write lands, so only the leaf can
-    // still be refused.
+    const index = parsePropertyIndex(indexText, opts.indexParse);
+    if (index === null) return unknown(key, line);
+    if (index < 0) {
+      return negativeIndex
+        ? negativeIndexError(indexText, key, line, negativeIndex.message, negativeIndex.code)
+        : unknown(key, line);
+    }
+    if (opts.indexLimit && index >= opts.indexLimit.value) {
+      return keyShapeError(
+        key,
+        line,
+        `Unknown ${describes} property: "${key}" (${opts.indexLimit.at})`,
+        unknownCode
+      );
+    }
     const resolved = resolveLeaf(leafName);
     if (resolved === null) return unknown(key, line);
-    // A leaf whose own path carries an index is a nested family (`ChainIK3D`'s
-    // `settings/<i>/joints/<j>/bone`, chain_ik_3d.cpp), matched by its slice's own regex through
-    // {@link stringToInt}. Absorbing one needs a sub-path that ends in an index
-    // (`SpringBoneSimulator3D`'s `collisions/<j>`) and a `negativeIndex` per index position.
     return leaves[resolved]!(key, value, line);
   }, opts.accepts ?? describes);
 
@@ -139,15 +113,11 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     // `is_valid_int` family is grounded with or without a negative-index branch.
     ...(gatesOnValidInt ? [IS_VALID_INT_CITE] : []),
     ...(negativeIndex ? [negativeIndex.cite] : []),
+    ...(opts.indexLimit ? [opts.indexLimit.at] : []),
   ];
   if (cites.length > 0) {
-    // Two cites where two guards can fire, the way `patternValidator` names
-    // both of TileSet's (`resources/tileset/sourceValidators.ts`).
     validator.grounding = { kind: 'enforced', cite: cites.join(', ') };
   } else {
-    // A `to_int` class resolves every index text to some element, so nothing
-    // above refuses a real value: only an unrecognised key shape or leaf name
-    // is rejected. Every magnitude bound lives in the leaves.
     validator.formatOnly = true;
   }
   validator.leaves = Object.values(leaves);

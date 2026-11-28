@@ -232,6 +232,22 @@ describe('the hand row folds into the same check', () => {
     expectError(validator('frame_0/duration', '-2', 1), '-1');
   });
 
+  it('rounds the float setter argument and keeps the hint on the written value', () => {
+    const validator = descriptorValidator({
+      ...descriptorOf('AnimatedTexture', 'frame_0/duration'),
+      facts: { float32: true, setter: { cite: 'test.cpp:1', min: { at: -1 } } },
+    })!;
+    expectWarning(validator('frame_0/duration', '-1.000000001', 1), 'non-negative');
+    expectWarning(validator('frame_0/duration', '-1e-50', 1), 'non-negative');
+    expectError(validator('frame_0/duration', '-1.000001', 1), '-1');
+  });
+
+  it('refuses a float32 fact on an integer setter', () => {
+    expect(() =>
+      descriptorValidator({ ...base, facts: { float32: true, setter: { cite: 'test.cpp:1' } } })
+    ).toThrow('float32');
+  });
+
   it('prints the message the hand row states', () => {
     const validator = descriptorValidator({ ...base, facts: { message: "'frames' is 1 to 256" } })!;
     expectWarning(validator('frames', '300', 1), "'frames' is 1 to 256");

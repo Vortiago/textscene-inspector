@@ -140,15 +140,15 @@ export class ValidatorRegistry {
    *   declaration asks {@link ValidatorRegistry.declarationFor} instead.
    */
   declarationFor(nodeType: string, propertyKey: string): PropertyValidator | null {
-    return resolveDeclaration(this.tables, nodeType, propertyKey) ?? this.derivedFor(nodeType, propertyKey);
+    const hand = resolveDeclaration(this.tables, nodeType, propertyKey);
+    if (hand && !hand.preferCaptured) return hand;
+    return this.derivedFor(nodeType, propertyKey) ?? hand;
   }
 
   /** @internal For the registry sweeps in `linter/testing/`. */
   isDerived(nodeType: string, propertyKey: string): boolean {
-    return (
-      resolveDeclaration(this.tables, nodeType, propertyKey) === null &&
-      this.derivedFor(nodeType, propertyKey) !== null
-    );
+    const resolved = this.declarationFor(nodeType, propertyKey);
+    return resolved !== null && this.derived.get(nodeType)?.get(propertyKey) === resolved;
   }
 
   /** @internal The own capture keys of `nodeType` a derived check answers, for the sheet and coverage generators. */
