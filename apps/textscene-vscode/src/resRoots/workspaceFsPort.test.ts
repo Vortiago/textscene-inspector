@@ -55,16 +55,18 @@ describe('workspaceFsPort', () => {
     ]);
   });
 
-  it('reads permitted files and returns null when the workspace read is refused', async () => {
+  it('reads regular files and refuses oversized files and symbolic links', async () => {
     const bytes = new Uint8Array([1, 2, 3]);
     vscodeMocks.workspace.fs.stat
       .mockResolvedValueOnce({ type: vscode.FileType.File, size: bytes.length })
-      .mockResolvedValueOnce({ type: vscode.FileType.File, size: MAX_READ_BYTES + 1 });
+      .mockResolvedValueOnce({ type: vscode.FileType.File, size: MAX_READ_BYTES + 1 })
+      .mockResolvedValueOnce({ type: vscode.FileType.File | vscode.FileType.SymbolicLink, size: 7 });
     vscodeMocks.workspace.fs.readFile.mockResolvedValueOnce(bytes);
     const port = workspaceFsPort(folder);
 
     expect(await port.read('/game/icon.svg')).toBe(bytes);
     expect(await port.read('/game/large.glb')).toBeNull();
+    expect(await port.read('/game/link.glb')).toBeNull();
     expect(vscodeMocks.workspace.fs.readFile).toHaveBeenCalledTimes(1);
   });
 
