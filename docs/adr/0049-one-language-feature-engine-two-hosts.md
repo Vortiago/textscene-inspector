@@ -44,6 +44,11 @@ property tables, hints and deprecated aliases, and the copies would drift.
   workspace. The CLI uses its working directory as the workspace. VS Code invalidates cached roots
   on workspace file creation and deletion. Window focus refreshes cached answers for directories
   above the workspace.
+- The VS Code preview reads resources inside the scene's `res://` root, including resources in
+  a Godot project above the opened folder. Relative resource paths resolve from the scene's
+  directory and use the project root as their bound. For a loose scene, the workspace folder is
+  the bound on relative paths. Hot reload observes files inside the workspace. Reopening the preview after refocus
+  reads current bytes for dependencies outside the workspace.
 - The extension's **agent tools** (`vscode.lm`) are extension-only: lint a scene, read its node
   tree, open its preview, list its missing resources, and capture the preview as a PNG. They
   call the same linter, parsers and viewport capture. The capture tool needs the image part of a

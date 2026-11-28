@@ -2,8 +2,11 @@
  * Sets up the test workspace as a mirror of the fixtures res:// root, like the web
  * app's copy-fixtures.js.
  */
-import { copyFileSync, mkdirSync, readdirSync, rmSync } from 'fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'node:os';
+import { ABOVE_WORKSPACE_FOLDER_NAME, writeAboveWorkspaceSmokeProject } from '../smokeProject/aboveWorkspace';
+import { INTEGRATION_WORKSPACE_FILE } from './integrationLaunch';
 
 /**
  * Copies a source tree into the workspace with no filter: the directory is the
@@ -28,7 +31,7 @@ function copyRecursive(src: string, dest: string): void {
  * Mirrors scenes/fixtures/ into the test workspace.
  * @param workspaceRoot - Root directory of the test workspace
  */
-export function setupTestWorkspace(workspaceRoot: string): void {
+export function setupTestWorkspace(workspaceRoot: string): () => void {
   console.log('Setting up test workspace at:', workspaceRoot);
 
   try {
@@ -48,4 +51,19 @@ export function setupTestWorkspace(workspaceRoot: string): void {
   copyRecursive(fixturesSource, fixturesTarget);
 
   console.log('  Mirrored scenes/fixtures/ to fixtures/ (res:// root)');
+
+  // Start with both folders open so VS Code can keep the extension host running throughout the suite.
+  const smokeProject = mkdtempSync(join(realpathSync(tmpdir()), 'textscene-parent-project-'));
+  const cleanup = () => rmSync(smokeProject, { recursive: true, force: true });
+  try {
+    const { workspace } = writeAboveWorkspaceSmokeProject(smokeProject);
+    writeFileSync(
+      join(workspaceRoot, INTEGRATION_WORKSPACE_FILE),
+      JSON.stringify({ folders: [{ path: '.' }, { name: ABOVE_WORKSPACE_FOLDER_NAME, path: workspace }] })
+    );
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
+  return cleanup;
 }

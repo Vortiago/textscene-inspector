@@ -61,9 +61,9 @@ export function createMockDiagnosticCollection(name = 'mock'): {
 
 export const mockUri = {
   joinPath: vi.fn((base: any, ...pathSegments: string[]) => {
-    const basePath = base.fsPath || base.path || '/';
+    const basePath = base.path || base.fsPath || '/';
     const joined = path.posix.join(basePath, ...pathSegments);
-    return createMockUri(joined);
+    return createMockUriForScheme(joined, base.scheme ?? 'file', base.authority ?? '');
   }),
 
   file: vi.fn((fsPath: string) => createMockUri(fsPath)),
