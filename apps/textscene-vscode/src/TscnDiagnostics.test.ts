@@ -1007,6 +1007,36 @@ describe('TscnDiagnostics', () => {
       });
     });
 
+    it('clears a loose scene finding when a folder above its root is deleted', async () => {
+      const dir = '/workspace/assets/scenes';
+      let hasTree = true;
+      (vscode.workspace.fs.stat as Mock).mockImplementation(async (uri: vscode.Uri) => {
+        if (!hasTree || uri.path !== `${dir}/tree.glb`) throw new Error('Not found');
+        return { type: vscode.FileType.File, size: INSTANCED_TREE.length, ctime: 0, mtime: 0 };
+      });
+      (vscode.workspace.fs.readFile as Mock).mockResolvedValue(INSTANCED_TREE);
+      const level = sceneUsingTree(dir);
+      open(level);
+      const diagnostics = newDiagnostics();
+      try {
+        const findings = () =>
+          (collection.set.mock.lastCall?.[1] as vscode.Diagnostic[] | undefined)?.map(
+            (finding) => finding.code
+          );
+        await settleWalks();
+        expect(findings()).toContain('gltf-required-extension-unsupported-in-node');
+
+        hasTree = false;
+        deleteFolder('/workspace/assets');
+        await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
+
+        expect(findings()).not.toContain('gltf-required-extension-unsupported-in-node');
+      } finally {
+        diagnostics.dispose();
+        (vscode.workspace.fs.readFile as Mock).mockResolvedValue(new Uint8Array());
+      }
+    });
+
     it.each(['create', 'delete'] as const)(
       're-lints each open document of the project whose last lint read a glTF when a .gdextension is %sd',
       async (kind) => {

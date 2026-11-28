@@ -257,9 +257,10 @@ export class TscnDiagnostics implements vscode.Disposable {
         rootUri &&
         record.session.reads.length > 0 &&
         sameFileSystem(rootUri, uri) &&
-        isWithinRoot(rootUri.path, uri.path, HOST_PATH_CASE)
+        (isWithinRoot(rootUri.path, uri.path, HOST_PATH_CASE) ||
+          isWithinRoot(uri.path, rootUri.path, HOST_PATH_CASE))
       ) {
-        // Any path added to or removed from the project can change which plugins the scan finds.
+        // A folder event can stand in for changes to all of its files.
         record.listingChanged = true;
       }
       this._walk(document, record);
