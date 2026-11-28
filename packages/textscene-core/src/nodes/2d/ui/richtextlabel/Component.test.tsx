@@ -165,6 +165,18 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     expect(strokesOf(underlined)).toHaveLength(1);
   });
 
+  it.each([0, 2])('draws the underline over its glyphs with outline size %i', async (outlineSize) => {
+    const renderer = await render({
+      text: `[outline_size=${outlineSize}][outline_color=red][u]pp[/u][/outline_color][/outline_size]`,
+      bbcodeEnabled: true,
+    });
+    const meshes = meshesOf(renderer);
+    const glyphs = meshes.filter((mesh) => bundledRunOf(mesh) !== undefined);
+    const underline = meshes.find((mesh) => mesh.geometry.type === 'PlaneGeometry')!;
+    expect(glyphs).toHaveLength(outlineSize === 0 ? 1 : 2);
+    for (const glyph of glyphs) expect(underline.renderOrder).toBeGreaterThan(glyph.renderOrder);
+  });
+
   it("draws the underline below the line's own ascent, which a larger run on the line raises (rich_text_label.cpp:1571, :1737)", async () => {
     const strokeYOf = async (text: string) => {
       const renderer = await render({ text, bbcodeEnabled: true });
