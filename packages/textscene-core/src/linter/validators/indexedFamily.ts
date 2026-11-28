@@ -73,8 +73,9 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
 
   // Hoisted out of the per-call body, which runs once per `<prefix><i>/<leaf>`
   // key: one closure per registered family, not one per call.
+  const source = opts.indexLimit ? ` (${opts.indexLimit.at})` : '';
   const unknown = (key: string, line: number): ReturnType<PropertyValidator> =>
-    keyShapeError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
+    keyShapeError(key, line, `Unknown ${describes} property: "${key}"${source}`, unknownCode);
 
   const resolveLeaf: LeafResolver =
     opts.indexParse !== 'to_int'
@@ -95,14 +96,7 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
         ? negativeIndexError(indexText, key, line, negativeIndex.message, negativeIndex.code)
         : unknown(key, line);
     }
-    if (opts.indexLimit && index >= opts.indexLimit.value) {
-      return keyShapeError(
-        key,
-        line,
-        `Unknown ${describes} property: "${key}" (${opts.indexLimit.at})`,
-        unknownCode
-      );
-    }
+    if (opts.indexLimit && index >= opts.indexLimit.value) return unknown(key, line);
     const resolved = resolveLeaf(leafName);
     if (resolved === null) return unknown(key, line);
     return leaves[resolved]!(key, value, line);

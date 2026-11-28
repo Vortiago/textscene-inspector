@@ -100,6 +100,7 @@ export interface ParseError {
 
 /** Where one `[ext_resource]`, `[sub_resource]` or `[node]` section sits in the file. Every line is 1-based. */
 export interface SectionLines {
+  readonly resourceId?: string;
   readonly heading: number;
   /**
    * Each stored property's line, keyed as the section's bag stores it: a deprecated spelling

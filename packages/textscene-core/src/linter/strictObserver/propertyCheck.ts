@@ -6,36 +6,47 @@
 import type { ParsedProperty } from '../../parser/TscnParserCore.js';
 import type { ParseError } from '../types.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
+import { resolvedResourceRef } from '../../godot/variant/resourceRef.js';
+import { propertyError } from '../validators/propertyError.js';
 import { ownsNilMessage } from '../propertyValidator.js';
 import { isNilLiteral } from '../../godot/variant/variantParser.js';
 
 /** The refusal for one property, or null where no validator claims it or the value passes. */
-export function propertyRefusal({
-  ownerType,
-  key,
-  value,
-  line,
-  isMultiline,
-  stored,
-}: ParsedProperty): ParseError | null {
-  // Multi-line values (shader code, label text) and properties without a typed owner (index=/instance= nodes,
-  // ext_resource/gd_scene sections) go unvalidated.
-  if (isMultiline || !ownerType) return null;
+export function propertyRefusal(
+  { ownerType, key, value, line, isMultiline, stored }: ParsedProperty,
+  resourceId?: string
+): ParseError | null {
+  if (!ownerType) return null;
 
   // The key as written first. Where nothing claims that spelling, the pair the engine applies
   // (`godot/classdb/deprecated.ts` resolves the alias and transforms the value), and the diagnostic names both,
   // because the canonical key appears nowhere in the file.
   let lookupKey = key;
   let lookupValue = value;
-  let validator = validatorRegistry.findValidator(ownerType, key);
+  let validator = validatorRegistry.declarationFor(ownerType, key);
   if (!validator) {
     if (stored.key === key) return null;
-    validator = validatorRegistry.findValidator(ownerType, stored.key);
+    validator = validatorRegistry.declarationFor(ownerType, stored.key);
     if (!validator) return null;
     lookupKey = stored.key;
     lookupValue = stored.value;
   }
 
+  if (validator.refusesSelfAt && resourceId !== undefined) {
+    const ref = resolvedResourceRef(lookupValue);
+    if (ref?.kind === 'SubResource' && ref.id === resourceId) {
+      return {
+        ...propertyError(
+          key,
+          line,
+          `${key} cannot use its own ${ownerType} (${validator.refusesSelfAt}).`,
+          'SELF_RESOURCE_REFERENCE'
+        ),
+        propertyKey: key,
+      };
+    }
+  }
+  if (isMultiline && !validator.preferCaptured) return null;
   const found = validator(lookupKey, lookupValue, line);
   if (!found) return null;
   const keyed: ParseError = { ...found, propertyKey: key };

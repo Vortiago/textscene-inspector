@@ -220,10 +220,20 @@ function arrayValidator(descriptor: PropertyDescriptor): PropertyValidator {
 }
 
 function objectValidator(descriptor: PropertyDescriptor): PropertyValidator {
-  refuseFacts(descriptor, []);
   const { name, hint } = descriptor.property;
-  if (hint === PROPERTY_HINT.NODE_TYPE) return v.nodePath(name, { orNull: true });
-  return v.resourceReference(name);
+  if (hint === PROPERTY_HINT.NODE_TYPE) {
+    refuseFacts(descriptor, []);
+    return v.nodePath(name, { orNull: true });
+  }
+  refuseFacts(descriptor, ['refusesSelfAt']);
+  const validator = v.resourceReference(name);
+  const cite = descriptor.facts?.refusesSelfAt;
+  if (cite) {
+    validator.refusesSelfAt = cite;
+    validator.grounding = { kind: 'enforced', cite };
+    delete validator.formatOnly;
+  }
+  return validator;
 }
 
 export function descriptorValidator(descriptor: PropertyDescriptor): PropertyValidator | null {

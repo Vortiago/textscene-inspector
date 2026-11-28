@@ -13,7 +13,7 @@ interface SectionLineRecorder {
   /** Records a property of the open section under the key the scan stores its value under. */
   record(key: string, line: number): void;
   /** Files the open section's lines under what it built. */
-  built(section: BuiltSection, headingLine: number): void;
+  built(section: BuiltSection, headingLine: number, resourceId?: string): void;
 }
 
 export function sectionLines(): SectionLineRecorder {
@@ -28,8 +28,12 @@ export function sectionLines(): SectionLineRecorder {
     record(key, line) {
       propertyLines.set(key, line);
     },
-    built(section, headingLine) {
-      lines.set(section, { heading: headingLine, properties: propertyLines });
+    built(section, headingLine, resourceId) {
+      lines.set(section, {
+        heading: headingLine,
+        properties: propertyLines,
+        ...(resourceId === undefined ? {} : { resourceId }),
+      });
     },
   };
 }

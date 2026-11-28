@@ -1,3 +1,4 @@
+import { loadedResourceId } from '../../godot/variant/resourceId.js';
 import type { ParseObserver } from '../../parser/TscnParserCore.js';
 import type { BuiltSection } from '../../parser/types.js';
 import type { ParseError, SectionLines } from '../types.js';
@@ -24,6 +25,7 @@ export function strictObserver(): StrictObserver {
   const instanced = instancedPaths();
   const isRootHeading = rootHeadingCounter();
   // Written on each heading. Every refusal raised while it is set is about that section.
+  let resourceId: string | undefined;
   let owner: SectionOwner | null = null;
 
   const observer: ParseObserver = {
@@ -40,7 +42,9 @@ export function strictObserver(): StrictObserver {
       });
     },
 
-    onSectionStart: (heading, section, line) => {
+    onSectionStart: (heading, section, line, idToken) => {
+      resourceId =
+        idToken === undefined ? undefined : (loadedResourceId(idToken.replace(/^&(?=")/, '')) ?? undefined);
       reads.read(heading, line);
       lines.start();
       if (section !== 'node') {
@@ -63,11 +67,11 @@ export function strictObserver(): StrictObserver {
     onProperty: (property) => {
       // The key the scan stores the value under, so a reader of the bag finds the line.
       lines.record(property.stored.key, property.line);
-      const error = propertyRefusal(property);
+      const error = propertyRefusal(property, resourceId);
       if (error) errors.push({ ...error, ...owner });
     },
 
-    onSectionBuilt: (built, headingLine) => lines.built(built, headingLine),
+    onSectionBuilt: (built, headingLine) => lines.built(built, headingLine, resourceId),
   };
 
   return { observer, errors, lines: lines.lines, headingReads: reads.reads };

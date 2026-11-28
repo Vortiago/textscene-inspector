@@ -43,6 +43,8 @@ export type PropertyValidator = ((key: string, value: string, line: number) => P
   formatOnly?: boolean;
   /** ClassDB checks bound properties before this wildcard handles missing keys. */
   preferCaptured?: true;
+  /** A resource setter rejects a reference to the resource that owns the property. */
+  refusesSelfAt?: string;
 
   /**
    * The per-sub-property validators a wildcard dispatcher such as

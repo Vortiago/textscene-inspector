@@ -623,13 +623,15 @@ frames = SubResource("sf")
         2,
         expect.objectContaining({ type: 'ext_resource' }),
         'ext_resource',
-        3
+        3,
+        '"1"'
       );
       expect(onSectionStart).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({ type: 'sub_resource' }),
         'sub_resource',
-        5
+        5,
+        '"bm"'
       );
       expect(onSectionStart).toHaveBeenNthCalledWith(4, expect.objectContaining({ type: 'node' }), 'node', 7);
     });

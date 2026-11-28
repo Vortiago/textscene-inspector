@@ -3,7 +3,7 @@
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 import { isNilLiteral, nodePathLiteral } from '../../godot/variant/variantParser.js';
-import { isPathResourceLiteral, resourceRef } from '../../godot/variant/resourceRef.js';
+import { isPathResourceLiteral, resolvedResourceRef } from '../../godot/variant/resourceRef.js';
 
 /**
  * Every resource-reference validator, so a sweep can ask whether a registered
@@ -28,7 +28,7 @@ export function createResourceReferenceValidator(
     // one: `variant_parser.cpp:699` parses `null` and `nil` to `Variant()`,
     // `can_convert_strict` allows NIL -> OBJECT (variant.cpp:543), and a `Ref<T>`
     // setter takes an invalid Ref. Whether the slot should be filled is a rule's question.
-    if (!isNilLiteral(value) && resourceRef(value) === null && !isPathResourceLiteral(value)) {
+    if (!isNilLiteral(value) && resolvedResourceRef(value) === null && !isPathResourceLiteral(value)) {
       return propertyError(
         key,
         line,

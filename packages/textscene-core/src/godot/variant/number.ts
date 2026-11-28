@@ -4,6 +4,8 @@
  * cannot drift. {@link TSCN_FLOAT_PATTERN_SOURCE} says why they differ.
  */
 
+import { storedReal } from '../math/real.js';
+import { decimalFloat } from './decimalFloat.js';
 import { compositeSpellings } from './variantConversion.js';
 
 /**
@@ -11,7 +13,7 @@ import { compositeSpellings } from './variantConversion.js';
  * Anchored and finite by choice: it refuses `inf` and `nan`, so a decoder falls back to its
  * default. `number.md` gives each clause with its source line, measured load and ReDoS reason.
  */
-const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
+export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
 
 /**
  * A whole value that `get_token` reads as an INT: digits after an optional `-`, with no `.` or
@@ -103,6 +105,16 @@ export function parseGodotFloat(value: string): number | null {
   if (!TSCN_FLOAT_RE.test(trimmed)) return null;
   const num = parseFloat(trimmed);
   return Number.isNaN(num) ? null : num;
+}
+
+// variant_parser.cpp:486-489, binder_common.h:175
+export function floatSetterArgument(raw: string, converted: number): number {
+  const token = raw.trim();
+  return storedReal(
+    !Object.hasOwn(NON_FINITE_FLOATS, token) && /[.eE]/.test(token) && TSCN_FLOAT_RE.test(token)
+      ? decimalFloat(token)
+      : converted
+  );
 }
 
 /**

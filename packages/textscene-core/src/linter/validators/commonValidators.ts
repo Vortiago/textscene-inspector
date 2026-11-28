@@ -5,7 +5,7 @@ import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
 import { convertedSpelling, storedNotWritten, unrepresentableInt } from './intSlot.js';
 import { boolLiteralAsNumber, boolSlotValue, scalarSlotValue } from '../../godot/variant/variantBool.js';
-import { parseGodotFloat } from '../../godot/variant/number.js';
+import { floatSetterArgument, parseGodotFloat } from '../../godot/variant/number.js';
 import { readIntSlot, slotWidth } from '../../godot/variant/intSlots.js';
 import { type IntWidth } from '../../godot/variant/intWidth.js';
 
@@ -255,7 +255,7 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
 
     // The setter's own ends first: they are the more severe tier, and the band
     // between them and the hint's ends is what the outer checks below report.
-    const setterValue = spec.float32 ? Math.fround(num) : num;
+    const setterValue = spec.float32 ? floatSetterArgument(value, num) : num;
     const refusal =
       enforcedEndRefusal(propertyName, enforcedMin, 'min', setterValue, enforcedMessage) ??
       enforcedEndRefusal(propertyName, enforcedMax, 'max', setterValue, enforcedMessage);

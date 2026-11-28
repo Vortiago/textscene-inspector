@@ -88,7 +88,7 @@ export interface ParseObserver {
   /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;
   /** A heading parsed successfully and a new section begins. */
-  onSectionStart?(heading: ParsedHeading, section: SectionType, line: number): void;
+  onSectionStart?(heading: ParsedHeading, section: SectionType, line: number, idToken?: string): void;
   /** A property value completed. */
   onProperty?(property: ParsedProperty): void;
   /**
@@ -262,7 +262,8 @@ export class TscnParserCore {
       if (isHeading(line)) {
         finalizeSection();
 
-        currentHeading = parseHeading(line);
+        const scanned = parseHeading(line);
+        currentHeading = scanned;
         if (currentHeading) {
           currentSection = this.identifySection(currentHeading);
           currentHeadingLine = lineNumber;
@@ -280,7 +281,17 @@ export class TscnParserCore {
             addFileValue({ text: instance, line: lineNumber, place, isOpeningTag });
           if (currentHeading.type === 'connection' && binds !== undefined)
             addFileValue({ text: binds, line: lineNumber, place: 'binds', isOpeningTag });
-          observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
+          if (observer?.onSectionStart) {
+            const span = scanned?.valueSpans.id;
+            let idToken: string | undefined;
+            if (span && (currentSection === 'sub_resource' || currentSection === 'ext_resource')) {
+              const quotes = line[span.start - 1] === '"' ? 1 : 0;
+              idToken = line.slice(span.start - quotes, span.end + quotes);
+            }
+            if (idToken !== undefined)
+              observer.onSectionStart(currentHeading, currentSection, lineNumber, idToken);
+            else observer.onSectionStart(currentHeading, currentSection, lineNumber);
+          }
         } else {
           observer?.onError?.({
             message: `Invalid heading format: "${line.trim()}"`,

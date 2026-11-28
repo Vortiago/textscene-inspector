@@ -5,6 +5,8 @@
  * character `<= 32` before a token (`:415-417`), so `SubResource ( "id" )` loads like the tight form.
  */
 
+import { loadedResourceId } from './resourceId.js';
+
 const WS = '\\s*';
 
 /**
@@ -158,6 +160,16 @@ export function resourceRef(raw: string): ResourceRef | null {
   const match = RESOURCE_REF_RE.exec(raw);
   if (!match) return null;
   return { kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]) };
+}
+
+const LOADED_REF = new RegExp(`^(SubResource|ExtResource)${WS}\\(([\\s\\S]*)\\)$`);
+
+/** @canonical resolve the identity a Godot text resource reference loads */
+export function resolvedResourceRef(raw: string): ResourceRef | null {
+  const match = LOADED_REF.exec(raw);
+  if (!match) return null;
+  const id = loadedResourceId(match[2]!.trim());
+  return id === null ? null : { kind: match[1] as ResourceRef['kind'], id };
 }
 
 /** An open reference at the end of a text, `[1]` its kind and `[2]` the id typed so far. */

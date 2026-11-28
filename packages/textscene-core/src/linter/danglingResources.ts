@@ -11,7 +11,7 @@ import { armDiagnostic } from './ruleArms.js';
 import { propertyLocation } from './sourceLocation.js';
 import { validatorRegistry, type PropertyValidator } from './ValidatorRegistry.js';
 import { isResourceSlotValidator } from './validators/resourceValidators.js';
-import { resourceRef } from '../godot/variant/resourceRef.js';
+import { resolvedResourceRef } from '../godot/variant/resourceRef.js';
 
 /** The ids a body may name: ext ids are all known up front, int ids accrue. */
 interface Declared {
@@ -48,7 +48,7 @@ function sweep(
   into: Diagnostic[]
 ): void {
   for (const [key, value] of Object.entries(owner.rawProperties)) {
-    const ref = resourceRef(value.trim());
+    const ref = resolvedResourceRef(value.trim());
     // Not a well-formed reference: its format is the strict parser's diagnostic, and a second error naming a
     // missing resource would be wrong.
     if (ref === null) continue;
@@ -74,14 +74,16 @@ function sweep(
 /** Each dangling reference, on the line of the property that holds it. */
 export function danglingResourceDiagnostics(scene: RawScene, lines: SourceLines): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const ext = new Set(scene.externalResources.map((r) => r.id));
+  const loadedId = (resource: { id: string } & BuiltSection) =>
+    lines.get(resource)?.resourceId ?? resource.id;
+  const ext = new Set(scene.externalResources.map(loadedId));
   const int = new Set<string>();
-  const all = new Set(scene.internalResources.map((r) => r.id));
+  const all = new Set(scene.internalResources.map(loadedId));
 
   // File order: `int_resources[id] = res` lands as each heading is read (`:629`), ahead of its body, so a body sees
   // the ids above it and its own, and a forward reference dangles.
   for (const resource of scene.internalResources) {
-    int.add(resource.id);
+    int.add(loadedId(resource));
     const owner: Owner = {
       built: resource,
       name: resource.id,
