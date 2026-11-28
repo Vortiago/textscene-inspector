@@ -11,6 +11,13 @@ const riders = readFixture('unit-bone-attachment-3d-follow.tscn').replace(
   'bone_idx = 5',
   'bone_idx = 5\ntransform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.3, 0.2)'
 );
+const ridersWithOtherSkeleton =
+  riders +
+  `
+[node name="Other" type="Skeleton3D" parent="."]
+bones/0/name = "b4"
+bones/0/position = Vector3(7, 8, 9)
+`;
 const drivingRider = riders
   .replace('bone_idx = 5', 'bone_idx = 5\noverride_pose = true')
   .replace('bones/5/position = Vector3(0, -0.2, 0)', 'bones/5/position = Vector3(0.24, -0.2, 0.1)')
@@ -87,16 +94,9 @@ describe('successive attachment overrides', () => {
   });
 
   it('reads the bone name on the skeleton selected at the index setter', () => {
-    const alternate =
-      riders +
-      `
-[node name="Other" type="Skeleton3D" parent="."]
-bones/0/name = "b4"
-bones/0/position = Vector3(7, 8, 9)
-`;
     const writes =
       'bone_idx = 4\nuse_external_skeleton = true\nexternal_skeleton = NodePath("../../Other")\nbone_idx = 99';
-    const seat = measuredSeat(writes, alternate);
+    const seat = measuredSeat(writes, ridersWithOtherSkeleton);
     expect(seat.bone).toBe(0);
     expect(seat.global?.origin).toEqual({ x: 7, y: 8, z: 9 });
   });
@@ -144,16 +144,9 @@ it('keeps the reset on an unkeyed part of an animated skin', () => {
 });
 
 it('keeps the last parented pose when an external setter already bound the rider', () => {
-  const alternate =
-    riders +
-    `
-[node name="Other" type="Skeleton3D" parent="."]
-bones/0/name = "b4"
-bones/0/position = Vector3(7, 8, 9)
-`;
   const seat = measuredSeat(
     'bone_idx = 4\nexternal_skeleton = NodePath("../../Other")\nuse_external_skeleton = true\nbone_idx = 99',
-    alternate
+    ridersWithOtherSkeleton
   );
   expect(seat.global?.origin).toEqual({ x: expect.closeTo(0.34641, 5), y: expect.closeTo(-0.1, 5), z: 0 });
 });

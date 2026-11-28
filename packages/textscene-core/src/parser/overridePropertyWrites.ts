@@ -43,14 +43,20 @@ export function overlayPropertyWrites(base: PropertyBag, written: PropertyBag): 
 }
 
 export function mapPropertyWrites(
-  from: PropertyBag,
-  to: PropertyBag,
-  map: (key: string, value: string) => Write
-): void {
-  keepHeadingLine(from, to);
-  if (sourceOf(from).writes || Object.keys(from).length !== Object.keys(to).length) {
-    sourceOf(to).writes = propertyWrites(from).map(([key, value]) => map(key, value));
-  }
+  raw: PropertyBag,
+  map: (key: string, value: string) => { key: string; value: string }
+): PropertyBag {
+  let changed = false;
+  const writes = propertyWrites(raw).map(([key, value]): Write => {
+    const mapped = map(key, value);
+    changed ||= mapped.key !== key || mapped.value !== value;
+    return [mapped.key, mapped.value];
+  });
+  if (!changed) return raw;
+  const mapped = Object.fromEntries(writes);
+  keepHeadingLine(raw, mapped);
+  if (writes.length > Object.keys(mapped).length) sourceOf(mapped).writes = writes;
+  return mapped;
 }
 
 export function observeOverrideWrites(): ParseObserver {
@@ -62,19 +68,18 @@ export function observeOverrideWrites(): ParseObserver {
         section === 'node' && (!heading.attributes.type || heading.attributes.instance) ? [] : undefined;
       if (writes) {
         const current = writes;
-        observer.onProperty = ({ key, value }) => current.push([key, value]);
+        observer.onProperty = ({ stored }) => current.push([stored.key, stored.value]);
       } else {
         delete observer.onProperty;
       }
     },
     onSectionBuilt(section, line) {
-      if ('rawProperties' in section) {
-        sourceOf(section.rawProperties).line = line;
-        sourceOf(section.rawProperties).file = file;
-      }
-      if (writes && 'rawProperties' in section && writes.length > Object.keys(section.rawProperties).length) {
-        sourceOf(section.rawProperties).writes = writes;
-      }
+      if (!('rawProperties' in section)) return;
+      const { rawProperties } = section;
+      const source = sourceOf(rawProperties);
+      source.line = line;
+      source.file = file;
+      if (writes && writes.length > Object.keys(rawProperties).length) source.writes = writes;
     },
   };
   return observer;

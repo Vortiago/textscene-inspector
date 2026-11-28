@@ -29,14 +29,10 @@ export function layerRawOverride(
   overrideRaw: Record<string, string>,
   phase: { beforeParenting?: boolean } = {}
 ): Layered {
-  const written = canonicalisePropertyBag(base.type, overrideRaw);
+  const written = mapPropertyWrites(overrideRaw, (key, value) =>
+    resolveDeprecatedProperty(base.type, key, value)
+  );
   const rawProperties = { ...canonicalisePropertyBag(base.type, base.rawProperties), ...written };
-  if (written !== overrideRaw) {
-    mapPropertyWrites(overrideRaw, written, (key, value) => {
-      const property = resolveDeprecatedProperty(base.type, key, value);
-      return [property.key, property.value];
-    });
-  }
   keepHeadingLine(seat.rawProperties, rawProperties);
   const { parser } = parserRegistrationOf(base.type);
   return {

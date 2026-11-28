@@ -411,7 +411,8 @@ export class BonePoses {
   }
 
   forgetGlobalSubtree(index: number, globals: Map<number, Transform3D>): void {
-    if (!globals.size) return;
+    // A load retains each bone it reads with every ancestor (skeleton_3d.cpp:532-563).
+    if (!globals.has(index)) return;
     const dirty = new Set([index]);
     for (const bone of this.rig.order) {
       if (dirty.has(this.parentOf(bone))) dirty.add(bone);

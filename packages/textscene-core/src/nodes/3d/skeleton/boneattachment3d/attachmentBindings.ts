@@ -11,7 +11,7 @@ import type { Skeleton3DProperties } from '../../skeleton3d/types.js';
 
 interface AttachmentBinding {
   skeleton: LiveLink | null;
-  bone: number;
+  bone: number | string;
   external: boolean;
   heldLocal?: Transform3D;
 }
@@ -71,8 +71,8 @@ class Attachment {
       case 'useExternalSkeleton':
         this.state.useExternalSkeleton = write.value;
         if (write.value) {
-          this.updateExternal(load);
-          const rig = skeleton();
+          const external = this.updateExternal(load);
+          const rig = external && load.canReach(external) ? this.poses(external) : null;
           if (rig && this.state.boneIdx < 0) this.state.boneIdx = rig.findBone(this.state.boneName);
           this.bound = !!rig && this.state.boneIdx >= 0;
         }
@@ -81,13 +81,8 @@ class Attachment {
   }
 
   result(): AttachmentBinding {
-    if (this.state.useExternalSkeleton) this.updateExternal();
-    const skeleton = this.skeleton();
-    let bone = this.state.boneIdx;
-    if (skeleton && !this.bound && bone < 0) {
-      const { bones } = skeleton.step.node.properties as Skeleton3DProperties;
-      bone = bones.findIndex((entry) => entry.name === this.state.boneName);
-    }
+    const skeleton = this.state.useExternalSkeleton ? this.updateExternal() : this.skeleton();
+    const bone = !this.bound && this.state.boneIdx < 0 ? this.state.boneName : this.state.boneIdx;
     return {
       skeleton,
       bone: this.state.overridePose ? -1 : bone,

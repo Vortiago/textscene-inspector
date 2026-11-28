@@ -140,8 +140,13 @@ function seatOf(
   const node = link.step.node;
   if (node.type !== 'BoneAttachment3D') return;
   const binding = attachmentBindings(tree).bindings.get(link.path)!;
-  const { bone, skeleton } = binding;
-  if (!skeleton || bone < 0) {
+  const { bone: selection, skeleton } = binding;
+  const posed =
+    skeleton && (typeof selection === 'string' || selection >= 0)
+      ? posedSkeletonOf(skeleton, tree, patches)
+      : null;
+  const bone = typeof selection === 'string' ? (posed?.findBone(selection) ?? -1) : selection;
+  if (!skeleton || !posed || bone < 0) {
     if (binding.heldLocal) {
       const local = binding.heldLocal;
       const parent = parentPathOf(link.path);
@@ -155,7 +160,6 @@ function seatOf(
     }
     return;
   }
-  const posed = posedSkeletonOf(skeleton, tree, patches);
   const pose = posed.globalPose(bone);
   if (!binding.external) {
     // `set_transform(bone_global_pose)` (:311): the pose is the local transform, and the parent
