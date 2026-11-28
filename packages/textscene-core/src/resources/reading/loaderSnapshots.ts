@@ -103,6 +103,7 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     const loadedFiles = new Map<FileKind<object>, CacheSource<object>>();
     const snapshot = snapshotOver({
       ...parsedFiles,
+      owner: loader,
       loaded(fileKind, address) {
         let files = loadedFiles.get(fileKind);
         if (!files) loadedFiles.set(fileKind, (files = recordedIn(kindReads(fileKind))));
