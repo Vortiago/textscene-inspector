@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { createResRoots, type ResRoot, type ResRoots } from '@textscene/core/resources/resRoots';
 import { forwardSlashes, RES_SCHEME } from '@textscene/core/resources/resPath';
+import { ANY_PATH_PATTERN } from '../watchPatterns';
 import { workspaceFsPort, workspaceUriAt } from './workspaceFsPort';
 
 /** A core `res://` root with the Uri forms VS Code's editor features need. */
@@ -32,7 +33,7 @@ export function createWorkspaceResRoots(): WorkspaceResRoots {
   const byFolder = new Map<string, { uri: vscode.Uri; roots: ResRoots }>();
   const wrappers = new WeakMap<ResRoot, WorkspaceResRoot>();
   const changes = new vscode.EventEmitter<vscode.Uri>();
-  const watcher = vscode.workspace.createFileSystemWatcher('**/*', false, true, false);
+  const watcher = vscode.workspace.createFileSystemWatcher(ANY_PATH_PATTERN, false, true, false);
 
   const invalidate = (uri: vscode.Uri) => {
     // Sibling workspace folders can both use the Godot project above them.

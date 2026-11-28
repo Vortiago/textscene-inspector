@@ -9,7 +9,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import { useLiveScenePass } from '../liveScenePass';
-import { useSharedLiveTree } from '../useLiveSceneTree';
+import { useLiveTreeSelection } from '../useLiveSceneTree';
 import type { PaintRange } from '../canvasPaintOrder';
 import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPaint';
 import { useSortedPaint } from '../contexts/YSortContext';
@@ -82,9 +82,10 @@ export function useChildPaintFrames(
   );
 }
 
-/** The frame of each root of a dispatched scene, or null where the roots read the pass. */
+const hasLiveTree = () => true;
+
 export function useRootPaintFrames(roots: readonly TscnNode[]): readonly PaintFrame[] | null {
-  const hasTree = useSharedLiveTree() !== null;
+  const hasTree = useLiveTreeSelection(hasLiveTree, Object.is) === true;
   return useMemo(() => (hasTree ? null : detachedPaint().rootFrames(roots)), [hasTree, roots]);
 }
 

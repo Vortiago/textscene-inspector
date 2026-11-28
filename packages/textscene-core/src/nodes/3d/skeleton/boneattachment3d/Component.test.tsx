@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import { parseTscnContent } from '../../../../scene/parseScene';
 import type { SceneGraph } from '../../../../core/SceneGraph';
 import { DispatchedScene } from '../../../../r3f/testing/DispatchedScene';
@@ -161,4 +162,27 @@ describe('<BoneAttachment3D>', () => {
     expect(seat.position.x).toBeCloseTo(0.5, 5);
     expect(seat.position.y).toBeCloseTo(2.5, 5);
   });
+});
+
+it('carries each rider box with the bone its instance selected last', async () => {
+  const file = 'unit-bone-attachment-3d-follow.tscn';
+  const scene = readFixture('unit-bone-attachment-3d-overrides.tscn');
+  const loader = loaderServing({ [`res://${file}`]: readFixture(file) });
+  const renderer = await ReactThreeTestRenderer.create(
+    <DispatchedScene sceneGraph={parsed(scene)} loader={loader} />
+  );
+  await settleLoads();
+  const root = sceneRoot(renderer);
+  root.updateMatrixWorld(true);
+  for (const [name, x, y] of [
+    ['NameFirst', -0.30359, -0.1],
+    ['IndexFirst', 0.65, 0.1],
+  ] as const) {
+    const box = objectAt(objectAt(root, name), 'GreenBox');
+    const position = box.getWorldPosition(new THREE.Vector3());
+    expect(position.x).toBeCloseTo(x, 5);
+    expect(position.y).toBeCloseTo(y, 5);
+    expect(position.z).toBeCloseTo(0.1, 5);
+  }
+  await renderer.unmount();
 });

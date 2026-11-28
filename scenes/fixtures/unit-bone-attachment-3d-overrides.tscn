@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+; Two instances write the same bone name and index in opposite orders.
+; The green boxes ride different bones. The other attachment scene has no instance override.
+
+[ext_resource type="PackedScene" path="res://unit-bone-attachment-3d-follow.tscn" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="NameFirst" parent="." instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 0, 0)
+
+[node name="GreenRider" parent="NameFirst/Skeleton3D" index="0"]
+bone_name = "b2"
+bone_idx = 4
+
+[node name="IndexFirst" parent="." instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 0, 0)
+
+[node name="GreenRider" parent="IndexFirst/Skeleton3D" index="0"]
+bone_idx = 4
+bone_name = "b2"
+
+[editable path="NameFirst"]
+[editable path="IndexFirst"]

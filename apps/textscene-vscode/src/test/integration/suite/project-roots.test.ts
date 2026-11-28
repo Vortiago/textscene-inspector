@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { godotProjectDir, lineStartingWith, removeGodotProject } from '../helpers/godotProjectHelpers';
+import { getFixturePath } from '../helpers/fixtureHelpers';
 import { createTestPanel, getExtensionUri, waitForMessage } from '../helpers/panelHelpers';
 import { waitFor } from '../../waitFor';
 import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
@@ -226,6 +227,117 @@ suite('Project roots', () => {
       assert.strictEqual(await linkTarget(scene), looseGrid);
     } finally {
       fs.rmSync(looseGrid, { force: true });
+      fs.rmSync(scenePath, { force: true });
+    }
+  });
+
+  test('creating and deleting a project file reloads preview resources from the new root', async function () {
+    this.timeout(30000);
+    const resPath = 'res://root-switch.png';
+    const looseTexture = path.join(dir, 'scenes', 'root-switch.png');
+    const projectTexture = path.join(dir, 'root-switch.png');
+    const scenePath = path.join(dir, 'scenes', 'preview-root.tscn');
+    const projectFile = path.join(dir, 'project.godot');
+    const looseBytes = Buffer.from('loose texture');
+    const projectBytes = Buffer.from('project texture');
+    fs.writeFileSync(looseTexture, looseBytes);
+    fs.writeFileSync(projectTexture, projectBytes);
+    fs.writeFileSync(scenePath, sceneWith(resPath));
+
+    const { panel, roots, sentMessages, triggerMessage } = createTestPanel(
+      getExtensionUri(),
+      vscode.Uri.file(scenePath)
+    );
+    const projectEvents = roots.onDidInvalidate((uri) => {
+      if (uri.fsPath === projectFile) void panel.handleDependencyChange(uri, 'created-or-deleted');
+    });
+    const requestTexture = async (requestId: string) => {
+      triggerMessage({ type: 'loadResource', path: resPath, resourceType: 'Texture2D', requestId });
+      const reply = () =>
+        sentMessages.find(
+          (message) =>
+            (message.type === 'resourceLoaded' || message.type === 'resourceLoadError') &&
+            message.requestId === requestId
+        );
+      await waitFor(
+        () => reply() !== undefined,
+        8000,
+        () => `Missing texture reply for ${requestId}`
+      );
+      const message = reply();
+      assert.ok(message?.type === 'resourceLoaded' && message.isBinary, JSON.stringify(message));
+      return message.content;
+    };
+    const waitForReload = (count: number) =>
+      waitFor(
+        () => sentMessages.filter((m) => m.type === 'resourceChanged' && m.path === resPath).length === count,
+        8000,
+        () => `Missing texture reload ${count}`
+      );
+
+    try {
+      triggerMessage({ type: 'webviewReady' });
+      await waitForMessage(sentMessages, 'loadTscn', 8000);
+      assert.strictEqual(await requestTexture('loose'), looseBytes.toString('base64'));
+
+      await writeProjectFile(projectFile);
+      await waitForReload(1);
+      assert.strictEqual(await requestTexture('project'), projectBytes.toString('base64'));
+
+      await removeProjectFile(projectFile);
+      await waitForReload(2);
+      assert.strictEqual(await requestTexture('loose-again'), looseBytes.toString('base64'));
+    } finally {
+      projectEvents.dispose();
+      panel.dispose();
+      for (const file of [looseTexture, projectTexture, scenePath]) {
+        fs.rmSync(file, { force: true });
+      }
+    }
+  });
+
+  test('creating and deleting a project file changes the Problems panel verdict for an open scene', async function () {
+    this.timeout(30000);
+    const glb = getFixturePath('gltf-unsupported-required-extension/instanced-tree.glb').fsPath;
+    const looseTree = path.join(dir, 'scenes', 'tree.glb');
+    const projectTree = path.join(dir, 'tree.glb');
+    const scenePath = path.join(dir, 'scenes', 'lint-root.tscn');
+    const projectFile = path.join(dir, 'project.godot');
+    fs.copyFileSync(glb, looseTree);
+    fs.copyFileSync(glb, projectTree);
+    fs.writeFileSync(
+      scenePath,
+      [
+        '[gd_scene format=3]',
+        '[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]',
+        '[node name="Tree" instance=ExtResource("1_tree")]',
+      ].join('\n')
+    );
+
+    try {
+      const scene = await shown(scenePath);
+      const diagnostics = () => vscode.languages.getDiagnostics(scene.uri);
+      const waitForFinding = (code: string, severity: vscode.DiagnosticSeverity) =>
+        waitFor(
+          () =>
+            diagnostics().some(
+              (finding) =>
+                finding.source === 'tscn-lint' && finding.code === code && finding.severity === severity
+            ),
+          8000,
+          () => `Expected ${code} at severity ${severity}, found ${JSON.stringify(diagnostics())}`
+        );
+      const looseFinding = () =>
+        waitForFinding('gltf-required-extension-maybe-unsupported', vscode.DiagnosticSeverity.Warning);
+
+      await looseFinding();
+      await writeProjectFile(projectFile);
+      await waitForFinding('gltf-required-extension-unsupported', vscode.DiagnosticSeverity.Error);
+      await removeProjectFile(projectFile);
+      await looseFinding();
+    } finally {
+      fs.rmSync(looseTree, { force: true });
+      fs.rmSync(projectTree, { force: true });
       fs.rmSync(scenePath, { force: true });
     }
   });

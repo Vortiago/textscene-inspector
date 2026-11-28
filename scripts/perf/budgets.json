@@ -183,7 +183,7 @@
   },
   "demo-3d-platformer-write-each-frame": {
     "drawCalls": 306,
-    "sceneRenders": 1,
+    "sceneRenders": 0,
     "steps": {
       "Scene draw": {
         "drawCalls": 194,
@@ -221,6 +221,50 @@
       },
       "Scene draw": {
         "drawCalls": 35,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "dungeon": {
+    "drawCalls": 309,
+    "sceneRenders": 0,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 308,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "dungeon-write-each-frame": {
+    "drawCalls": 309,
+    "sceneRenders": 0,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 308,
         "runs": 1
       },
       "Canvas copy": {

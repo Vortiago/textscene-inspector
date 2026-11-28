@@ -6,7 +6,7 @@
 
 import { useNoComponentReport } from './viewStatus/useNoComponentReport.js';
 import { ControlCanvasSpace } from './ControlCanvasSpace.js';
-import { Fragment, useEffect, useMemo } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { LiveNode } from '../resources/liveNode.js';
@@ -45,7 +45,13 @@ import {
 } from './contexts/InstancedScenePathsContext.js';
 import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
 import { UnownedSubtree } from './contexts/UnownedSubtreeContext.js';
-import { useLiveStepOf } from './useLiveSceneTree.js';
+import { sameData } from '../utils/sameData.js';
+import {
+  seatedRootsOf,
+  useLiveTreeSelection,
+  useLiveStepOf,
+  type SharedLiveTree,
+} from './useLiveSceneTree.js';
 import { useLiveDrawnNode } from './liveNodePatches.js';
 import { useResourceLoader } from '../resources/ResourceLoaderContext.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
@@ -86,8 +92,8 @@ function containsCsgShape(node: TscnNode): boolean {
 }
 
 export interface NodeDispatcherProps {
-  /** Root nodes from the active scene (typically `scene.scenes.get(rootScene).nodes`). */
-  nodes: readonly TscnNode[];
+  /** A detached walk takes its roots here. A scene view reads its roots from the live tree. */
+  nodes?: readonly TscnNode[];
 }
 
 /**
@@ -102,23 +108,42 @@ function hidesSubtree(node: TscnNode, animatedVisible: boolean | null): boolean 
   return !(animatedVisible ?? (node.properties as { visible?: boolean }).visible !== false);
 }
 
-export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
+const NO_NODES: readonly TscnNode[] = [];
+
+function dispatchOf(nodes: readonly TscnNode[]) {
+  return {
+    names: nodes.map((node) => node.name),
+    ranks: canvasLayerRanks(nodes),
+    hasCsg: nodes.some(containsCsgShape),
+  };
+}
+
+const liveDispatch = (live: SharedLiveTree) => dispatchOf(seatedRootsOf(live));
+
+function LiveRoot({ index }: { index: number }) {
+  const select = useCallback((live: SharedLiveTree) => seatedRootsOf(live)[index], [index]);
+  const node = useLiveTreeSelection(select, Object.is);
+  return node && <DispatchedNode node={node} path={node.name} />;
+}
+
+export const NodeDispatcher = memo(function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   useSceneRenderCount();
   const { handlers } = useViewportSelection();
   // The running game picks no node.
   const pointerHandlers = useIsEditorHint() ? handlers : null;
   useCanvasPickListeners(pointerHandlers);
 
+  const live = useLiveTreeSelection(nodes ? null : liveDispatch, sameData);
+  const { names, ranks, hasCsg } = useMemo(() => live ?? dispatchOf(nodes ?? NO_NODES), [live, nodes]);
   // Early, as FrameOnOpen frames a CSG result only after the loader settles. CsgPrimitive evaluates it.
   useEffect(() => {
-    if (nodes.some(containsCsgShape)) prefetchCsgModule();
-  }, [nodes]);
+    if (hasCsg) prefetchCsgModule();
+  }, [hasCsg]);
 
   const canvasModulate = useCanvasModulateColor(nodes);
   // Pure functions of the tree, so the Control walk derives the same numbers on its own.
-  const ranks = useMemo(() => canvasLayerRanks(nodes), [nodes]);
-  const rootOrders = useMemo(() => childOrders([], nodes.length), [nodes.length]);
-  const rootFrames = useRootPaintFrames(nodes);
+  const rootOrders = useMemo(() => childOrders([], names.length), [names.length]);
+  const rootFrames = useRootPaintFrames(nodes ?? NO_NODES);
 
   return (
     // paint-order-safe: one pointer root, as R3F raycasts once per handler (one per node would cost depth).
@@ -130,10 +155,10 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
         <LayerRanksProvider value={ranks}>
           {/* Inside the pointer root, so a click on a node that escaped its parent reaches it. */}
           <WorldRoot>
-            {nodes.map((node, i) => (
-              <InPaintFrame key={node.name} frame={rootFrames?.[i]}>
+            {names.map((name, i) => (
+              <InPaintFrame key={name} frame={rootFrames?.[i]}>
                 <TreeOrderProvider order={rootOrders[i]!}>
-                  <DispatchedNode node={node} path={node.name} />
+                  {nodes ? <DispatchedNode node={nodes[i]!} path={name} /> : <LiveRoot index={i} />}
                 </TreeOrderProvider>
               </InPaintFrame>
             ))}
@@ -142,7 +167,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
       </CanvasModulateContext.Provider>
     </group>
   );
-}
+});
 
 interface DispatchedNodeProps {
   node: LiveNode;
@@ -153,7 +178,7 @@ interface DispatchedNodeProps {
  * Sends a node with an `instance` ref to `InstancedNode` and every other node to
  * `PlainNode`. It holds no hooks, so the branch is free of rules-of-hooks concerns.
  */
-export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
+export const DispatchedNode = memo(function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const dispatched = node.instance ? (
     <InstancedNode node={node} path={path} />
   ) : (
@@ -167,7 +192,7 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
   );
   if (!node.isUnowned) return scoped;
   return <UnownedSubtree>{scoped}</UnownedSubtree>;
-}
+});
 
 /**
  * Provides the scope a node carries (`LiveNode.scope`). Under another scene's provider a

@@ -95,7 +95,8 @@ function walk(
   base: readonly string[],
   relative: string,
   floor: number,
-  { uniquePaths, exists, isOpaque, instanceTable }: Partial<RootWalkTables> = {}
+  { uniquePaths, exists, isOpaque, instanceTable }: Partial<RootWalkTables> = {},
+  claimedExists?: (path: string) => boolean
 ): string[] | null | UnlistedEnd {
   let segments = [...base];
   const parts = nodePathWalkNames(relative);
@@ -124,6 +125,7 @@ function walk(
         return isOpaqueHere && !isDeferred
           ? { unlisted: [...segments, ...parts.slice(index)].join('/') }
           : null;
+      if (claimedExists && !claimedExists(claimed)) return null;
       segments = claimed.split('/');
       continue;
     }
@@ -135,6 +137,11 @@ function walk(
   return segments;
 }
 
+export interface NodePathBoundary {
+  depth: number;
+  exists(path: string): boolean;
+}
+
 /**
  * A relative node path resolved against the base node itself, not its parent, so `"Child"` is a
  * child and `"../Sibling"` a sibling. The base path's first segment is the scene root, the floor:
@@ -144,10 +151,17 @@ function walk(
 export function resolveRelativePath(
   basePath: string,
   relative: string,
-  uniquePaths?: ReadonlyMap<string, string>
+  uniquePaths?: ReadonlyMap<string, string>,
+  boundary?: NodePathBoundary
 ): string | null {
   if (relative.startsWith('/')) return null;
-  const end = walk(basePath.split('/'), relative, 1, { uniquePaths });
+  const end = walk(
+    basePath.split('/'),
+    relative,
+    boundary?.depth ?? 1,
+    { uniquePaths, exists: boundary?.exists },
+    boundary?.exists
+  );
   return Array.isArray(end) ? end.join('/') : null;
 }
 
@@ -190,10 +204,11 @@ export function walkedPath(end: string | null | UnlistedEnd): string | null {
 export function resolveNodePathLiteral(
   basePath: string,
   raw: string | undefined,
-  uniquePaths?: ReadonlyMap<string, string>
+  uniquePaths?: ReadonlyMap<string, string>,
+  boundary?: NodePathBoundary
 ): string | null {
   const inner = relativePathText(raw);
-  return inner === null ? null : resolveRelativePath(basePath, inner, uniquePaths);
+  return inner === null ? null : resolveRelativePath(basePath, inner, uniquePaths, boundary);
 }
 
 /**

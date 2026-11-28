@@ -29,7 +29,7 @@ A reader takes all three from the one call, because the authored node and its gr
 _Avoid_: reading a node's merge, scope or children in separate calls.
 
 **Live tree snapshot** (`LiveTreeContext` in `r3f/liveSceneTree.ts`, shared by `useSharedLiveTree`):
-One read of the loader's scene cache that every question over the **Live scene tree** shares until the next scene or GLB load.
+The **Live scene tree** over one written graph and one snapshot of the loader's caches. A host write or a load can give the readers a new tree. A reader renders when its selection changes.
 It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
 It also carries the project's **Physics clock**, so one snapshot answers for one project.
 _Avoid_: a live tree or a context per consumer, per question.
@@ -648,7 +648,7 @@ A named part of a frame that a **frame profile** times, such as Shadows or Fog. 
 _Avoid_: "pass" (a pass is one render, and a step can hold many). "phase".
 
 **Scene render**:
-A React render of a scene tree, counted per frame by the **frame profile** at each commit of `NodeDispatcher`. It runs outside the frame, so the frame's CPU time leaves it out. A scene at rest, or a pan or zoom of the view, makes none (ADR-0053).
+A React render of a scene tree, counted per frame by the **frame profile** at each commit of `NodeDispatcher`. It runs outside the frame, so the frame's CPU time leaves it out. A scene at rest and a pan or zoom make none. A host write makes none while the root names and canvas-wide values stay the same (ADR-0053).
 _Avoid_: "re-render" for a frame's draw. A frame draws the scene, and a scene render rebuilds its React tree.
 
 **Work budget**:

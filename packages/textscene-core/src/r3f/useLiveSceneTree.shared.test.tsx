@@ -10,7 +10,14 @@ import { TscnParser } from '../parser/TscnParser.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
-import { useLiveTreeVersion } from './useLiveSceneTree.js';
+import { openScene } from '../scene/openScene';
+import './sceneLiveTree';
+import {
+  seatedRootsOf,
+  useLiveTreeSelection,
+  useLiveTreeVersion,
+  type SharedLiveTree,
+} from './useLiveSceneTree.js';
 import { useLiveNode } from './liveNode.testkit.js';
 import { useLocalScene, useUniqueNamePaths } from './useUniqueNames.js';
 
@@ -50,6 +57,25 @@ function mount({ seeded = true } = {}) {
 }
 
 describe('the live tree shared by its consumers', () => {
+  it('reads a write and keeps a selection that the write leaves unchanged', async () => {
+    const scene = openScene({ source: MAIN, provider: { loadResource: async () => null } });
+    const hierarchy = { scene, sceneGraph: scene.parse().sceneGraph, panelId: 'p' };
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <HierarchyProvider value={hierarchy}>{children}</HierarchyProvider>
+    );
+    const names = (live: SharedLiveTree) => seatedRootsOf(live)[0]?.name;
+    const visible = (live: SharedLiveTree) => seatedRootsOf(live)[0]?.rawProperties.visible;
+    const nameProbe = vi.fn(() => useLiveTreeSelection(names, Object.is));
+    renderHook(nameProbe, { wrapper });
+    const { result } = renderHook(() => useLiveTreeSelection(visible, Object.is), { wrapper });
+    const reads = nameProbe.mock.calls.length;
+    await act(async () => {
+      await scene.getNode('/root/Main').set('visible', false);
+    });
+    expect(result.current).toBe('false');
+    expect(nameProbe).toHaveBeenCalledTimes(reads);
+  });
+
   it('reads the sub-scene once for two hooks on one tick', () => {
     const { wrapper, reads } = mount();
     renderHook(() => useUniqueNamePaths(HEAD), { wrapper });

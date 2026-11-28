@@ -5,7 +5,6 @@
  */
 
 import * as vscode from 'vscode';
-import { PROJECT_FILE_NAME } from '@textscene/core/godot';
 import { error as logError, warn } from '@textscene/core/logger';
 import type { HostToWebviewMessage, LoadTscnMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
@@ -16,12 +15,14 @@ import { relayWebviewLog } from './hostLogRelay';
 import { writeClipboard } from './writeClipboard';
 import { encodeResourceResponse } from './wireCodec';
 import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue';
+import type { WorkspaceResRoots } from './resRoots/workspaceResRoots';
+import { isProjectFile } from './watchPatterns';
 
 export { dispatchWebviewMessage } from './webviewDispatch';
 export type { WebviewMessageHandlers } from './webviewDispatch';
 
 /** What a watcher saw happen to a file. */
-export type FileChange = 'changed' | 'created' | 'deleted';
+export type FileChange = 'changed' | 'created' | 'deleted' | 'created-or-deleted';
 
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
@@ -53,12 +54,7 @@ export class TscnPreviewPanel {
   /** Set by a `webviewLoadFailed`, which loads the document once more. Cleared by `webviewReady`. */
   private _hasReloadedDocument = false;
 
-  /**
-   * Cached per panel, so the `res://` root walk and the served `fsPath -> res://`
-   * map (`VSCodeResourceProvider.getServedResPath`) survive across requests and
-   * dependency changes. `update()` discards it when the document changes, and
-   * `handleDependencyChange` when a `project.godot` change moves the `res://` root.
-   */
+  // The provider records served paths so edits can refresh the resources the webview is using.
   private _resourceProvider: VSCodeResourceProvider | null = null;
 
   private readonly _captures = new PreviewCaptureQueue({
@@ -66,7 +62,11 @@ export class TscnPreviewPanel {
     postPing: (pingId) => this._postMessageToWebview({ type: 'capturePing', pingId }),
   });
 
-  public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
+  public static create(
+    extensionUri: vscode.Uri,
+    resource: vscode.Uri,
+    roots: WorkspaceResRoots
+  ): TscnPreviewPanel {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn! + 1
       : vscode.ViewColumn.Two;
@@ -83,14 +83,19 @@ export class TscnPreviewPanel {
       }
     );
 
-    return new TscnPreviewPanel(panel, extensionUri, resource);
+    return new TscnPreviewPanel(panel, extensionUri, resource, roots);
   }
 
   public reveal(column?: vscode.ViewColumn): void {
     this._panel.reveal(column);
   }
 
-  public constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, resource: vscode.Uri) {
+  public constructor(
+    panel: vscode.WebviewPanel,
+    extensionUri: vscode.Uri,
+    resource: vscode.Uri,
+    private readonly _roots: WorkspaceResRoots
+  ) {
     this._panel = panel;
     this._extensionUri = extensionUri;
     this._currentResource = resource;
@@ -218,7 +223,11 @@ export class TscnPreviewPanel {
     if (!workspaceFolder) {
       return null;
     }
-    this._resourceProvider = new VSCodeResourceProvider(workspaceFolder.uri, this._currentResource);
+    this._resourceProvider = new VSCodeResourceProvider(
+      this._roots,
+      workspaceFolder.uri,
+      this._currentResource
+    );
     return this._resourceProvider;
   }
 
@@ -404,9 +413,4 @@ export class TscnPreviewPanel {
     if (this._disposed) return;
     this._panel.webview.postMessage(message);
   }
-}
-
-/** Whether `fileUri` names a `project.godot`, whose directory is the `res://` root. */
-function isProjectFile(fileUri: vscode.Uri): boolean {
-  return fileUri.path.split('/').pop() === PROJECT_FILE_NAME;
 }

@@ -4,7 +4,9 @@
  * never a throw or a partial render (R3F-contracts.md §4).
  */
 import { createContext, useContext, type ReactNode } from 'react';
+import type { TscnNode } from '../../parser/types.js';
 import type { SceneGraph } from '../../core/SceneGraph.js';
+import { useSceneSnapshot } from '../hooks/useSceneSnapshot.js';
 import type { Scene } from '../../scene/openScene.js';
 
 export interface HierarchyContextValue {
@@ -43,4 +45,14 @@ export function useHierarchy(): HierarchyContextValue {
  */
 export function useOptionalHierarchy(): HierarchyContextValue | null {
   return useContext(HierarchyContext);
+}
+
+export function useWrittenGraph(): SceneGraph | null {
+  const hierarchy = useOptionalHierarchy();
+  return useSceneSnapshot(hierarchy?.scene, (scene) => scene.written(), hierarchy?.sceneGraph ?? null);
+}
+
+/** A hosted scene dispatches its live roots. A detached view dispatches the roots it supplies. */
+export function useDispatchRoots(roots: readonly TscnNode[] | null): readonly TscnNode[] | undefined {
+  return useOptionalHierarchy()?.scene ? undefined : (roots ?? undefined);
 }

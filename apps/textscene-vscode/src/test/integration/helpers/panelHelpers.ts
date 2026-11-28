@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from '../../../TscnPreviewPanel';
 import type { HostToWebviewMessage } from '../../../protocol';
+import { createWorkspaceResRoots, type WorkspaceResRoots } from '../../../resRoots/workspaceResRoots';
 import { waitFor } from '../../waitFor';
 
 const EXTENSION_ID = 'vortiago.textscene-inspector';
@@ -22,6 +23,7 @@ export function getExtensionUri(): vscode.Uri {
 export interface TestPanel {
   /** The `TscnPreviewPanel` under test. */
   panel: TscnPreviewPanel;
+  roots: WorkspaceResRoots;
   /** Every message the panel has sent to the webview through `postMessage`. */
   sentMessages: HostToWebviewMessage[];
   /**
@@ -122,7 +124,14 @@ export function createTestPanel(
     },
   };
 
-  const panel = new TscnPreviewPanel(fakePanel as unknown as vscode.WebviewPanel, extensionUri, resourceUri);
+  const roots = createWorkspaceResRoots();
+  const panel = new TscnPreviewPanel(
+    fakePanel as unknown as vscode.WebviewPanel,
+    extensionUri,
+    resourceUri,
+    roots
+  );
+  panel.onDidDispose(() => roots.dispose());
 
   function triggerMessage(msg: Record<string, unknown>): void {
     for (const listener of messageListeners) {
@@ -137,7 +146,7 @@ export function createTestPanel(
     }
   }
 
-  return { panel, sentMessages, triggerMessage, setVisible };
+  return { panel, roots, sentMessages, triggerMessage, setVisible };
 }
 
 export async function waitForMessage(

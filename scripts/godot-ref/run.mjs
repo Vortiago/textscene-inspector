@@ -1293,7 +1293,7 @@ func _await_reflection_probe_captures(source: Viewport) -> void:
 # pending work is in render-wait.md.
 func _await_rendered(source: Viewport) -> void:
 	var period := FOG_JITTER_CYCLE_FRAMES if _has_fog_history(source) else 1
-	if not (PREVIEWS or IN_GAME) and period == 1:
+	if not (PREVIEWS or IN_GAME) and not _has_frame_history(source):
 		return
 	Engine.time_scale = 0.0
 	var pictures: Array[PackedByteArray] = []
@@ -1351,6 +1351,10 @@ func _pending_work() -> Array[int]:
 	]:
 		queued += RenderingServer.get_rendering_info(info)
 	return [queued, RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TEXTURE_MEM_USED)]
+
+func _has_frame_history(source: Viewport) -> bool:
+	var environment := _environment_in_effect(source)
+	return environment != null and (environment.ssil_enabled or _has_fog_history(source))
 
 func _has_fog_history(source: Viewport) -> bool:
 	var environment := _environment_in_effect(source)

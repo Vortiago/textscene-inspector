@@ -6,6 +6,7 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { createMockUri, setupMockPanel } from './test-setup';
 
 function mockDefaultViewportMode(value: 'auto' | '2D' | '3D' | undefined): void {
@@ -24,7 +25,11 @@ describe('TscnPreviewPanel textscene.defaultViewportMode', () => {
     mockDefaultViewportMode(undefined);
     const { webview } = setupMockPanel();
 
-    TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/test.tscn'));
+    TscnPreviewPanel.create(
+      createMockUri('/extension'),
+      createMockUri('/workspace/test.tscn'),
+      createWorkspaceResRoots()
+    );
 
     expect(webview.html).toContain('window.__TEXTSCENE_CONFIG__ = {"viewportMode":"auto"};');
   });
@@ -33,7 +38,11 @@ describe('TscnPreviewPanel textscene.defaultViewportMode', () => {
     mockDefaultViewportMode('2D');
     const { webview } = setupMockPanel();
 
-    TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/test.tscn'));
+    TscnPreviewPanel.create(
+      createMockUri('/extension'),
+      createMockUri('/workspace/test.tscn'),
+      createWorkspaceResRoots()
+    );
 
     expect(webview.html).toContain('window.__TEXTSCENE_CONFIG__ = {"viewportMode":"2D"};');
   });
@@ -42,7 +51,11 @@ describe('TscnPreviewPanel textscene.defaultViewportMode', () => {
     mockDefaultViewportMode('3D');
     const { webview } = setupMockPanel();
 
-    TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/test.tscn'));
+    TscnPreviewPanel.create(
+      createMockUri('/extension'),
+      createMockUri('/workspace/test.tscn'),
+      createWorkspaceResRoots()
+    );
 
     expect(webview.html).toContain('window.__TEXTSCENE_CONFIG__ = {"viewportMode":"3D"};');
   });
@@ -51,7 +64,11 @@ describe('TscnPreviewPanel textscene.defaultViewportMode', () => {
     mockDefaultViewportMode('2D');
     setupMockPanel();
 
-    TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/test.tscn'));
+    TscnPreviewPanel.create(
+      createMockUri('/extension'),
+      createMockUri('/workspace/test.tscn'),
+      createWorkspaceResRoots()
+    );
 
     expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('textscene');
   });

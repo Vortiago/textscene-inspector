@@ -4,6 +4,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnSceneProvider } from './TscnSceneProvider';
 import { TscnSceneContents } from './SceneContents';
 import { openScene, type Scene } from '../scene/openScene';
+import { variant } from '../scene/variant';
 import { visibleInTree } from './visibleInTree';
 import { ControlCanvasLayer } from './controls/native/ControlCanvasLayer';
 import { settleLoads } from './testing/settleLoads';
@@ -97,6 +98,18 @@ describe("a host's visible = false", () => {
     await hide(scene, '/root/Root/Far');
 
     expect(drawnBounds(renderer).max.x).toBeCloseTo(0.5, 5);
+  });
+
+  it('draws the same CSG result after a child size write as a new view', async () => {
+    const scene = openScene({ source: CSG_SCENE, provider: { loadResource: async () => null } });
+    const renderer = await draw(scene);
+    const before = drawnBounds(renderer);
+    await ReactThreeTestRenderer.act(async () => {
+      await scene.getNode('Far').set('size', variant('Vector3(10, 2, 2)'));
+      await settleLoads();
+    });
+    expect(drawnBounds(renderer)).not.toEqual(before);
+    expect(drawnBounds(renderer)).toEqual(drawnBounds(await draw(scene)));
   });
 
   it('hides a root Control', async () => {

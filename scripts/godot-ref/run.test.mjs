@@ -1005,6 +1005,17 @@ describe('the render wait fits inside the render pass', () => {
     expect(wait).toMatch(/while Engine\.get_process_frames\(\) < NEVER_SETTLES_CAPTURE_FRAME:/);
   });
 
+  it('waits for frame history in the effective environment with --no-previews', () => {
+    const script = bootstrap();
+    const wait = script.split('func _await_rendered')[1].split('\nfunc ')[0];
+
+    expect(wait).toContain('if not (PREVIEWS or IN_GAME) and not _has_frame_history(source):\n\t\treturn');
+    const history = script.split('func _has_frame_history')[1].split('\nfunc ')[0];
+    expect(history).toContain('_environment_in_effect(source)');
+    expect(history).toContain('environment.ssil_enabled');
+    expect(history).toContain('_has_fog_history(source)');
+  });
+
   it('holds the quiet window only while every global transform holds still', () => {
     // A paused tree still runs transform notifications, so a relay cycle moves its nodes on every
     // frame, after the picture has lost them.

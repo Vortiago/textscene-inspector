@@ -48,12 +48,13 @@ function prepareSceneLights(
   scene: THREE.Scene,
   camera: THREE.Camera,
   positionalAtlas: ViewportShadowAtlas,
-  tickMsec: number
+  tickMsec: number,
+  maxTextureSize: number
 ): void {
   const lights = sceneLights(scene);
   fitSceneDirectionalShadows(scene, camera, lights);
   fitScenePositionalShadows(lights, camera, positionalAtlas, tickMsec);
-  if (!areAtlasesUpdatedPerFrame()) updateAreaLightAtlas();
+  if (!areAtlasesUpdatedPerFrame()) updateAreaLightAtlas(maxTextureSize);
   writeAreaLightUniforms(lights, camera);
   const shadedLights = sceneLights(scene);
   const drawsSoftShadows = drawsDirectionalSoftShadows(shadedLights, camera);
@@ -70,12 +71,19 @@ function prepareSceneLights(
 
 /** The light pass before each render of `scene`, in `atlas` outside a viewport pass. Null runs nothing. */
 export function useSceneShadowFit(scene: THREE.Scene | null, atlas: PositionalShadowAtlasSettings): void {
+  const getState = useThree((state) => state.get);
   const settings = useByValue(atlas, sameData);
   useEffect(() => {
     if (!scene) return undefined;
     const ownAtlas = new ViewportShadowAtlas(settings);
     const stopObserving = observeSceneCamera(scene, (camera) =>
-      prepareSceneLights(scene, camera, renderUnderWay()?.shadowAtlas ?? ownAtlas, performance.now())
+      prepareSceneLights(
+        scene,
+        camera,
+        renderUnderWay()?.shadowAtlas ?? ownAtlas,
+        performance.now(),
+        getState().gl.capabilities.maxTextureSize
+      )
     );
     return () => {
       stopObserving();
@@ -83,7 +91,7 @@ export function useSceneShadowFit(scene: THREE.Scene | null, atlas: PositionalSh
       releaseSoftShadowSearch(scene);
       ownAtlas.dispose();
     };
-  }, [scene, settings]);
+  }, [scene, settings, getState]);
 }
 
 /** Mounted once per 3D canvas, for the canvas's own scene. */

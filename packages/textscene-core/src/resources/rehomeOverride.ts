@@ -5,6 +5,7 @@
  * override names joins the node's scope, under a fresh id where the node's file holds that id.
  */
 
+import { mapPropertyWrites } from '../parser/overridePropertyWrites.js';
 import { renameResourceRefs, type ResourceRef } from '../godot/variant/resourceRef.js';
 import type { SceneScope, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { findExtResource, findSubResource } from './SubResourceResolver.js';
@@ -53,8 +54,7 @@ export function rehomeOverride(
   };
   const rehomeValue = (value: string): string => renameResourceRefs(value, rehomeRef);
 
-  const rehomedRaw = mapValues(raw, rehomeValue);
-  if (external.renamed.size === 0 && internal.renamed.size === 0) return { raw, scope: into };
+  const rehomedRaw = mapPropertyWrites(raw, (key, value) => ({ key, value: rehomeValue(value) }));
   // `into` itself when nothing joins it: a caller compares scopes by identity.
   if (addedExternal.length === 0 && addedInternal.length === 0) return { raw: rehomedRaw, scope: into };
   return {

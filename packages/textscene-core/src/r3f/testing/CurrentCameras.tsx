@@ -11,6 +11,7 @@ function sceneWithCurrentCameras(cameras3D: CurrentCameraPaths, cameras2D: Curre
   const subscribe = () => () => {};
   return {
     subscribe,
+    written: () => null,
     observe: subscribe,
     currentCamera3D: (viewport: string | null) => cameras3D.get(viewport) ?? null,
     currentCamera2D: (viewport: string | null) => cameras2D.get(viewport) ?? null,

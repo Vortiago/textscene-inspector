@@ -1,3 +1,4 @@
+import * as logger from '../../../logger';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -199,7 +200,7 @@ describe('the decal atlas', () => {
   });
 
   it('draws the decals that fit a smaller GPU texture and warns with both sizes (edge case)', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const fits = hold(dataTexture(64));
     const overflows = hold(dataTexture(300));
 
@@ -209,6 +210,43 @@ describe('the decal atlas', () => {
     expect(decalAtlasRect(overflows)).toBeUndefined();
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/512x512.*256/));
     warn.mockRestore();
+  });
+
+  it('draws all five sources that fit when the fourth reaches past the bottom edge', () => {
+    const sizes = [
+      [480, 1504],
+      [992, 992],
+      [992, 992],
+      [992, 497],
+      [480, 1504],
+      [992, 1248],
+      [1248, 736],
+      [992, 992],
+    ] as const;
+    const sources = sizes.map(([width, height], index) =>
+      hold(new THREE.DataTexture(new Uint8Array(width * height * 4).fill(index + 1), width, height))
+    );
+
+    updateDecalAtlas(2048);
+
+    expect(sources.map((source) => Boolean(decalAtlasRect(source)))).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(decalAtlasRect(sources[3]!)).toEqual({
+      x: 16 / 2048,
+      y: 1552 / 2048,
+      width: 992 / 2048,
+      height: 497 / 2048,
+    });
+    const at = (2047 * 2048 + 16) * 4;
+    expect([...baseLevel().subarray(at, at + 4)]).toEqual([4, 4, 4, 4]);
   });
 
   it('places nothing for a texture whose pixels cannot be read (error case)', () => {
@@ -230,7 +268,7 @@ describe('the decal atlas', () => {
   });
 
   it('draws a texture it left out for size once another decal releases its room (edge case)', () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
     // Each 64 x 64 texture is 3 x 3 cells, two to a row of 8 columns: four fit 256 texels, a fifth needs 512.
     const textures = [0, 1, 2, 3, 4].map((shade) => hold(dataTexture(64, [shade, shade, shade, 255])));
     updateDecalAtlas(256);

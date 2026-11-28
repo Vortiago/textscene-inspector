@@ -6,14 +6,16 @@
 import { DECAL_ATLAS_MIPMAPS } from '../../../godot/rendering/decalAtlas.js';
 import { mipChain, RGBA_BYTES, type MipLevel } from '../../../resources/processing/mipChain.js';
 import type { GodotImage } from '../../../r3f/textureAtlas/godotImage.js';
-import type { DecalAtlasLayout } from './decalAtlasLayout.js';
+import type { AtlasLayout } from '../../../r3f/textureAtlas/fitAtlas.js';
 
-/** Copies `image` into `atlas` at `rect`'s corner, one row at a time. */
+/** Godot draws the full rect and the mip framebuffer clips it (texture_storage.cpp:3211-3216). */
 function copyInto(atlas: MipLevel, image: GodotImage, { x, y }: { x: number; y: number }): void {
   const rowBytes = image.width * RGBA_BYTES;
-  for (let row = 0; row < image.height; row++) {
+  const copyBytes = Math.min(image.width, atlas.width - x) * RGBA_BYTES;
+  const rows = Math.min(image.height, atlas.height - y);
+  for (let row = 0; row < rows; row++) {
     atlas.data.set(
-      image.data.subarray(row * rowBytes, (row + 1) * rowBytes),
+      image.data.subarray(row * rowBytes, row * rowBytes + copyBytes),
       ((y + row) * atlas.width + x) * RGBA_BYTES
     );
   }
@@ -29,7 +31,7 @@ function copyInto(atlas: MipLevel, image: GodotImage, { x, y }: { x: number; y: 
  * buffers and 15 ms with reused ones.
  */
 export function decalAtlasLevels(
-  layout: DecalAtlasLayout,
+  layout: AtlasLayout,
   images: readonly GodotImage[],
   reusable: readonly MipLevel[] = []
 ): MipLevel[] {
@@ -39,7 +41,7 @@ export function decalAtlasLevels(
 }
 
 /** The atlas's transparent black base: `spare` cleared when it has the size, else new. */
-function baseLevel({ width, height }: DecalAtlasLayout, spare: MipLevel | undefined): MipLevel {
+function baseLevel({ width, height }: AtlasLayout, spare: MipLevel | undefined): MipLevel {
   if (spare?.width === width && spare.height === height) {
     spare.data.fill(0);
     return spare;

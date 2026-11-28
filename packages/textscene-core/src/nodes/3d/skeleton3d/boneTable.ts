@@ -93,6 +93,11 @@ export class BoneAdder {
   private readonly taken = new Map<string, number>();
   private added = 0;
 
+  constructor(names: readonly string[] = []) {
+    names.forEach((name, index) => this.taken.set(name, index));
+    this.added = names.length;
+  }
+
   /**
    * Null for a key that is no `bones/<i>/name`. An unreachable slot (`INVALID_BONE_INDEX`) and a name
    * :605 refuses are `refused`, since phase 1 reports both on the same key. Both leave the bone

@@ -4,6 +4,7 @@
  * any other key sets a leaf of a bone that is already there.
  */
 
+import { propertyWrites } from '../../../parser/overridePropertyWrites.js';
 import { warn } from '../../../logger.js';
 import { boolOr, intOr, realVec3Or } from '../../../parser/valueParsers.js';
 import { parseQuaternion } from '../../../parser/vectors.js';
@@ -52,27 +53,37 @@ const LEAF_SETTERS: Readonly<Record<string, LeafSetter>> = {
   },
 };
 
-/** The bones a node's `bones/*` keys build, in the order `add_bone` added them. */
-export function readBones(properties: Record<string, string>): Bone[] {
-  const bones: Bone[] = [];
-  const adder = new BoneAdder();
-  for (const [key, value] of Object.entries(properties)) {
-    const addition = adder.write(key, value);
-    if (addition) {
-      if (addition.kind === 'added') bones.push(newBone(addition.name));
-      continue;
-    }
-    setLeaf(bones, key, value);
-  }
-  return bones;
+export interface BoneChange {
+  index: number;
+  change: Partial<Bone>;
 }
 
-/** A leaf key of a bone that exists. `which` is a `uint32_t`, so an index past the table drops the write (:90). */
-function setLeaf(bones: Bone[], key: string, value: string): void {
-  const boneKey = boneKeyOf(key);
-  if (!boneKey) return;
-  const { which, leaf } = boneKey;
-  const bone = bones[which];
-  const setter = Object.hasOwn(LEAF_SETTERS, leaf) ? LEAF_SETTERS[leaf] : undefined;
-  if (bone && setter) setter(bone, value, `Skeleton3D ${key}`, which);
+export function readBones(
+  properties: Record<string, string>,
+  held: readonly Bone[] = [],
+  changes?: BoneChange[]
+): Bone[] {
+  const bones = [...held];
+  const adder = new BoneAdder(held.map((bone) => bone.name));
+  for (const [key, value] of propertyWrites(properties)) {
+    const addition = adder.write(key, value);
+    if (addition) {
+      if (addition.kind === 'added') {
+        const bone = newBone(addition.name);
+        changes?.push({ index: bones.length, change: bone });
+        bones.push(bone);
+      }
+      continue;
+    }
+    const slot = boneKeyOf(key);
+    if (!slot) continue;
+    const { which, leaf } = slot;
+    const bone = bones[which];
+    if (!bone || !Object.hasOwn(LEAF_SETTERS, leaf)) continue;
+    const next = changes ? { ...bone } : bone;
+    LEAF_SETTERS[leaf]!(next, value, `Skeleton3D ${key}`, which);
+    bones[which] = next;
+    changes?.push({ index: which, change: { [leaf]: next[leaf as keyof Bone] } });
+  }
+  return bones;
 }

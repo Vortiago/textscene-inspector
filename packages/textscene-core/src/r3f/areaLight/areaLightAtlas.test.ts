@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import * as logger from '../../logger';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   areaTexturePlacement,
@@ -52,14 +53,27 @@ function hold(texture: THREE.Texture): THREE.Texture {
 
 afterEach(() => {
   for (const texture of held.splice(0)) releaseAreaTexture(texture);
-  updateAreaLightAtlas();
+  updateAreaLightAtlas(4096);
 });
 
 describe('the area light atlas', () => {
+  it('keeps the first texture within the GPU limit and logs the required size', () => {
+    const warn = vi.spyOn(logger, 'warn');
+    const first = hold(dataTexture(64, () => [255, 0, 0, 255]));
+    const last = hold(dataTexture(64, () => [0, 0, 255, 255]));
+
+    updateAreaLightAtlas(256);
+
+    expect(areaTexturePlacement(lightShowing(first)).rect.width).toBe(0.25);
+    expect(areaTexturePlacement(lightShowing(last))).toEqual(untexturedPlacement());
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/AreaLightAtlas.*256x512.*256/));
+    warn.mockRestore();
+  });
+
   it('places a held texture where Godot does', () => {
     const texture = hold(dataTexture(64, () => [255, 255, 255, 255]));
 
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     expect(areaTexturePlacement(lightShowing(texture))).toEqual({
       rect: { x: 0, y: 0, width: 0.25, height: 0.25 },
@@ -70,7 +84,7 @@ describe('the area light atlas', () => {
   it("puts a bottom-up texture's last row at the atlas's top", () => {
     hold(dataTexture(2, (row) => (row === 0 ? [255, 0, 0, 255] : [0, 0, 255, 255])));
 
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     expect(atlasCorner()).toEqual([0, 0, 255, 255]);
   });
@@ -79,7 +93,7 @@ describe('the area light atlas', () => {
     const target = readableLiveTarget(2, [255, 0, 0, 255], [0, 0, 255, 255]);
     hold(target.texture);
 
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     expect(atlasCorner()).toEqual([0, 0, 255, 255]);
     target.withdraw();
@@ -90,7 +104,7 @@ describe('the area light atlas', () => {
     texture.flipY = true;
     hold(texture);
 
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     expect(atlasCorner()).toEqual([255, 0, 0, 255]);
   });
@@ -98,11 +112,11 @@ describe('the area light atlas', () => {
   it("rebuilds once a held texture's pixels change", () => {
     const texture = dataTexture(2, () => [0, 0, 0, 255]);
     hold(texture);
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     texture.image.data!.fill(255);
     texture.needsUpdate = true;
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     expect(atlasCorner()).toEqual([255, 255, 255, 255]);
   });
@@ -110,17 +124,17 @@ describe('the area light atlas', () => {
   it('keeps a texture placed while a second holder holds it (edge case)', () => {
     const texture = hold(dataTexture(64, () => [255, 255, 255, 255]));
     holdAreaTexture(texture);
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     releaseAreaTexture(texture);
     hold(dataTexture(64, () => [0, 0, 0, 255]));
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     expect(areaTexturePlacement(lightShowing(texture))).not.toEqual(untexturedPlacement());
   });
 
   it('places nothing for a light without a texture (edge case)', () => {
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     // An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`).
     expect(untexturedPlacement()).toEqual({ rect: { x: 0, y: 0, width: 0, height: 0 }, maxMipmap: 0 });
@@ -129,7 +143,7 @@ describe('the area light atlas', () => {
   it('places nothing for a texture whose pixels cannot be read (error case)', () => {
     const texture = hold(new THREE.Texture());
 
-    updateAreaLightAtlas();
+    updateAreaLightAtlas(4096);
 
     expect(areaTexturePlacement(lightShowing(texture))).toEqual(untexturedPlacement());
   });

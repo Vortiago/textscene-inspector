@@ -50,6 +50,28 @@ describe('decalAtlasLevels', () => {
     expect(texelAt(levels[0]!, 15, 15)).toEqual([0, 0, 0, 0]);
   });
 
+  it('clips the bottom of a 1 by 31 source at the framebuffer edge', () => {
+    const image = { width: 1, height: 31, data: new Uint8Array(31 * 4).fill(255) };
+    const layout = packDecalAtlas([image]);
+    expect(layout.rects[0]).toEqual({ x: 16, y: 16, width: 1, height: 31 });
+
+    const [base] = decalAtlasLevels(layout, [image]);
+    expect(texelAt(base!, 16, 31)).toEqual([255, 255, 255, 255]);
+    expect(texelAt(base!, 15, 31)).toEqual([0, 0, 0, 0]);
+  });
+
+  it('clips the right edge without wrapping into another row or shortening the source stride', () => {
+    const image = { width: 31, height: 2, data: new Uint8Array(31 * 2 * 4) };
+    image.data.fill(255, 31 * 4);
+    const images = Array.from({ length: 8 }, () => image);
+    const layout = packDecalAtlas(images);
+    expect(layout.rects[7]).toEqual({ x: 240, y: 16, width: 31, height: 2 });
+
+    const [base] = decalAtlasLevels(layout, images);
+    expect(texelAt(base!, 255, 17)).toEqual([255, 255, 255, 255]);
+    expect(texelAt(base!, 0, 18)).toEqual([0, 0, 0, 0]);
+  });
+
   it('averages the 2 x 2 block of the level above, padding included (:3220-3222)', () => {
     const { levels } = twoTextureAtlas();
     // Level 1 texel (8, 8) averages level 0 texels (16..17, 16..17): one red and three clear.

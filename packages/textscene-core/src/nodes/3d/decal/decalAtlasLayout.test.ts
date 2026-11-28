@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitDecalAtlas, packDecalAtlas } from './decalAtlasLayout';
+import { packDecalAtlas } from './decalAtlasLayout';
 
 /*
  * Every expectation follows `update_decal_atlas` (`texture_storage.cpp:3038-3153`): border = 1 << 5
@@ -68,18 +68,18 @@ describe('packDecalAtlas', () => {
   });
 });
 
-describe('fitDecalAtlas', () => {
+describe('fitting the decal layout', () => {
   const sizes = [
     { width: 300, height: 100 },
     { width: 64, height: 64 },
   ];
 
   it('packs everything when the atlas fits the limit', () => {
-    expect(fitDecalAtlas(sizes, 4096)).toEqual({ layout: packDecalAtlas(sizes), wanted: undefined });
+    expect(packDecalAtlas(sizes, 4096)).toEqual(packDecalAtlas(sizes));
   });
 
   it('drops the textures that joined last until the rest fit, and names the size it wanted', () => {
-    const { layout, wanted } = fitDecalAtlas(sizes, 256);
+    const { wanted, ...layout } = packDecalAtlas(sizes, 256);
     const full = packDecalAtlas(sizes);
     expect(wanted).toEqual({ width: full.width, height: full.height });
     // The 300-wide texture alone needs 512 wide, so nothing fits in 256.
@@ -91,7 +91,7 @@ describe('fitDecalAtlas', () => {
       { width: 64, height: 64 },
       { width: 300, height: 100 },
     ];
-    const { layout } = fitDecalAtlas(later, 256);
+    const layout = packDecalAtlas(later, 256);
     expect(layout.rects).toEqual([{ x: 16, y: 16, width: 64, height: 64 }]);
   });
 
@@ -107,6 +107,6 @@ describe('fitDecalAtlas', () => {
       }
     );
 
-    expect(fitDecalAtlas(many, 1024).layout.rects).toHaveLength(keptByDropping!);
+    expect(packDecalAtlas(many, 1024).rects).toHaveLength(keptByDropping!);
   });
 });

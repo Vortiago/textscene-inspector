@@ -6,8 +6,7 @@ import { createMockUri, vscode } from './test-setup';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
 import { TscnDiagnostics } from './TscnDiagnostics';
-import { resRootOf } from './resRoot';
-import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
+import { ANY_PATH_PATTERN, PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 vi.mock('./TscnPreviewPanel', () => ({
   TscnPreviewPanel: {
@@ -118,39 +117,6 @@ describe('Extension', () => {
     commandHandlers.get('textscene.openPreviewToSide')?.();
   }
 
-  describe('the shared project.godot answers', () => {
-    const SCENE = createMockUri('/workspace/scenes/Door.tscn');
-    const statCalls = () => (vscode.workspace.fs.stat as Mock).mock.calls.length;
-
-    /** Activates with no project.godot anywhere, and looks the scene's root up once. Returns the stats it took. */
-    async function activateAndLookUp(): Promise<number> {
-      activate(mockContext);
-      (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({ uri: createMockUri('/workspace') });
-      (vscode.workspace.fs.stat as Mock).mockRejectedValue(new Error('Not found'));
-      await resRootOf(SCENE);
-      return statCalls();
-    }
-
-    it('forgets them on a project.godot event', async () => {
-      const firstWalk = await activateAndLookUp();
-
-      await fireChange(PROJECT_FILE_PATTERN, createMockUri('/workspace/project.godot'));
-      await resRootOf(SCENE);
-
-      expect(statCalls()).toBe(2 * firstWalk);
-    });
-
-    it('forgets them when the window gains focus', async () => {
-      const firstWalk = await activateAndLookUp();
-      for (const [onWindowState] of (vscode.window.onDidChangeWindowState as Mock).mock.calls) {
-        onWindowState({ focused: true });
-      }
-      await resRootOf(SCENE);
-
-      expect(statCalls()).toBe(2 * firstWalk);
-    });
-  });
-
   describe('activate', () => {
     it('should initialize logger on activation', () => {
       activate(mockContext);
@@ -185,11 +151,7 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      // Commands, symbol, definition, document link, hover, completion, code action,
-      // folding, highlight and reference providers, five agent tools, diagnostics, save listener,
-      // each of the two watchers itself plus its three handlers, the project file watcher's three
-      // forget handlers, the window focus listener, and the stop-file watcher itself plus its two handlers.
-      expect(mockContext.subscriptions.length).toBe(31);
+      expect(mockContext.subscriptions.length).toBe(26);
     });
 
     it('should register a reference provider for Find All References on a res:// path', () => {
@@ -227,7 +189,11 @@ describe('Extension', () => {
       const commandHandler = commandHandlers.get('textscene.openPreviewToSide');
       commandHandler?.();
 
-      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, mockDocument.uri);
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(
+        mockContext.extensionUri,
+        mockDocument.uri,
+        mockContext.subscriptions[0]
+      );
     });
 
     // VS Code passes the clicked resource as the handler's first argument for
@@ -246,7 +212,11 @@ describe('Extension', () => {
       const clicked = createMockUri('/workspace/clicked.tscn');
       commandHandlers.get('textscene.openPreviewToSide')?.(clicked);
 
-      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, clicked);
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(
+        mockContext.extensionUri,
+        clicked,
+        mockContext.subscriptions[0]
+      );
     });
 
     it('previews a clicked file that is not open in any editor', () => {
@@ -260,7 +230,11 @@ describe('Extension', () => {
       const clicked = createMockUri('/workspace/never-opened.tscn');
       commandHandlers.get('textscene.openPreviewToSide')?.(clicked);
 
-      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, clicked);
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(
+        mockContext.extensionUri,
+        clicked,
+        mockContext.subscriptions[0]
+      );
       expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
     });
 
@@ -277,7 +251,11 @@ describe('Extension', () => {
 
       commandHandlers.get('textscene.openPreviewToSide')?.();
 
-      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, active.uri);
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(
+        mockContext.extensionUri,
+        active.uri,
+        mockContext.subscriptions[0]
+      );
     });
 
     it('ignores a non-tscn argument rather than previewing it', () => {
@@ -499,7 +477,11 @@ describe('Extension', () => {
       const [, resourceWatcher, projectFileWatcher] = createWatcher.mock.results.map(
         (result) => result.value
       );
-      expect(TscnDiagnostics).toHaveBeenCalledWith(resourceWatcher, projectFileWatcher);
+      expect(TscnDiagnostics).toHaveBeenCalledWith(
+        expect.objectContaining({ rootOf: expect.any(Function), onDidInvalidate: expect.any(Function) }),
+        resourceWatcher,
+        projectFileWatcher
+      );
     });
 
     it('routes a changed project file to the panel for re-fetch', async () => {
@@ -512,14 +494,19 @@ describe('Extension', () => {
       expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri, 'changed');
     });
 
-    it('routes a deleted project file to the panel', async () => {
+    it.each([
+      ['create', fireCreate],
+      ['delete', fireDelete],
+    ] as const)('routes a project file %s only after the shared roots report it', async (_kind, fire) => {
       activate(mockContext);
       openPanelFor('/workspace/scene.tscn');
-
       const projectUri = createMockUri('/workspace/project.godot');
-      await fireDelete(PROJECT_FILE_PATTERN, projectUri);
 
-      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri, 'deleted');
+      await fire(PROJECT_FILE_PATTERN, projectUri);
+      expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
+
+      await fire(ANY_PATH_PATTERN, projectUri);
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri, 'created-or-deleted');
     });
 
     it('routes a changed dependency to the panel for re-fetch', async () => {
