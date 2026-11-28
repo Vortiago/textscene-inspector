@@ -6,18 +6,13 @@
 
 import * as vscode from 'vscode';
 import { definitionRangeAt, resPathAt } from '@textscene/core/languageFeatures';
-import { existingResFile } from './existingResFile';
-import { resRootOf } from './resRoot';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
-
-/** The file a `res://` path names under the document's root, or null outside every workspace folder or for no file. */
-async function resFileOf(document: vscode.TextDocument, path: string): Promise<vscode.Uri | null> {
-  const root = await resRootOf(document.uri);
-  return root ? existingResFile(root, path) : null;
-}
+import type { WorkspaceResRoots } from './resRoots/workspaceResRoots';
 
 export class TscnDefinitionProvider implements vscode.DefinitionProvider {
+  constructor(private readonly roots: WorkspaceResRoots) {}
+
   async provideDefinition(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -28,7 +23,9 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
     if (declaration) return new vscode.Location(document.uri, toVscodeRange(declaration));
 
     const occurrence = resPathAt(model, position);
-    const file = occurrence && (await resFileOf(document, occurrence.path));
+    if (!occurrence) return null;
+    const root = await this.roots.rootOf(document.uri);
+    const file = await root?.existingFile(occurrence.path);
     return file ? new vscode.Location(file, new vscode.Position(0, 0)) : null;
   }
 }

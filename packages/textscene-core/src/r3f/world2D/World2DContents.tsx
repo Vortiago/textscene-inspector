@@ -11,6 +11,7 @@ import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../..
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext.js';
 import { EditedRootProvider } from '../contexts/InstanceOwnersContext.js';
 import { SceneResourcesProvider } from '../SceneResourcesContext.js';
+import { useDispatchRoots } from '../contexts/HierarchyContext.js';
 import { NodeDispatcher } from '../NodeDispatcher.js';
 import { CanvasWorldScope } from '../environment/WorldEnvironmentScope.js';
 import { world2DCameraPose } from './world2DCamera.js';
@@ -71,6 +72,7 @@ export function World2DContents({
   view,
   children,
 }: World2DCanvasProps) {
+  const dispatchRoots = useDispatchRoots(nodes);
   const canvasModulate = useCanvasModulateColor(nodes);
   const canvasSpace = useRootCanvasColorSpace();
   const [frameSteps] = useState(createCanvasFrameSteps);
@@ -89,7 +91,7 @@ export function World2DContents({
                 {/* One provider over both walks: a y-sorted node and the Controls beside it exchange origins and runs. */}
                 <YSortProvider>
                   <CanvasWorldScope>
-                    <NodeDispatcher nodes={nodes} />
+                    <NodeDispatcher nodes={dispatchRoots} />
                   </CanvasWorldScope>
                   {/* Inside the lighting provider, so a 2D light reaches a Control. */}
                   <PendingSuspense>

@@ -5,17 +5,17 @@
  */
 
 import { TscnParser } from '@textscene/core/parser';
-import type { LintResourceProvider } from '../LintResourceProvider';
+import type { ResRoot } from '@textscene/core/resources/resRoots';
 
 /** Every `res://` path the scene names that no file answers. Empty when all are present, or with no provider. */
 export async function missingResourcePaths(
-  provider: LintResourceProvider | null,
+  root: ResRoot | null,
   content: string
 ): Promise<readonly string[]> {
-  if (!provider) return [];
+  if (!root) return [];
   const paths = new TscnParser().parse(content).externalResources.map((resource) => resource.path);
   // A stamp is one `stat`, and null for a missing file or a path outside the root.
-  const stamps = await Promise.all(paths.map((path) => provider.stamp(path)));
+  const stamps = await Promise.all(paths.map((path) => root.stamp(path)));
   return paths.filter((_, index) => stamps[index] === null);
 }
 

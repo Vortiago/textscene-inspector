@@ -9,12 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { globSync } from 'glob';
-import {
-  ANY_PATH_PATTERN,
-  GDEXTENSION_PATTERN,
-  RESOURCE_FILES_PATTERN,
-  SCAN_STOP_FILES_PATTERN,
-} from './watchPatterns';
+import { ANY_PATH_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 import { LOADED_FILE_EXTENSIONS } from '@textscene/core/resources/resourceProviderUtils';
 
 let root: string;
@@ -68,18 +63,6 @@ describe('RESOURCE_FILES_PATTERN', () => {
 
   it('leaves the project file to its own watcher', () => {
     expect(matched(RESOURCE_FILES_PATTERN, ['project.godot'])).toEqual([]);
-  });
-});
-
-describe('GDEXTENSION_PATTERN', () => {
-  it('matches a .gdextension file in any case, at any depth', () => {
-    const files = ['bin/a.gdextension', 'addons/x/bin/B.GDExtension'];
-
-    expect(matched(GDEXTENSION_PATTERN, files)).toEqual([...files].sort());
-  });
-
-  it('matches no file of another extension', () => {
-    expect(matched(GDEXTENSION_PATTERN, ['bin/a.gdextension.import', 'bin/a.so'])).toEqual([]);
   });
 });
 

@@ -13,7 +13,7 @@ import {
 } from '@textscene/core/languageFeatures';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
-import type { ResPathListing } from './TscnResPathListing';
+import type { WorkspaceResRoots } from './resRoots/workspaceResRoots';
 
 /** The icon for each engine completion kind. A `Record`, so a new kind does not compile until it has one. */
 const COMPLETION_KIND: Record<CompletionKind, vscode.CompletionItemKind> = {
@@ -39,7 +39,7 @@ function toCompletionItem(item: EngineCompletionItem): vscode.CompletionItem {
 export class TscnCompletionItemProvider implements vscode.CompletionItemProvider {
   readonly triggerCharacters = COMPLETION_TRIGGER_CHARACTERS;
 
-  constructor(private readonly pathListing?: ResPathListing) {}
+  constructor(private readonly roots: WorkspaceResRoots) {}
 
   async provideCompletionItems(
     document: vscode.TextDocument,
@@ -47,12 +47,9 @@ export class TscnCompletionItemProvider implements vscode.CompletionItemProvider
     _token: vscode.CancellationToken,
     _context: vscode.CompletionContext
   ): Promise<vscode.CompletionItem[]> {
-    const listing = this.pathListing;
-    const items = await completionsAt(
-      languageDocumentOf(document),
-      position,
-      listing ? { listPaths: () => listing.pathsFor(document) } : undefined
-    );
+    const items = await completionsAt(languageDocumentOf(document), position, {
+      listPaths: async () => (await this.roots.rootOf(document.uri))?.root.listPaths() ?? [],
+    });
     return items.map(toCompletionItem);
   }
 }

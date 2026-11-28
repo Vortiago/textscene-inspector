@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { godotProjectDir, lineStartingWith, removeGodotProject } from '../helpers/godotProjectHelpers';
+import { getFixturePath } from '../helpers/fixtureHelpers';
 import { createTestPanel, getExtensionUri, waitForMessage } from '../helpers/panelHelpers';
 import { waitFor } from '../../waitFor';
 import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
@@ -207,5 +208,72 @@ suite('Project roots', () => {
     assert.deepStrictEqual(await definitionTargets(scene, PROJECT_PATH), [grid]);
     const paths = await offeredPaths(scene, PROJECT_PATH);
     assert.ok(paths.includes(PROJECT_PATH), `offered: ${paths.join(', ')}`);
+  });
+  test('creating and deleting a project file switches the target of an open scene link', async () => {
+    const looseGrid = path.join(dir, 'scenes', 'art', 'grid.png');
+    const scenePath = path.join(dir, 'scenes', 'switch-root.tscn');
+    const projectFile = path.join(dir, 'project.godot');
+    fs.mkdirSync(path.dirname(looseGrid), { recursive: true });
+    fs.writeFileSync(looseGrid, '');
+    fs.writeFileSync(scenePath, sceneWith(PROJECT_PATH));
+    try {
+      const scene = await shown(scenePath);
+      assert.strictEqual(await linkTarget(scene), looseGrid);
+
+      await writeProjectFile(projectFile);
+      assert.strictEqual(await linkTarget(scene), grid);
+
+      await removeProjectFile(projectFile);
+      assert.strictEqual(await linkTarget(scene), looseGrid);
+    } finally {
+      fs.rmSync(looseGrid, { force: true });
+      fs.rmSync(scenePath, { force: true });
+    }
+  });
+
+  test('creating and deleting a project file changes the Problems panel verdict for an open scene', async function () {
+    this.timeout(30000);
+    const glb = getFixturePath('gltf-unsupported-required-extension/instanced-tree.glb').fsPath;
+    const looseTree = path.join(dir, 'scenes', 'tree.glb');
+    const projectTree = path.join(dir, 'tree.glb');
+    const scenePath = path.join(dir, 'scenes', 'lint-root.tscn');
+    const projectFile = path.join(dir, 'project.godot');
+    fs.copyFileSync(glb, looseTree);
+    fs.copyFileSync(glb, projectTree);
+    fs.writeFileSync(
+      scenePath,
+      [
+        '[gd_scene format=3]',
+        '[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]',
+        '[node name="Tree" instance=ExtResource("1_tree")]',
+      ].join('\n')
+    );
+
+    try {
+      const scene = await shown(scenePath);
+      const diagnostics = () => vscode.languages.getDiagnostics(scene.uri);
+      const waitForFinding = (code: string, severity: vscode.DiagnosticSeverity) =>
+        waitFor(
+          () =>
+            diagnostics().some(
+              (finding) =>
+                finding.source === 'tscn-lint' && finding.code === code && finding.severity === severity
+            ),
+          8000,
+          () => `Expected ${code} at severity ${severity}, found ${JSON.stringify(diagnostics())}`
+        );
+      const looseFinding = () =>
+        waitForFinding('gltf-required-extension-maybe-unsupported', vscode.DiagnosticSeverity.Warning);
+
+      await looseFinding();
+      await writeProjectFile(projectFile);
+      await waitForFinding('gltf-required-extension-unsupported', vscode.DiagnosticSeverity.Error);
+      await removeProjectFile(projectFile);
+      await looseFinding();
+    } finally {
+      fs.rmSync(looseTree, { force: true });
+      fs.rmSync(projectTree, { force: true });
+      fs.rmSync(scenePath, { force: true });
+    }
   });
 });

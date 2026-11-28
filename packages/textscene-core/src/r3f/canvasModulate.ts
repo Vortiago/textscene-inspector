@@ -5,12 +5,14 @@
  * does not apply.
  */
 
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useMemo, useCallback } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { liveTreeOf, type LiveTreeContext } from './liveSceneTree.js';
-import { useProjectTreeSettings, useSharedLiveTree } from './useLiveSceneTree.js';
+import { useLiveTreeSelection, useProjectTreeSettings, type SharedLiveTree } from './useLiveSceneTree.js';
 import { canvasScopesOf } from './canvasScopes.js';
 import { NOTHING_CACHED } from './cacheSources.js';
+import { useByValue } from './hooks/useByValue.js';
+import { sameData } from '../utils/sameData.js';
 import { perObject } from '../utils/perObject.js';
 import type { ProjectTreeSettings } from '../parser/projectSettingsParser.js';
 import { WHITE_MODULATE } from './canvasItemModulate.js';
@@ -33,10 +35,22 @@ const noScenesIn = perObject((project: ProjectTreeSettings): LiveTreeContext => 
  * sub-scene counts the moment that sub-scene is loaded: it joins the group of the canvas it sits
  * in, whichever file declares it (`canvas_modulate.cpp:33-45`).
  */
-export function useCanvasModulateColor(nodes: readonly TscnNode[]): Rgba {
+export function useCanvasModulateColor(nodes?: readonly TscnNode[]): Rgba {
   const project = useProjectTreeSettings();
-  const ctx = useSharedLiveTree()?.ctx ?? noScenesIn(project);
-  return useMemo(() => canvasScopesOf(liveTreeOf(nodes, ctx)).modulate ?? WHITE_MODULATE, [nodes, ctx]);
+  const select = useCallback(
+    (live: SharedLiveTree) =>
+      canvasScopesOf(liveTreeOf(nodes ?? live.roots, live.ctx)).modulate ?? WHITE_MODULATE,
+    [nodes]
+  );
+  const liveColor = useLiveTreeSelection(select, sameData);
+  const color = useMemo(
+    () =>
+      liveColor ??
+      (nodes && canvasScopesOf(liveTreeOf(nodes, noScenesIn(project))).modulate) ??
+      WHITE_MODULATE,
+    [liveColor, nodes, project]
+  );
+  return useByValue(color, sameData);
 }
 
 /**
