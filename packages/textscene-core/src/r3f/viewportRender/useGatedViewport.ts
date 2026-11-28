@@ -2,10 +2,11 @@
  * What a sub-viewport's pass renders by: its update gate, its clear mode, and the renders of its
  * target, which live as long as the pass and the parsed scene.
  */
-import { useLayoutEffect, useState, useSyncExternalStore } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
+import type { Scene } from '../../scene/openScene.js';
 import { propertyWriteRevision } from '../../scene/writeRevisions.js';
-import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
+import { useSceneSnapshot } from '../hooks/useSceneSnapshot.js';
 import { perObject } from '../../utils/perObject.js';
 import { TargetRenderState } from './renderGate.js';
 import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
@@ -33,6 +34,10 @@ const NO_SCENE = {};
  */
 const renderStatesOf = perObject((_scene: object) => perObject((_pass: object) => new TargetRenderState()));
 
+function useSetterRevision(host: Scene | undefined, path: string, property: string): number {
+  return useSceneSnapshot(host, (scene) => propertyWriteRevision(scene.written(), path, property), 0);
+}
+
 /**
  * The renders of one viewport pass's target, which a resize leaves as they are
  * (`renderer_viewport.cpp:920`). They live as long as the pass and its target: a remount makes a new
@@ -43,10 +48,8 @@ export function useViewportRenderState(path: string, updateMode: number): Target
   const hierarchy = useOptionalHierarchy();
   const scene = hierarchy?.sceneGraph ?? NO_SCENE;
   const host = hierarchy?.scene;
-  const subscribe = host?.subscribe ?? subscribeToNothing;
-  const revision = (property: string) => propertyWriteRevision(host?.written() ?? null, path, property);
-  const update = useSyncExternalStore(subscribe, () => revision('render_target_update_mode'));
-  const clear = useSyncExternalStore(subscribe, () => revision('render_target_clear_mode'));
+  const update = useSetterRevision(host, path, 'render_target_update_mode');
+  const clear = useSetterRevision(host, path, 'render_target_clear_mode');
   const [pass] = useState(() => ({}));
   const state = renderStatesOf(scene)(pass);
   useLayoutEffect(() => state.rearm(), [state, updateMode, update]);

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { useOptionalHierarchy, useWrittenGraph } from './contexts/HierarchyContext.js';
-import { useSeatedRoots } from './useLiveSceneTree.js';
+import { useDispatchRoots } from './contexts/HierarchyContext.js';
+import { useRootScene } from './hooks/useRootScene.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
@@ -14,8 +14,8 @@ import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
 /** What the 3D stage's canvas draws of the scene, with the editor's parts as `children`. */
 export function TscnSceneContents({ children }: { children?: ReactNode }) {
   const { rootScene, nodes } = useRootScene();
+  const dispatchRoots = useDispatchRoots(nodes);
 
-  const dispatchNodes = useOptionalHierarchy()?.scene ? undefined : nodes;
   return (
     <CanvasRendererScope>
       {/* Godot's editor preview sun and environment, while the scene has none of its own (ADR-0025). */}
@@ -27,7 +27,7 @@ export function TscnSceneContents({ children }: { children?: ReactNode }) {
             externalResources={rootScene.externalResources}
           >
             <EditedRootProvider editableInstances={rootScene.editableInstances}>
-              <NodeDispatcher nodes={dispatchNodes ?? undefined} />
+              <NodeDispatcher nodes={dispatchRoots} />
             </EditedRootProvider>
           </SceneResourcesProvider>
         )}
@@ -42,11 +42,4 @@ export function TscnSceneContents({ children }: { children?: ReactNode }) {
       </WorldEnvironmentScope>
     </CanvasRendererScope>
   );
-}
-
-/** The root scene of the scene the view reads, and its seated roots: null before the scene loads. */
-export function useRootScene() {
-  const sceneGraph = useWrittenGraph();
-  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  return { rootScene, nodes: useSeatedRoots() ?? null };
 }

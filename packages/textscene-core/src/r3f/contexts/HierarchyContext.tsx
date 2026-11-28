@@ -3,9 +3,10 @@
  * successful parse, and a consumer then renders a passive loading state,
  * never a throw or a partial render (R3F-contracts.md §4).
  */
-import { createContext, useContext, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
+import type { TscnNode } from '../../parser/types.js';
 import type { SceneGraph } from '../../core/SceneGraph.js';
-import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
+import { useSceneSnapshot } from '../hooks/useSceneSnapshot.js';
 import type { Scene } from '../../scene/openScene.js';
 
 export interface HierarchyContextValue {
@@ -48,8 +49,10 @@ export function useOptionalHierarchy(): HierarchyContextValue | null {
 
 export function useWrittenGraph(): SceneGraph | null {
   const hierarchy = useOptionalHierarchy();
-  return useSyncExternalStore(
-    hierarchy?.scene?.subscribe ?? subscribeToNothing,
-    hierarchy?.scene?.written ?? (() => hierarchy?.sceneGraph ?? null)
-  );
+  return useSceneSnapshot(hierarchy?.scene, (scene) => scene.written(), hierarchy?.sceneGraph ?? null);
+}
+
+/** A hosted scene dispatches its live roots. A detached view dispatches the roots it supplies. */
+export function useDispatchRoots(roots: readonly TscnNode[] | null): readonly TscnNode[] | undefined {
+  return useOptionalHierarchy()?.scene ? undefined : (roots ?? undefined);
 }
