@@ -73,3 +73,7 @@ Godot 4.6.3 imports fonts on worker threads, and about one whole-tree import in 
 there: a 0-byte `.fontdata` temporary stays behind and every thread waits on a futex. The generated
 `project.godot` sets `editor/import/use_multiple_threads=false`, which measured 0 hangs in 20
 imports of `scenes/fixtures`, against 5 hangs in 15 with threads. A good import takes 6 to 10 s.
+
+## Concurrent preview captures
+
+Preview harnesses share a lock per local working copy. `HARNESS_LOCK_WAIT_MS` sets the wait limit (default 20 minutes, 0 fails immediately). Plain `pnpm build` and `pnpm dev` run outside the lock.

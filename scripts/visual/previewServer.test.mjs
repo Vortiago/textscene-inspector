@@ -24,7 +24,8 @@ import {
   TEXTURE_WORK_STATUS_TESTID,
 } from './preview/appContract.mjs';
 import { isUniformImage, sceneStillLoading, settleCanvas, writeCaptureImage } from './preview/capture.mjs';
-import { startPreview } from './preview/server.mjs';
+import { killPreviewGroup, startPreview } from './preview/server.mjs';
+import { EventEmitter, once } from 'node:events';
 import { bootstrapScript } from '../godot-ref/run.mjs';
 
 // The real spawn, so a test can replace one call without launching `vite preview`.
@@ -402,17 +403,43 @@ ${keepAlive ? 'setTimeout(() => {}, 120000);' : 'proc.unref();'}
     expect(reaped).toBe(true);
   }, 20000);
 
+  it('waits until the preview process closes its listener', async () => {
+    const child = spawn(
+      process.execPath,
+      [
+        '-e',
+        `
+      process.once('SIGTERM', () => setTimeout(() => process.exit(0), 50));
+      process.send('ready');
+      setInterval(() => {}, 10_000);
+    `,
+      ],
+      { detached: true, stdio: ['ignore', 'ignore', 'ignore', 'ipc'] }
+    );
+    try {
+      await once(child, 'message');
+      await killPreviewGroup(child);
+      expect(child.exitCode).toBe(0);
+    } finally {
+      child.kill('SIGKILL');
+    }
+  });
+
   it('is the teardown startPreview registers for the group it spawns', () => {
-    spawn.mockReturnValueOnce({ pid: 4242 });
+    const proc = Object.assign(new EventEmitter(), { pid: 4242, exitCode: null, signalCode: null });
+    spawn.mockReturnValueOnce(proc);
     const once = vi.spyOn(process, 'once').mockReturnValue(process);
+    const on = vi.spyOn(process, 'on').mockReturnValue(process);
     const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
     try {
       startPreview(1);
-      const handlers = Object.fromEntries(once.mock.calls);
+      const handlers = Object.fromEntries([...once.mock.calls, ...on.mock.calls]);
       expect(Object.keys(handlers).sort()).toEqual(['SIGHUP', 'SIGINT', 'SIGTERM', 'exit']);
       handlers.exit();
-      expect(kill).toHaveBeenCalledWith(-4242, 'SIGTERM');
+      expect(kill).toHaveBeenCalledWith(-4242, 'SIGKILL');
     } finally {
+      proc.emit('exit');
+      on.mockRestore();
       once.mockRestore();
       kill.mockRestore();
     }

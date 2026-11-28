@@ -1,0 +1,158 @@
+import { randomUUID } from 'node:crypto';
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmdirSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+import { onHarnessExit } from './onHarnessExit.mjs';
+import { REPO_ROOT } from './paths.mjs';
+
+// A cold build and a full golden run fit within twenty minutes.
+const DEFAULT_WAIT_MS = 20 * 60_000;
+const POLL_MS = 1_000;
+const UNREADABLE_GRACE_MS = 60_000;
+
+function processRuns(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (error.code === 'ESRCH') return false;
+    if (error.code === 'EPERM') return true;
+    throw error;
+  }
+}
+
+export function buildLockState(text, ageMs, runs) {
+  let owner;
+  try {
+    owner = JSON.parse(text);
+  } catch {
+    // A process can stop between creating the directory and writing its owner.
+  }
+  if (
+    !Number.isInteger(owner?.pid) ||
+    owner.pid <= 0 ||
+    owner.pid > 0x7fffffff ||
+    typeof owner.command !== 'string' ||
+    !owner.command.trim() ||
+    typeof owner.startedAt !== 'string' ||
+    !Number.isFinite(Date.parse(owner.startedAt))
+  ) {
+    return { state: ageMs > UNREADABLE_GRACE_MS ? 'stale' : 'unreadable' };
+  }
+  return { state: runs(owner.pid) ? 'held' : 'stale', owner };
+}
+
+function removeOwner(lock, file) {
+  try {
+    if (file) unlinkSync(join(lock, file));
+    // A competing waiter can already own this path. Only an empty directory is safe to remove.
+    rmdirSync(lock);
+  } catch (error) {
+    if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code)) throw error;
+  }
+}
+
+function tryAcquire(lock, file, owner) {
+  try {
+    mkdirSync(lock);
+  } catch (error) {
+    if (error.code === 'EEXIST') return false;
+    throw error;
+  }
+  try {
+    writeFileSync(join(lock, file), JSON.stringify(owner), { flag: 'wx' });
+    // A waiter can remove an old empty directory between mkdir and the write. Verify sole ownership.
+    const files = readdirSync(lock);
+    if (files.length === 1 && files[0] === file) return true;
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      removeOwner(lock, file);
+      throw error;
+    }
+  }
+  removeOwner(lock, file);
+  return false;
+}
+
+function inspectLock(lock) {
+  try {
+    const [file] = readdirSync(lock);
+    const path = file ? join(lock, file) : lock;
+    let text = '';
+    if (file) {
+      try {
+        text = readFileSync(path, 'utf8');
+      } catch (error) {
+        if (error.code !== 'EACCES' && error.code !== 'EPERM') throw error;
+      }
+    }
+    const ageMs = Date.now() - statSync(path).mtimeMs;
+    return { file, ...buildLockState(text, ageMs, processRuns) };
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+function releaseOnExit(lock, file) {
+  const unregister = onHarnessExit(release);
+  function release() {
+    unregister();
+    removeOwner(lock, file);
+  }
+  return release;
+}
+
+export async function acquireBuildLock({
+  root = REPO_ROOT,
+  portEnvName = 'VISUAL_PORT',
+  log = console.log,
+} = {}) {
+  const waitMs = Number(process.env.HARNESS_LOCK_WAIT_MS ?? DEFAULT_WAIT_MS);
+  if (!Number.isSafeInteger(waitMs) || waitMs < 0) {
+    throw new Error('HARNESS_LOCK_WAIT_MS must be a non-negative integer in milliseconds');
+  }
+  const cache = join(root, 'node_modules', '.cache');
+  mkdirSync(cache, { recursive: true });
+  const lock = join(cache, 'textscene-harness.lock');
+  const file = `${randomUUID()}.json`;
+  const owner = {
+    pid: process.pid,
+    command: process.argv.join(' ').replace(/[\r\n]+/g, ' '),
+    startedAt: new Date().toISOString(),
+  };
+  const deadline = performance.now() + waitMs;
+  let announced = false;
+  for (;;) {
+    if (tryAcquire(lock, file, owner)) return releaseOnExit(lock, file);
+    const current = inspectLock(lock);
+    if (!current) continue;
+    if (current.state === 'stale') {
+      removeOwner(lock, current.file);
+      continue;
+    }
+    const holder = current.owner;
+    const description = holder
+      ? `PID ${holder.pid} (${holder.command}, started ${holder.startedAt})`
+      : 'an unreadable owner';
+    const remaining = deadline - performance.now();
+    if (remaining <= 0) {
+      throw new Error(
+        `[preview] lock held by ${description}. Wait for it to finish, or run in a second working copy with its own ${portEnvName}.`
+      );
+    }
+    if (holder && !announced) {
+      log(`[preview] waiting for ${description} to release the working copy`);
+      announced = true;
+    }
+    await delay(Math.min(POLL_MS, remaining));
+  }
+}

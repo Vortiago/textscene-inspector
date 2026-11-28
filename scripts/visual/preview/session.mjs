@@ -4,6 +4,7 @@
  */
 
 import { launchSwiftShaderBrowser } from '../../showcase/browser.mjs';
+import { acquireBuildLock } from './buildLock.mjs';
 import { warmUpGLContext } from './captureContext.mjs';
 import { assertPortFree, killPreviewGroup, startPreview, waitForServer } from './server.mjs';
 import { ensureWebBuilt } from './webBuild.mjs';
@@ -17,26 +18,26 @@ export async function withPreviewBrowser(
   { port, portEnvName, launchBrowser = launchSwiftShaderBrowser },
   work
 ) {
-  // Build before the port check: a cold build is long enough for another worktree's harness to
-  // claim the port in between.
-  ensureWebBuilt();
-  await assertPortFree(port, portEnvName);
-  const { proc, baseUrl } = startPreview(port);
-  let browser;
+  const release = await acquireBuildLock({ portEnvName });
   try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await launchBrowser();
-    // Takes the first-context-lost risk before any real capture page opens.
-    await warmUpGLContext(browser);
-    return await work(browser, baseUrl);
-  } finally {
-    // A crashed browser rejects close(), which would skip the kill below and leave `vite preview`
-    // holding the port.
+    ensureWebBuilt();
+    await assertPortFree(port, portEnvName);
+    const { proc, baseUrl } = startPreview(port);
+    let browser;
     try {
-      await browser?.close();
-    } catch {
-      /* already gone */
+      await waitForServer(`${baseUrl}/`);
+      browser = await launchBrowser();
+      await warmUpGLContext(browser);
+      return await work(browser, baseUrl);
+    } finally {
+      try {
+        await browser?.close();
+      } catch {
+        // A crashed browser can reject close while its preview still holds the port.
+      }
+      await killPreviewGroup(proc);
     }
-    killPreviewGroup(proc);
+  } finally {
+    release();
   }
 }
