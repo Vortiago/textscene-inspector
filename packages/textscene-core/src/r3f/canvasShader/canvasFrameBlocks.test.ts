@@ -17,15 +17,11 @@ function cameraOf(): THREE.OrthographicCamera {
   return camera;
 }
 
-const blockOf = (colors: { canvasModulate: typeof RED }, renderId: number, camera: THREE.Camera) =>
-  canvasDataOf(
-    gl,
-    { renderId, object: new THREE.Object3D(), camera },
-    { ...colors, usesLinearColors: false }
-  );
+const blockOf = (colors: { canvasModulate: typeof RED }, frameId: number, camera: THREE.Camera) =>
+  canvasDataOf(gl, { frameId, object: new THREE.Object3D(), camera }, { ...colors, usesLinearColors: false });
 
-const modulationOf = (colors: { canvasModulate: typeof RED }, renderId: number, camera: THREE.Camera) =>
-  blockOf(colors, renderId, camera).canvasModulation.toArray();
+const modulationOf = (colors: { canvasModulate: typeof RED }, frameId: number, camera: THREE.Camera) =>
+  blockOf(colors, frameId, camera).canvasModulation.toArray();
 
 describe('canvasDataOf', () => {
   it('gives the items of a canvas with the same colours one block in a render', () => {

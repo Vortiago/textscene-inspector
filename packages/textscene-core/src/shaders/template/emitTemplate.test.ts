@@ -66,6 +66,12 @@ describe('emitTemplateStage', () => {
     expect(fragmentOf(block, body)).toMatch(/==\s*uint\(\s*1\s*\)|==\s*1u/);
   });
 
+  it('reads an integer vector of a block from one integer uniform per lane, as three uploads vector lanes as floats', () => {
+    const block = 'layout(set = 0, binding = 0, std140) uniform Params {\n\tuvec4 lights;\n} params;';
+    const fragment = fragmentOf(block, 'color = vec4(params.lights);');
+    expect([/uvec4 nodeUniform/.test(fragment), /uint nodeUniform/.test(fragment)]).toEqual([false, true]);
+  });
+
   it('reads a texture a function takes as an argument from the texture the call passes', () => {
     const globals = [
       'layout(set = 0, binding = 1) uniform texture2D shadow_atlas;',
@@ -132,7 +138,7 @@ describe('emitTemplateStage', () => {
       'layout(set = 0, binding = 3, std140) uniform Params {\n\tuint flags;\n} params;',
     ].join('\n');
     const guarded = (flags: number) => {
-      const resources = programResources(new Set([FLAGS]));
+      const resources = programResources({ specialisedMembers: new Set([FLAGS]) });
       const globals = GLOBALS;
       const body =
         'color = vec4(0.0);\nif (bool(params.flags & 4u)) { color = texture(sampler2D(atlas, atlas_sampler), vec2(0.5)); }';
@@ -150,7 +156,7 @@ describe('emitTemplateStage', () => {
     });
 
     it('emits only the operand a folded `?:` takes', () => {
-      const resources = programResources(new Set([FLAGS]));
+      const resources = programResources({ specialisedMembers: new Set([FLAGS]) });
       const body =
         'color = bool(params.flags & 4u) ? texture(sampler2D(atlas, atlas_sampler), vec2(0.5)) : vec4(0.0);';
       expect(generatedFragmentShader(stageOf(GLOBALS, body, resources).result)).not.toMatch(

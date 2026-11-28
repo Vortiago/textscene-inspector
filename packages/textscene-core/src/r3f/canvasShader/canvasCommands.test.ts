@@ -8,7 +8,6 @@ import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import {
   atlasRectRegion,
   boundByItem,
-  itemBox,
   meshCommands,
   multiMeshCommands,
   sameCommandLayout,
@@ -300,8 +299,12 @@ describe('boundByItem', () => {
   });
 });
 
-describe('itemBox of one command', () => {
-  const boxOf = (command: CanvasShaderCommand) => itemBox(new THREE.Box3(), [command]);
+describe('the item rect of one command', () => {
+  function boxOf(command: CanvasShaderCommand): THREE.Box3 {
+    const object = new THREE.Mesh(new THREE.BufferGeometry());
+    boundByItem(object, [command]);
+    return object.geometry.boundingBox!;
+  }
   const corners = (min: [number, number], max: [number, number]) =>
     new THREE.Box3(new THREE.Vector3(...min, 0), new THREE.Vector3(...max, 0));
 

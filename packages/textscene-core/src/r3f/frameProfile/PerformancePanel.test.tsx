@@ -15,6 +15,7 @@ const COUNTS: FrameStats = {
 const TIMINGS: FrameTimings = {
   gpuMs: 8.125,
   hasGpuTimer: true,
+  uploadsPerFrame: 0,
   steps: [
     { step: 'Shadows', cpuMs: 0.5, gpuMs: 4.25, runsPerFrame: 2, drawCallsPerFrame: 12 },
     { step: 'Fog', cpuMs: 0.25, gpuMs: 3, runsPerFrame: 1, drawCallsPerFrame: 0.5 },

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { srgbToLinearColor } from '../../godot/math/color.js';
 import { multiplyColor, type Rgba } from '../../godot/math/math.js';
 import type { Transform2DColumns } from '../../godot/math/transform2d.js';
+import type { ItemLightBits } from './canvasLights.js';
 
 /** What a command reads from the item that holds it and from the render target it draws to. */
 export interface CanvasItemDraw {
@@ -27,6 +28,9 @@ export const FLAGS = 26;
 /** Float offset of `InstanceData::instance_uniforms_ofs`. */
 const INSTANCE_UNIFORMS_OFS = 27;
 
+/** Float offset of `InstanceData::lights`, four words. */
+const LIGHTS = 28;
+
 /** An item with no instance uniforms: `instance_allocated_shader_uniforms_offset` of -1, as a uint. */
 export const NO_INSTANCE_UNIFORMS = 0xffffffff;
 
@@ -45,6 +49,12 @@ export function instanceRecord(item: CanvasItemDraw): InstanceRecord {
   floats.set(worldOf(item.transform), WORLD);
   words[INSTANCE_UNIFORMS_OFS] = NO_INSTANCE_UNIFORMS;
   return { bytes, floats, words };
+}
+
+/** Adds the item's lights to the flags its command wrote (`renderer_canvas_render_rd.cpp:2385`). */
+export function writeItemLights({ words }: InstanceRecord, { flags, lights }: ItemLightBits): void {
+  words[FLAGS] = (words[FLAGS]! | flags) >>> 0;
+  words.set(lights, LIGHTS);
 }
 
 /** `_update_transform_2d_to_mat2x3` (`renderer_canvas_render_rd.cpp:76`): the axes, then the origin. */

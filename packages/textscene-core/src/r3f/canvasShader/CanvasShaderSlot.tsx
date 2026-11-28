@@ -11,6 +11,7 @@ import { useCanvasColorSpace } from '../canvasColorSpace';
 import type { CanvasItemTextureSampler } from '../canvasItemTextureSampler';
 import { useCanvasModulate } from '../canvasModulate';
 import { useRecordWriter } from '../components/Canvas2DStage/canvasFrameSequence';
+import { useTemplateDrawClaim, useTemplateLighting } from '../components/LitCanvasItemPixels';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
 import { sameCommandLayout, type CanvasShaderCommand } from './canvasCommands';
@@ -109,6 +110,13 @@ export function CanvasShaderSlot({
     draw?.setColors({ finalModulate, canvasModulate });
     invalidate();
   }, [draw, finalModulate, canvasModulate, invalidate]);
+  const claimTemplateDraw = useTemplateDrawClaim();
+  useLayoutEffect(() => (draw ? claimTemplateDraw?.() : undefined), [draw, claimTemplateDraw]);
+  const lighting = useTemplateLighting();
+  useLayoutEffect(() => {
+    draw?.setLighting(lighting?.isLit && !lighting.isShadowed ? lighting : null);
+    invalidate();
+  }, [draw, lighting, invalidate]);
   useRecordWriter(draw?.writeRecords ?? null);
 
   const samplers = shaded?.samplers ?? null;

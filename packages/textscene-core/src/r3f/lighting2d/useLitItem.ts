@@ -27,6 +27,9 @@ import {
 } from './normalMappedLighting.js';
 import type { ApartLightBuffers, CanvasLightList } from './lightPassContext.js';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture.js';
+import type { ItemLighting } from '../canvasShader/canvasShaderDraw.js';
+import { isShadowedByLight, itemTemplateLights } from './templateLights.js';
+import { TemplateDrawClaims } from './templateDrawClaims.js';
 
 export type { CanvasItemLightingProps };
 
@@ -135,8 +138,10 @@ export interface LitItem {
   readonly lightMode: CanvasItemMaterialProperties['lightMode'];
   /** Undefined while no light reaches the item. */
   readonly list: CanvasLightList | undefined;
-  /** Whether a light on the canvas reaches the placement, whether or not an item reads its list. */
-  readonly isReachedByLight: boolean;
+  /** What a template draw of the item reads of its lights. */
+  readonly template: ItemTemplateLighting;
+  /** The template draws that hold the item's own pixels, the same object for the item's life. */
+  readonly claims: TemplateDrawClaims;
   readonly plain: CanvasItemLightingUniforms;
   /** The material props of a surface that has no normal map, which never change once mounted. */
   readonly plainProps: CanvasItemLightingProps;
@@ -147,8 +152,16 @@ export interface LitItem {
   readonly geometryRef: RefObject<THREE.Object3D | null>;
 }
 
+/** A lit item as Godot's canvas template draws it (`renderer_canvas_render_rd.cpp:2366-2391`). */
+export interface ItemTemplateLighting extends ItemLighting {
+  /** Whether the item draws with `use_lighting`: a light reaches it. */
+  readonly isLit: boolean;
+  /** Whether a light shadows it, which the template draws only once 2D shadows are ported. */
+  readonly isShadowed: boolean;
+}
+
 export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions): LitItem {
-  const { lists, lights, resolution } = useCanvasLighting2D();
+  const { lists, lights, resolution, lightRows } = useCanvasLighting2D();
   const canvasLayer = useCanvasLayerIndex();
   // The raw canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
@@ -164,13 +177,24 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   // past the render's budget, the item drops the later ones from its list.
   const geometryRef = useRef<THREE.Object3D | null>(null);
   const [takenLights, setTakenLights] = useState<readonly number[] | null>(null);
+  const [godotLights, setGodotLights] = useState<readonly number[] | null>(null);
   const placement = useMemo<ItemPlacement>(
     () => ({ lightMask, z: zFinal, layer: canvasLayer, takenLights }),
     [lightMask, zFinal, canvasLayer, takenLights]
   );
-  useCapItemLights(placement, geometryRef, setTakenLights);
+  useCapItemLights(placement, geometryRef, setTakenLights, setGodotLights);
   const list = lists.get(placementId(placement));
   const isReachedByLight = useMemo(() => isReachedByAnyLight(lights, placement), [lights, placement]);
+  const template = useMemo<ItemTemplateLighting>(
+    () => ({
+      rows: lightRows,
+      layer: canvasLayer,
+      lights: itemTemplateLights(lights, placement, godotLights),
+      isLit: isReachedByLight,
+      isShadowed: isShadowedByLight(lights, placement),
+    }),
+    [lightRows, canvasLayer, lights, placement, godotLights, isReachedByLight]
+  );
 
   const uniforms = useRef<CanvasItemLightingUniforms | null>(null);
   uniforms.current ??= createUniforms(resolution);
@@ -193,9 +217,21 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
 
   const { isLinear: isLinearCanvas } = canvasSpace;
   const plainProps = useMemo(() => canvasItemLightingProps(bound, isLinearCanvas), [bound, isLinearCanvas]);
+  const claims = useRef<TemplateDrawClaims | null>(null);
+  claims.current ??= new TemplateDrawClaims();
+  const itemClaims = claims.current;
   return useMemo(
-    () => ({ placement, lightMode, list, isReachedByLight, plain: bound, plainProps, geometryRef }),
-    [placement, lightMode, list, isReachedByLight, bound, plainProps]
+    () => ({
+      placement,
+      lightMode,
+      list,
+      template,
+      claims: itemClaims,
+      plain: bound,
+      plainProps,
+      geometryRef,
+    }),
+    [placement, lightMode, list, template, itemClaims, bound, plainProps]
   );
 }
 
@@ -215,7 +251,7 @@ export function useSurfaceLighting(
   const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
   const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
   const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
-  useRegisterLitItem(placement, isDrawn ? read : null);
+  useRegisterLitItem(placement, isDrawn ? read : null, item.claims);
 
   // A normal map scales each light by its own normal term, so it shades the lights the list keeps
   // apart.

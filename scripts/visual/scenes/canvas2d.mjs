@@ -80,6 +80,12 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-canvas-item-translated-instances.tscn',
     canvasItem: 'translated',
   },
+  // The lit template: ADD then MIX per layer, a CanvasLayer's own light and CanvasModulate.
+  {
+    name: 'canvas-layer-light-order-translated',
+    file: 'unit-canvas-layer-light-order.tscn',
+    canvasItem: 'translated',
+  },
   // The one variable: `texture_filter` on the Node2D parent. A Nearest parent keeps a magnified
   // Sprite2D's edge a hard step, and the project's Linear default blends it over one texel.
   {

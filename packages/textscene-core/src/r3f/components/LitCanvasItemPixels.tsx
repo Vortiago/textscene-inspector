@@ -5,7 +5,13 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { LIT_ITEM_USER_DATA } from '../lighting2d/itemLightCap';
-import { useLitItem, useSurfaceLighting, type LitItem } from '../lighting2d/useLitItem';
+import type { TemplateDrawClaims } from '../lighting2d/templateDrawClaims';
+import {
+  useLitItem,
+  useSurfaceLighting,
+  type ItemTemplateLighting,
+  type LitItem,
+} from '../lighting2d/useLitItem';
 import type { CanvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 import { canvasItemFacing, type CanvasItemFacing } from '../canvasItemFacing';
@@ -66,12 +72,23 @@ interface LitItemScope {
 const LitItemScopeContext = createContext<LitItemScope | undefined>(undefined);
 LitItemScopeContext.displayName = 'LitItemScopeContext';
 
-/** Whether a light reaches the lit item around a component, false outside one. */
-const ReachedByLightContext = createContext(false);
-ReachedByLightContext.displayName = 'ReachedByLightContext';
+/** What a template draw of the lit item around a component reads of its lights, null outside one. */
+const TemplateLightingContext = createContext<ItemTemplateLighting | null>(null);
+TemplateLightingContext.displayName = 'TemplateLightingContext';
 
-export function useIsReachedByLight(): boolean {
-  return useContext(ReachedByLightContext);
+export function useTemplateLighting(): ItemTemplateLighting | null {
+  return useContext(TemplateLightingContext);
+}
+
+type ClaimTemplateDraw = TemplateDrawClaims['claim'];
+
+/** Null outside an item whose own pixels a template draw can take, such as a tile run's own mesh. */
+const TemplateDrawContext = createContext<ClaimTemplateDraw | null>(null);
+TemplateDrawContext.displayName = 'TemplateDrawContext';
+
+/** The claim a template draw of the enclosing item's pixels makes while it draws them. */
+export function useTemplateDrawClaim(): ClaimTemplateDraw | null {
+  return useContext(TemplateDrawContext);
 }
 
 /** The `z_final` of the lit item around a mesh, 0 outside one. */
@@ -117,9 +134,9 @@ export function LitCanvasItem({ material, lightMask, zFinal, children }: LitCanv
   return (
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
       <ItemZFinalContext.Provider value={zFinal}>
-        <ReachedByLightContext.Provider value={item.isReachedByLight}>
+        <TemplateLightingContext.Provider value={item.template}>
           <LitItemScopeContext.Provider value={scope}>{children}</LitItemScopeContext.Provider>
-        </ReachedByLightContext.Provider>
+        </TemplateLightingContext.Provider>
       </ItemZFinalContext.Provider>
     </object3D>
   );
@@ -161,11 +178,14 @@ export function LitCanvasItemPixels({
   return (
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
       <ItemZFinalContext.Provider value={zFinal}>
-        <ReachedByLightContext.Provider value={item.isReachedByLight}>
-          <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
-            {typeof children === 'function' ? children(pixelMaterial) : children}
-          </CanvasItemPixelMaterialContext.Provider>
-        </ReachedByLightContext.Provider>
+        <TemplateLightingContext.Provider value={item.template}>
+          {/* The template draws no 2D shadow yet, so a shadowed item's own pixels stay classic. */}
+          <TemplateDrawContext.Provider value={item.template.isShadowed ? null : item.claims.claim}>
+            <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
+              {typeof children === 'function' ? children(pixelMaterial) : children}
+            </CanvasItemPixelMaterialContext.Provider>
+          </TemplateDrawContext.Provider>
+        </TemplateLightingContext.Provider>
       </ItemZFinalContext.Provider>
     </object3D>
   );

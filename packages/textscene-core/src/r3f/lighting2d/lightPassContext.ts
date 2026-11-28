@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { CanvasLightDeclaration, ItemPlacement, LitItemRead, PassMeshRole } from './itemLightList.js';
 import type { CappedItem } from './itemLightCap.js';
 import type { CanvasClip } from './lightPassHost.js';
+import type { CanvasLightRows } from './lightRows.js';
 
 /** The accumulations of one item light list. */
 export interface CanvasLightList {
@@ -93,6 +94,8 @@ export interface CanvasLighting2D {
    * while a normal-mapped item reads the light.
    */
   registerApartPlacer(ordinal: number, placer: ApartPlacer): () => void;
+  /** What the canvas's template draws read of its lights, the same object for the canvas's life. */
+  readonly lightRows: CanvasLightRows;
   /** Hands the pass one of light `ordinal`'s meshes, which it shows only over the lists `role` draws in. */
   registerPassMesh(mesh: THREE.Object3D, ordinal: number, role: PassMeshRole): () => void;
   /**
@@ -112,6 +115,7 @@ export const INERT_CANVAS_LIGHTING: CanvasLighting2D = {
   registerItem: (_placement: ItemPlacement, _read: LitItemRead) => () => {},
   registerCappedItem: (_item: CappedItem) => () => {},
   registerApartPlacer: (_ordinal: number, _placer: ApartPlacer) => () => {},
+  lightRows: { lights: new Map() },
   registerPassMesh: (_mesh: THREE.Object3D, _ordinal: number, _role: PassMeshRole) => () => {},
   registerPassStep: (_step: LightPassStep) => () => {},
 };

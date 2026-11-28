@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
-import { useIsReachedByLight } from '../components/LitCanvasItemPixels';
+import { useTemplateLighting } from '../components/LitCanvasItemPixels';
 import { useClipMask } from '../canvasGroup/ClipMaskContext';
 
 interface ShaderInForceProps {
@@ -13,10 +13,10 @@ interface ShaderInForceProps {
   children: (shader: ShaderText) => ReactNode;
 }
 
-/** The template draws no 2D light or clip mask yet: there an item without a shader stays classic. */
+/** The template draws no 2D shadow or clip mask yet: there an item without a shader stays classic. */
 export function ShaderInForce({ shader, materialShader, fallback, children }: ShaderInForceProps) {
-  const isReachedByLight = useIsReachedByLight();
+  const isShadowed = useTemplateLighting()?.isShadowed ?? false;
   const isClipMask = useClipMask() !== null;
-  const inForce = shader ?? (isReachedByLight || isClipMask ? null : materialShader);
+  const inForce = shader ?? (isShadowed || isClipMask ? null : materialShader);
   return <>{inForce ? children(inForce) : fallback}</>;
 }

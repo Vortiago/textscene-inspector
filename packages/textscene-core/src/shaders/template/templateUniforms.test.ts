@@ -40,6 +40,12 @@ describe('TemplateUniforms', () => {
     expect(valueOf(uniforms, 'b.size')).toEqual(new THREE.Vector2());
   });
 
+  it('reads back the integer vector a binding writes', () => {
+    const uniforms = uniformsOf('layout(set = 0) uniform B { uvec4 lights; } b;');
+    (uniforms.byName.get('b.lights') as { value: unknown }).value = new THREE.Vector4(256, 1, 2, 3);
+    expect(valueOf(uniforms, 'b.lights')).toEqual(new THREE.Vector4(256, 1, 2, 3));
+  });
+
   it('starts a two-column matrix at zero', () => {
     const matrix = valueOf(uniformsOf('layout(set = 0) uniform B { mat2 m; } b;'), 'b.m') as THREE.Matrix2;
     expect(matrix.elements).toEqual([0, 0, 0, 0]);

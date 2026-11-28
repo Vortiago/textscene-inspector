@@ -141,4 +141,24 @@ export const LIGHTING_2D_SCENES = [
   // A GradientTexture2D with no gradient holds no image, so the light draws Godot's 4 by 4 placeholder.
   // Godot 4.6.3 `--mode 2d`: the 8 magenta texels at (548..551, 298..301) read rgb(152,25,152).
   { name: 'pointlight2d-gradient-no-gradient', file: 'unit-pointlight2d-gradient-no-gradient.tscn', mode: '2d' },
+  // The lit template: ADD and SUB rows scaled by alpha, over plain, normal-mapped and specular sprites.
+  { name: 'pointlight2d-color-alpha-translated', file: 'unit-pointlight2d-color-alpha.tscn', canvasItem: 'translated' },
+  // The lit template: each item's first 15 positional lights, as Godot's loop takes them.
+  {
+    name: 'pointlight2d-item-light-cap-translated',
+    file: 'unit-pointlight2d-item-light-cap.tscn',
+    canvasItem: 'translated',
+  },
+  // The lit template: directional rows first, with the normal map's angle.
+  {
+    name: 'directionallight2d-normal-map-translated',
+    file: 'unit-directionallight2d-normal-map.tscn',
+    canvasItem: 'translated',
+  },
+  // The lit template: a render lists at most 256 lights, counted over the lights on screen.
+  {
+    name: 'pointlight2d-render-light-budget-translated',
+    file: 'unit-pointlight2d-render-light-budget.tscn',
+    canvasItem: 'translated',
+  },
 ];

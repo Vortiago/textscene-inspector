@@ -16,6 +16,7 @@ import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from './lightCullKey';
 import { useLightShadowCasters } from './ShadowCasterStage';
 import { useLightQuadMaterials } from './useLightQuadMaterials';
 import { placePositionalLight, useApartLightOrigin } from './apartLight';
+import { useLightRowSource } from './lightRows';
 import { Light2DBlendMode } from '../../godot/scene/light2d';
 
 export function PointLightQuads({ term }: { term: PointLightTerm }) {
@@ -42,12 +43,15 @@ export function PointLightQuads({ term }: { term: PointLightTerm }) {
   // `sequence` is this light's position in the canvas light list, which is what Godot applies
   // lights in (`renderer_canvas_render_rd.cpp:2365-2384`) and what order-dependent MIX depends on.
   const listed = useLightSequence();
+  const rowSource = useLightRowSource(term);
   const ordinal = useRegisterCanvasLight2D(true, {
     reach,
     sequence: lightDrawSequence(listed, null),
     shadowItemCullMask: casts ? shadow.itemCullMask : null,
+    castsShadow: casts,
     tintsShadow,
     mixes: term.blendMode === Light2DBlendMode.MIX,
+    rowSource,
   });
   const sequence = lightDrawSequence(listed, ordinal);
   // An item the light reaches through a bit outside `shadow_item_cull_mask` takes it unshadowed.
@@ -85,6 +89,7 @@ export function PointLightQuads({ term }: { term: PointLightTerm }) {
   return (
     <>
       <object3D ref={setOrigin} />
+      <object3D ref={rowSource.setOrigin} />
       <LightQuad role="lit" onMesh={setQuad} material={materials.lit} {...shape} />
       {materials.unshadowed && <LightQuad role="unshadowed" material={materials.unshadowed} {...shape} />}
     </>

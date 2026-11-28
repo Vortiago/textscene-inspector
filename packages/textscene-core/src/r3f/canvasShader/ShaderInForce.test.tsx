@@ -1,12 +1,13 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
-import { useIsReachedByLight } from '../components/LitCanvasItemPixels';
+import { useTemplateLighting } from '../components/LitCanvasItemPixels';
+import type { ItemTemplateLighting } from '../lighting2d/useLitItem';
 import { useClipMask } from '../canvasGroup/ClipMaskContext';
 import type { ClipMask } from '../canvasGroup/clipMask';
 import { ShaderInForce } from './ShaderInForce';
 
-vi.mock('../components/LitCanvasItemPixels', () => ({ useIsReachedByLight: vi.fn() }));
+vi.mock('../components/LitCanvasItemPixels', () => ({ useTemplateLighting: vi.fn() }));
 vi.mock('../canvasGroup/ClipMaskContext', () => ({ useClipMask: vi.fn() }));
 
 const shaderNamed = (file: string): ShaderText => ({ code: '', file, parameters: {}, textures: {} });
@@ -19,10 +20,10 @@ const MASK = {} as ClipMask;
 function drawn(
   shader: ShaderText | null,
   materialShader: ShaderText | null,
-  isReachedByLight: boolean,
+  isShadowed: boolean,
   isClipMask = false
 ) {
-  vi.mocked(useIsReachedByLight).mockReturnValue(isReachedByLight);
+  vi.mocked(useTemplateLighting).mockReturnValue({ isShadowed } as ItemTemplateLighting);
   vi.mocked(useClipMask).mockReturnValue(isClipMask ? MASK : null);
   const { container } = render(
     <ShaderInForce shader={shader} materialShader={materialShader} fallback="classic">
@@ -42,11 +43,22 @@ describe('ShaderInForce', () => {
     [null, null, false, 'classic'],
     [null, null, true, 'classic'],
   ] as const)(
-    'with own %o, material %o and a light %s draws %s',
-    (shader, materialShader, isLit, expected) => {
-      expect(drawn(shader, materialShader, isLit)).toBe(expected);
+    'with own %o, material %o and a shadowing light %s draws %s',
+    (shader, materialShader, isShadowed, expected) => {
+      expect(drawn(shader, materialShader, isShadowed)).toBe(expected);
     }
   );
+
+  it('draws the material shader outside a lit item', () => {
+    vi.mocked(useTemplateLighting).mockReturnValue(null);
+    vi.mocked(useClipMask).mockReturnValue(null);
+    const { container } = render(
+      <ShaderInForce shader={null} materialShader={MATERIAL} fallback="classic">
+        {(inForce) => inForce.file}
+      </ShaderInForce>
+    );
+    expect(container.textContent).toBe('material');
+  });
 
   it.each([
     [OWN, 'own'],

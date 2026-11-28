@@ -14,7 +14,7 @@ import { GENERAL_DEFINES } from './generalDefines.js';
 import { godotId, GodotIds } from './godotIds.js';
 import type { ModeTable } from './modeTable.js';
 import { parseTemplateStage } from './parseTemplate.js';
-import { preprocess } from './preprocess.js';
+import { preprocess, type Macro } from './preprocess.js';
 import { splitStages, type StageName } from './stages.js';
 import { TEMPLATE_FILES } from './templateFiles.generated.js';
 import type { GlobalNode, TemplateStageNode } from './templateTree.js';
@@ -100,9 +100,11 @@ export function linkTemplateStage(
   file: string,
   stage: StageName,
   variant: string,
-  material: CompiledMaterial
+  material: CompiledMaterial,
+  pinned: ReadonlyMap<string, Macro> = new Map()
 ): TemplateStageNode {
-  return parseTemplateStage(stage, preprocess(templateVariant(file, stage, variant, material)), material);
+  const preprocessed = preprocess(templateVariant(file, stage, variant, material), pinned);
+  return parseTemplateStage(stage, preprocessed, material);
 }
 
 /** The lines of one stage of a template variant, with the defines and the code sections of `material`. */

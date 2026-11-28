@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_LIGHT_CULL_KEY, directionalLightCullKey, type LightCullKey } from './lightCullKey';
-import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
+import { MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
 import {
   itemPositionalLights,
   positionalCandidates,
@@ -32,6 +32,7 @@ function light(overrides: Partial<CanvasLightDeclaration> = {}): CanvasLightDecl
     reach: key(),
     sequence: 0,
     shadowItemCullMask: null,
+    castsShadow: false,
     tintsShadow: false,
     mixes: false,
     ...overrides,
@@ -127,11 +128,7 @@ describe('the light list of an item under the per-item cap', () => {
   });
 });
 
-/**
- * Godot's per-item limit on positional lights: the loop breaks at `MAX_LIGHTS_PER_ITEM - 1`
- * (`renderer_canvas_render_rd.cpp:2380`).
- */
-const CAP = MAX_LIGHTS_PER_ITEM - 1;
+const CAP = MAX_POSITIONAL_LIGHTS_PER_ITEM;
 
 const ITEM_RECT: Rect2 = { x: 0, y: 0, w: 10, h: 10 };
 const OVER_ITEM: Rect2 = { x: -5, y: -5, w: 10, h: 10 };
@@ -179,12 +176,14 @@ describe('itemPositionalLights', () => {
 
   it('drops the candidates that meet the item past the 15th', () => {
     const candidates = ordinals(CAP + 3);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates))).toEqual(ordinals(CAP));
+    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates)).positional).toEqual(
+      ordinals(CAP)
+    );
   });
 
   it('keeps the candidates in their order', () => {
     const candidates = [...ordinals(CAP + 1)].reverse();
-    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates))).toEqual(
+    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates)).positional).toEqual(
       candidates.slice(0, CAP)
     );
   });
@@ -194,28 +193,35 @@ describe('itemPositionalLights', () => {
     const candidates = ordinals(CAP + 2);
     const rects = rectsOver(candidates);
     rects.set(0, PAST_ITEM);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toEqual(ordinals(CAP + 1));
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).positional).toEqual(ordinals(CAP + 1));
   });
 
   it('is null while the lights that meet the item fit, so it shares the placement list', () => {
     const candidates = ordinals(CAP + 5);
     const rects = rectsOver(candidates.slice(0, CAP), OVER_ITEM);
     for (const ordinal of candidates.slice(CAP)) rects.set(ordinal, PAST_ITEM);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).positional).toBeNull();
   });
 
   it('counts a rect that only touches the item as a miss', () => {
     const candidates = ordinals(CAP + 1);
     const rects = rectsOver(candidates);
     rects.set(0, { x: 10, y: 0, w: 10, h: 10 });
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).positional).toBeNull();
   });
 
   it('counts a light with no rect as a miss, as it draws nothing', () => {
     const candidates = ordinals(CAP + 1);
     const rects = rectsOver(candidates);
     rects.delete(0);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).positional).toBeNull();
+  });
+
+  it("hands a template draw the first 15 lights that meet the item, as Godot's loop takes them", () => {
+    const candidates = ordinals(CAP + 2);
+    const rects = rectsOver(candidates);
+    rects.set(0, PAST_ITEM);
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects).godot).toEqual(ordinals(CAP + 1).slice(1));
   });
 });
 

@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 import { add, bitAnd, int, mul, shiftRight } from 'three/tsl';
-import type { Node } from 'three/webgpu';
+import type { Node, NodeFrame } from 'three/webgpu';
 import { intNode, swizzles, tsl } from '../language/compositeParts.js';
 import { CONSTRUCTORS, floatNode } from '../language/emitConstant.js';
 import { element } from '../language/emitOperation.js';
@@ -16,7 +16,7 @@ import {
   type PlacedMember,
 } from './blockLayout.js';
 import { elementOf, glslShapeOf } from './glslTypes.js';
-import { ROW_TEXELS, RowStore, TEXEL_WORDS, type RowRegion } from './rowStore.js';
+import { ROW_TEXELS, RowStore, TEXEL_WORDS, type DrawWords, type RowRegion } from './rowStore.js';
 
 /** A word: `4 * texels + words` while each step is whole texels, so one texel takes one fetch. */
 type Index = { readonly texels?: Node; readonly words: number } | { readonly dynamicWords: Node };
@@ -58,8 +58,13 @@ export class RowBlock {
   }
 
   /** Writes each drawn object's words before its draw, and leaves the last ones for a null. */
-  writeEachDraw(wordsOf: (object: THREE.Object3D) => Uint32Array | null): void {
+  writeEachDraw(wordsOf: DrawWords): void {
     this.store.writeEachDraw(this.region, wordsOf);
+  }
+
+  /** Points each draw at the texture `textureOf` answers, or at its own for null. */
+  readEachDraw(textureOf: (frame: NodeFrame) => THREE.DataTexture | null): void {
+    this.store.readEachDraw(this.region, textureOf);
   }
 
   private struct(members: readonly RowMember[], word: Index): StructValue {

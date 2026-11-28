@@ -20,9 +20,18 @@ import {
   modulated,
   writeBatchRecords,
   writeBatchWorld,
+  writeItemLights,
   WHITE,
   type CanvasItemDraw,
 } from '../../shaders/canvas/canvasInstance';
+import {
+  bindCanvasLightsEachDraw,
+  itemLightBitsIn,
+  NO_ITEM_LIGHTS,
+  sameLightBits,
+  type CanvasLightsFrame,
+  type ItemLightBits,
+} from '../../shaders/canvas/canvasLights';
 import {
   quadBatchGeometry,
   textureRectRegion,
@@ -35,20 +44,24 @@ import {
   type CanvasTextureState,
   type TexelSize,
 } from '../../shaders/canvas/canvasTexture';
-import type {
-  CanvasDraw,
-  CanvasItemOptions,
-  CanvasVariant,
-  TranspiledCanvasItem,
+import {
+  specialiseCanvasDraw,
+  type CanvasDraw,
+  type CanvasItemOptions,
+  type CanvasVariant,
+  type TranspiledCanvasItem,
 } from '../../shaders/canvas/transpileCanvas';
 import { unDrawnMessage } from '../../shaders/fault/shaderRefusal';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { NodeFrame } from 'three/webgpu';
 import { perObject } from '../../utils/perObject';
 import { warnOnce } from '../../utils/warnOnce';
+import { decalAtlasTexture } from '../../nodes/3d/decal/decalAtlas';
+import type { CanvasLightRows } from '../lighting2d/lightRows';
 import { canvasTransformInto } from '../node2dTransform';
-import { boundByItem, itemBox, type CanvasShaderCommand } from './canvasCommands';
-import { canvasDataOf, type CanvasColors } from './canvasFrameBlocks';
+import { boundAgain, boundByItem, type CanvasShaderCommand } from './canvasCommands';
+import { canvasDataOf, type CanvasColors, type CanvasItemFrame } from './canvasFrameBlocks';
+import { canvasLightsOf, nextCanvasLightsOf } from './canvasFrameLights';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
 
@@ -112,6 +125,14 @@ export interface ItemColors {
   readonly canvasModulate: Rgba;
 }
 
+/** The lights that reach a lit item: its canvas's rows, its canvas layer and the ordinals it takes. */
+export interface ItemLighting {
+  readonly rows: CanvasLightRows;
+  readonly layer: number;
+  /** The positional lights in Godot's loop order, which each render maps to indices of `light_array`. */
+  readonly lights: readonly number[];
+}
+
 /** A translated item's draw: its three object, and the record writer the frame runs before the draw. */
 export interface CanvasShaderDraw {
   readonly object: THREE.Object3D;
@@ -121,6 +142,8 @@ export interface CanvasShaderDraw {
   readonly setFirstOrder: (firstOrder: number) => void;
   /** Writes the records and the colours the next frames read, with no new geometry. */
   readonly setColors: (colors: ItemColors) => void;
+  /** Draws the lit variant of each program with `lighting`, or the unlit one for null. */
+  readonly setLighting: (lighting: ItemLighting | null) => void;
   readonly writeRecords: () => void;
   /** Hands each mesh's object to its command's receiver, and returns the step that takes them back. */
   readonly handOver: () => () => void;
@@ -131,7 +154,7 @@ export interface CanvasShaderDraw {
 interface Batch {
   readonly object: THREE.Object3D;
   readonly setRun: (run: CommandRun) => void;
-  readonly writeColors: (item: CanvasItemDraw) => void;
+  readonly writeColors: (item: CanvasItemDraw, lights: ItemLightBits) => void;
   readonly writeWorld: (world: MutableTransform2D) => void;
   readonly handOver: () => () => void;
   readonly dispose: () => void;
@@ -180,20 +203,45 @@ export function canvasShaderDraw(
     );
     for (const release of released) release();
   };
+  // Written by `setSource`, and bound again by `setLighting`: the lit stages read the light atlas too.
+  let source: THREE.Texture | undefined;
+  let isLit = false;
+  const bindSource = () => {
+    const lightAtlas = isLit ? decalAtlasTexture() : null;
+    for (const variant of variants.values())
+      variant.texelSize = variant.binding.bind(source, bound.textureState, bound.maps, lightAtlas);
+    holdAnisotropy();
+  };
   const world = mutableTransform2D();
   // Written by `setColors`, and read again by `setSource`: new rects or texel sizes need new records.
   let finalModulate: Rgba | null = null;
+  // Written by `setLighting`, and read by the next record write, which runs before the render.
+  let lighting: ItemLighting | null = null;
+  // Written by `writeLights`: the bits of `lighting` in the last listing, rewritten when they change.
+  let lights = NO_ITEM_LIGHTS;
+  let lightsFrame: CanvasLightsFrame | null = null;
+  let lightsOrdinals: readonly number[] | null = null;
   const writeColors = () => {
     if (!finalModulate) return;
     const itemDraw = { transform: canvasTransformInto(world, object), finalModulate, usesLinearColors };
-    for (const batch of batches) batch.writeColors(itemDraw);
+    for (const batch of batches) batch.writeColors(itemDraw, lights);
+  };
+  const writeLights = () => {
+    const frame = lighting && nextCanvasLightsOf(gl, object, lighting.rows, lighting.layer);
+    const ordinals = lighting?.lights ?? null;
+    if (frame === lightsFrame && ordinals === lightsOrdinals) return;
+    lightsFrame = frame;
+    lightsOrdinals = ordinals;
+    const bits = frame && lighting ? itemLightBitsIn(frame, lighting.lights) : NO_ITEM_LIGHTS;
+    if (sameLightBits(bits, lights)) return;
+    lights = bits;
+    writeColors();
   };
   return {
     object,
     setSource: (texture, commands) => {
-      for (const variant of variants.values())
-        variant.texelSize = variant.binding.bind(texture ?? undefined, bound.textureState, bound.maps);
-      holdAnisotropy();
+      source = texture ?? undefined;
+      bindSource();
       commandRuns(commands).forEach((run, index) => batches[index]!.setRun(run));
       writeColors();
     },
@@ -205,7 +253,15 @@ export function canvasShaderDraw(
       finalModulate = colors.finalModulate;
       writeColors();
     },
+    setLighting: (next) => {
+      for (const { draw } of variants.values()) lightDraw(gl, draw, next);
+      lighting = next;
+      const wasLit = isLit;
+      isLit = next !== null;
+      if (isLit !== wasLit) bindSource();
+    },
     writeRecords: () => {
+      writeLights();
       object.updateWorldMatrix(true, false);
       canvasTransformInto(world, object);
       for (const batch of batches) batch.writeWorld(world);
@@ -250,9 +306,8 @@ function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch
   const count = layout.length;
   const geometry = quadBatchGeometry(Array.from({ length: count }, () => new ArrayBuffer(INSTANCE_BYTES)));
   const object = new THREE.Mesh(geometry, variant.draw.material);
-  object.frustumCulled = false;
   // Bounded by the layout until the first source, so a clip group reads the rects at once.
-  const box = boundByItem(object, layout);
+  boundByItem(object, layout);
   let regions: readonly CanvasRectCommand[] = [];
   return {
     object,
@@ -260,12 +315,13 @@ function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch
       if (run.kind !== 'rect') return;
       regions = run.commands.map(rectRegionOf);
       // The batch owns its quads, so each source writes the one box: AnimatedSprite2D sets one a frame.
-      itemBox(box, run.commands);
+      boundAgain(geometry, run.commands);
     },
-    writeColors: (item) =>
-      writeBatchRecords(geometry, item, regions.length, (record, index) =>
-        writeRectInstance(record, regions[index]!, item, variant.texelSize)
-      ),
+    writeColors: (item, lights) =>
+      writeBatchRecords(geometry, item, regions.length, (record, index) => {
+        writeRectInstance(record, regions[index]!, item, variant.texelSize);
+        writeItemLights(record, lights);
+      }),
     writeWorld: (world) => {
       for (let index = 0; index < count; index++) writeBatchWorld(geometry, index, world);
     },
@@ -289,6 +345,7 @@ function meshBatch(variantOf: (variant: CanvasVariant) => BoundVariant, command:
   const constants = {
     world: mutableTransform2D(),
     modulation: WHITE,
+    lights: NO_ITEM_LIGHTS,
     instances: command.kind === 'multimesh' ? command.instances : undefined,
   };
   const object = attributesObject(draw, geometry, arrays.primitive, constants);
@@ -299,10 +356,13 @@ function meshBatch(variantOf: (variant: CanvasVariant) => BoundVariant, command:
     setRun: (run) => {
       if (run.kind !== 'mesh' || run.command.kind !== 'multimesh') return;
       constants.instances = run.command.instances;
-      itemBox(object.geometry.boundingBox!, [run.command]);
+      boundAgain(object.geometry, [run.command]);
     },
     // `canvas_item_add_mesh`'s white modulate times the item's (`renderer_canvas_render_rd.cpp:2764-2855`).
-    writeColors: (item) => (constants.modulation = modulated(WHITE, item)),
+    writeColors: (item, lights) => {
+      constants.modulation = modulated(WHITE, item);
+      constants.lights = lights;
+    },
     writeWorld: (world) => multiplyTransform2DInto(constants.world, world, transform),
     handOver: () => {
       if (!meshRef) return NOTHING_TO_TAKE_BACK;
@@ -327,7 +387,31 @@ function bindFrameEachDraw(gl: THREE.WebGLRenderer, draw: CanvasDraw, canvas: Ca
     throw new Error(
       `expected a canvas draw to read the uniform ${DRAW_HOOK}, found ${hook ? 'an array' : 'none'}`
     );
-  hook.onObjectUpdate(({ renderId, object, camera }: NodeFrame) =>
-    bindCanvasData(draw, canvasDataOf(gl, { renderId, object: object!, camera: camera! }, canvas))
+  hook.onObjectUpdate((frame: NodeFrame) =>
+    bindCanvasData(draw, canvasDataOf(gl, itemFrameOf(frame), canvas))
   );
+}
+
+function itemFrameOf({ frameId, object, camera }: NodeFrame): CanvasItemFrame {
+  return { frameId, object: object!, camera: camera! };
+}
+
+/** Each draw's lighting, which the light rows writer that `lightDraw` hooks once reads before each draw. */
+const lightingOf = perObject((_draw: CanvasDraw) => ({
+  current: null as ItemLighting | null,
+  isHooked: false,
+}));
+
+/** Specialises `draw` for `lighting`, and writes its light rows before each draw while it is lit. */
+function lightDraw(gl: THREE.WebGLRenderer, draw: CanvasDraw, lighting: ItemLighting | null): void {
+  specialiseCanvasDraw(draw, { useLighting: lighting !== null });
+  const held = lightingOf(draw);
+  held.current = lighting;
+  // After the lit stages: they declare `light_array`, and a draw's layouts each build a draw of it.
+  if (!lighting || held.isHooked) return;
+  held.isHooked = true;
+  bindCanvasLightsEachDraw(draw, (frame) => {
+    const lit = held.current;
+    return lit && canvasLightsOf(gl, itemFrameOf(frame), lit.rows, lit.layer);
+  });
 }

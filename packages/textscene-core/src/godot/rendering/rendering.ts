@@ -69,7 +69,10 @@ export const MAX_LIGHTS_PER_RENDER = 256;
  * The per-item loop (`renderer_canvas_render_rd.cpp:2380`) stops one short of it, so an item takes
  * at most 15 positional lights.
  */
-export const MAX_LIGHTS_PER_ITEM = 16;
+const MAX_LIGHTS_PER_ITEM = 16;
+
+/** The positional lights an item takes, `renderer_canvas_render_rd.cpp:2380`. */
+export const MAX_POSITIONAL_LIGHTS_PER_ITEM = MAX_LIGHTS_PER_ITEM - 1;
 
 /**
  * `RS::ShadowCastingSetting` (`servers/rendering/rendering_server.h:1494-1499`, 4.7.2

@@ -55,6 +55,10 @@ describe("the lit quad, which a user's canvas_item shader adds its textures to",
   it('leaves a material 11 of the 12 fragment uniform blocks', () => {
     expect(MIN_UNIFORM_BLOCKS - uniformBlocksOf(program.fragment)).toBe(11);
   });
+  it('tests no light for a shadow, so SwiftShader compiles it in seconds, not minutes', () => {
+    const hasShadowBit = `${1 << 20}u`;
+    expect(program.fragment).not.toContain(hasShadowBit);
+  });
 });
 
 describe('the lit attributes variant, which reads the instance transforms in its vertex stage', () => {

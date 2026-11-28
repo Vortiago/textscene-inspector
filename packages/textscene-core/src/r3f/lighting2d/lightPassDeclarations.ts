@@ -9,6 +9,7 @@ import type * as THREE from 'three';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
 import type { CanvasLightDeclaration, ItemPlacement, LitItemRead, PassMeshRole } from './itemLightList.js';
 import { useCanvasLighting2D } from './lightPassContext.js';
+import type { TemplateDrawClaims } from './templateDrawClaims.js';
 
 /**
  * Declares a light while `enabled` holds, until a value changes or unmount. It depends on the
@@ -22,7 +23,7 @@ export function useRegisterCanvasLight2D(
   const { registerLight } = useCanvasLighting2D();
   const [ordinal, setOrdinal] = useState<number | null>(null);
   const { itemCullMask, zMin, zMax, layerMin, layerMax } = declaration.reach;
-  const { sequence, slot, shadowItemCullMask, tintsShadow, mixes } = declaration;
+  const { sequence, slot, shadowItemCullMask, castsShadow, tintsShadow, mixes, rowSource } = declaration;
   useEffect(() => {
     if (!enabled) {
       setOrdinal(null);
@@ -33,8 +34,10 @@ export function useRegisterCanvasLight2D(
       sequence,
       slot,
       shadowItemCullMask,
+      castsShadow,
       tintsShadow,
       mixes,
+      rowSource,
     });
     setOrdinal(registration.ordinal);
     return registration.release;
@@ -49,36 +52,36 @@ export function useRegisterCanvasLight2D(
     sequence,
     slot,
     shadowItemCullMask,
+    castsShadow,
     tintsShadow,
     mixes,
+    rowSource,
   ]);
   return ordinal;
 }
 
-/**
- * Declares a lit item at `placement`, by value, with the accumulation it reads, or nothing while
- * `read` is null. The cap hands `takenLights` as a new array only when they change, so its
- * identity serves.
- */
-export function useRegisterLitItem(placement: ItemPlacement, read: LitItemRead | null): void {
+// The cap hands `takenLights` as a new array only when they change, so its identity serves.
+/** Declares a lit item and its read by value, or nothing while `read` is null or a draw claims it. */
+export function useRegisterLitItem(
+  placement: ItemPlacement,
+  read: LitItemRead | null,
+  claims: TemplateDrawClaims | null = null
+): void {
   const { registerItem } = useCanvasLighting2D();
   const { lightMask, z, layer, takenLights } = placement;
-  useEffect(
-    () => (read === null ? undefined : registerItem({ lightMask, z, layer, takenLights }, read)),
-    [registerItem, lightMask, z, layer, takenLights, read]
-  );
+  useEffect(() => {
+    if (read === null) return undefined;
+    const register = () => registerItem({ lightMask, z, layer, takenLights }, read);
+    return claims ? claims.whileUnclaimed(register) : register();
+  }, [registerItem, lightMask, z, layer, takenLights, read, claims]);
 }
 
-/**
- * Hands the per-item cap an item at `placement`, uncapped, whose own geometry `geometry` holds.
- * `take` receives the item's light list while more than 15 lights meet it or the render
- * budget drops one. The cap records a new entry as handed nothing, so each release hands the item
- * null to match: else an item that moves to a placement that fits every light keeps the old list.
- */
+/** Hands the per-item cap an uncapped item at `placement`, and hands the item null again on release. */
 export function useCapItemLights(
   placement: ItemPlacement,
   geometry: RefObject<THREE.Object3D | null>,
-  take: (takenLights: readonly number[] | null) => void
+  take: (takenLights: readonly number[] | null) => void,
+  takeGodotLights: (godotLights: readonly number[] | null) => void
 ): void {
   const { registerCappedItem } = useCanvasLighting2D();
   const { lightMask, z, layer } = placement;
@@ -87,12 +90,14 @@ export function useCapItemLights(
       placement: { lightMask, z, layer, takenLights: null },
       geometry,
       take,
+      takeGodotLights,
     });
     return () => {
       release();
       take(null);
+      takeGodotLights(null);
     };
-  }, [registerCappedItem, lightMask, z, layer, geometry, take]);
+  }, [registerCappedItem, lightMask, z, layer, geometry, take, takeGodotLights]);
 }
 
 /**

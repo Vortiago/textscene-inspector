@@ -11,7 +11,12 @@ import {
 } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import type { MaterialBlendState } from '../pipeline/blendState.js';
-import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
+import {
+  parsedShader,
+  shaderSource,
+  type ParsedShader,
+  type ShaderOptions,
+} from '../language/parseShader.js';
 import type { ShaderNode } from '../language/shaderTree.js';
 import { builtInsNamed } from '../language/treeWalk.js';
 import { CANVAS_CUSTOM_ARRAYS } from '../../godot/rendering/meshArrayFormat.js';
@@ -19,6 +24,7 @@ import { INSTANCE_ID_ATTRIBUTE, VERTEX_ID_ATTRIBUTE } from '../template/surfaceA
 import { devicePoints, sizesPoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
+import { pinnedMacros } from '../template/preprocess.js';
 import type { RowBlock } from '../template/rowBlock.js';
 import type { Specialisation } from '../template/specialisation.js';
 import type { TemplateUniform } from '../template/templateUniforms.js';
@@ -33,6 +39,8 @@ import {
 } from '../template/vulkanStage.js';
 import type { Vec4 } from '../tslTypes.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
+import { textHash, type CodeKey } from '../uniforms/programKey.js';
+import { SamplerBinding } from '../uniforms/samplerUniform.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { canvasBlendState } from './canvasBlend.js';
@@ -62,13 +70,20 @@ export const CANVAS_VARIANT_DEFINES: Readonly<Record<CanvasVariant, string>> = {
 const writesPointSize = (variant: CanvasVariant) =>
   CANVAS_VARIANT_DEFINES[variant].includes('USE_POINT_SIZE');
 
+/** A shadowed item draws classic, so a lit draw folds out the shadow code SwiftShader takes minutes on. */
+const NO_CANVAS_SHADOWS = pinnedMacros('#define LIGHT_FLAGS_HAS_SHADOW 0');
+
 /** One template for every variant: the defines key each stage in the memo, which lives with the page. */
 const CANVAS: ProgramTemplate = {
   shaderType: 'canvas_item',
   template: 'canvas.glsl',
   defines: CANVAS_VARIANT_DEFINES.quad,
   memo: new TreeMemo(),
+  pinnedMacros: NO_CANVAS_SHADOWS,
 };
+
+/** Every lit draw of a canvas reads one `light_array` texture, uploaded once a frame. */
+const SHARED_LIGHT_ARRAY: ReadonlySet<string> = new Set(['light_array']);
 
 /** One variant of a canvas item's material. */
 export interface CanvasDraw {
@@ -116,6 +131,7 @@ export function transpileCanvasItem(source: string, options: CanvasItemOptions =
   });
   const item: ItemProgram = {
     program,
+    codeHash: codeHashOf(parsed, options),
     shader: { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) },
     blend: canvasBlendState(parsed.tree),
     ...builtInUses(parsed.tree),
@@ -157,6 +173,8 @@ export function specialiseCanvasDraw(draw: CanvasDraw, { useLighting }: CanvasSp
 /** What every variant of one item's material shares. */
 interface ItemProgram {
   readonly program: LinkedProgram;
+  /** A hash of the text with each option that changes the code. */
+  readonly codeHash: string;
   readonly shader: MaterialShader;
   readonly blend: MaterialBlendState;
   /** Whether the shader reads or writes `POINT_SIZE` (`renderer_canvas_render_rd.cpp:1826`). */
@@ -190,14 +208,19 @@ interface PointSizeUse {
 
 /** The material of `variant`, with resources of its own and the program's parameters. */
 function canvasDraw(
-  { program, shader, blend, usesPointSize, customsRead }: ItemProgram,
+  { program, codeHash, shader, blend, usesPointSize, customsRead }: ItemProgram,
   target: DrawTarget
 ): CanvasDraw {
   const emulatesPoints = usesPointSize && writesPointSize(target.variant);
-  const resources = programResources();
+  const resources = programResources({ buffersApart: SHARED_LIGHT_ARRAY });
   const viewportInTarget = uniform(new THREE.Vector4(0, 0, 1, 1));
   const specialisations = resources.uniforms.specialisations;
   const material = new BoundNodeMaterial({ ...shader, specialisations });
+  material.codeKey = codeKeyOf(
+    `${target.variant}|${target.rows}|${emulatesPoints}|${codeHash}`,
+    resources.textures,
+    program
+  );
   // Godot's canvas pipeline: no cull and no depth (`renderer_canvas_render_rd.cpp:1535`).
   Object.assign(material, blend, {
     transparent: true,
@@ -228,6 +251,30 @@ function canvasDraw(
     textures: resources.textures,
     buffers: resources.buffers.byName,
     viewportInTarget,
+  };
+}
+
+/** No `file`: it names a fault's position only, so two files of one text share a program. */
+function codeHashOf(
+  { code }: ParsedShader,
+  { sampling, usesLinearColors = false }: CanvasItemOptions
+): string {
+  return textHash(JSON.stringify([code, sampling, usesLinearColors]));
+}
+
+/** The code key of one variant's `source`, with the template's textures and the shader's samplers. */
+function codeKeyOf(
+  source: string,
+  templateTextures: ReadonlyMap<string, TextureNode>,
+  { parameters }: LinkedProgram
+): CodeKey {
+  return {
+    source: `canvas|${source}`,
+    textures: function* () {
+      yield* templateTextures.values();
+      for (const parameter of parameters.values())
+        if (parameter instanceof SamplerBinding) yield* parameter.textureNodes;
+    },
   };
 }
 

@@ -22,6 +22,7 @@ import {
   instancingFlags,
 } from './canvasMultiMesh.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
+import { NO_ITEM_LIGHTS, type ItemLightBits } from './canvasLights.js';
 
 /** The vertex arrays of `Item::CommandPolygon`, or of one surface of a mesh. */
 export interface CanvasVertexArrays {
@@ -144,10 +145,12 @@ const channels = ({ r, g, b, a }: Rgba) => [r, g, b, a];
 const repeated = (value: readonly number[], count: number) =>
   Array.from({ length: count }, () => value).flat();
 
-/** `PushConstantAttributes` past `PushConstant` (`renderer_canvas_render_rd.h:391-398`), with no light. */
+/** `PushConstantAttributes` past `PushConstant` (`renderer_canvas_render_rd.h:391-398`). */
 export interface AttributesConstants {
   readonly world: Transform2DColumns;
   readonly modulation: Rgba;
+  /** The item's lights, none when left out. */
+  readonly lights?: ItemLightBits;
   /** A multimesh batch's instances, which its `batch_flags` and the `transforms` buffer carry. */
   readonly instances?: CanvasInstances;
 }
@@ -179,6 +182,8 @@ interface AttributesParams {
   readonly modulation: THREE.Vector4;
   /** The texture's bits, which its binding writes, with this batch's instancing bits. */
   batchFlags: number;
+  flags: number;
+  readonly lights: THREE.Vector4;
 }
 
 const newParams = (): AttributesParams => ({
@@ -187,11 +192,13 @@ const newParams = (): AttributesParams => ({
   worldOfs: new THREE.Vector2(),
   modulation: new THREE.Vector4(),
   batchFlags: 0,
+  flags: 0,
+  lights: new THREE.Vector4(),
 });
 
 function setParams(
   params: AttributesParams,
-  { world, modulation: { r, g, b, a }, instances }: AttributesConstants,
+  { world, modulation: { r, g, b, a }, instances, lights = NO_ITEM_LIGHTS }: AttributesConstants,
   textureFlags: number
 ): void {
   const [xx, xy, yx, yy, ox, oy] = worldOf(world);
@@ -199,11 +206,12 @@ function setParams(
   params.worldY.set(yx!, yy!);
   params.worldOfs.set(ox!, oy!);
   params.modulation.set(r, g, b, a);
+  params.flags = lights.flags;
+  const [first, second, third, fourth] = lights.lights;
+  params.lights.set(first, second, third, fourth);
   // `tex_info->flags | flags` (`renderer_canvas_render_rd.h:557`).
   params.batchFlags = (textureFlags & ~INSTANCING_BITS) | (instances ? instancingFlags(instances) : 0);
 }
-
-const NO_LIGHTS = new THREE.Vector4();
 
 const BATCH_FLAGS = 'params.batch_flags';
 
@@ -221,9 +229,8 @@ const ATTRIBUTES_BINDINGS: readonly Binding<AttributesParams>[] = [
     godot: 'renderer_canvas_render_rd.cpp:571',
     value: ({ modulation }) => modulation,
   },
-  // No light reaches the item, so its flags and light indices are zero.
-  { uniform: 'params.flags', godot: 'renderer_canvas_render_rd.cpp:573', value: () => 0 },
-  { uniform: 'params.lights', godot: 'renderer_canvas_render_rd.cpp:572', value: () => NO_LIGHTS },
+  { uniform: 'params.flags', godot: 'renderer_canvas_render_rd.cpp:573', value: ({ flags }) => flags },
+  { uniform: 'params.lights', godot: 'renderer_canvas_render_rd.cpp:572', value: ({ lights }) => lights },
   {
     uniform: 'params.instance_uniforms_ofs',
     godot: 'renderer_canvas_render_rd.cpp:574',

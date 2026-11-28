@@ -16,7 +16,8 @@ import { canvasDataTransformInto, targetViewportInto } from './canvasTransforms'
 
 /** One draw of a shaded item: the render it belongs to, and the object and camera it draws with. */
 export interface CanvasItemFrame {
-  readonly renderId: number;
+  /** `frameId`, not `renderId`: three counts a render for each draw (`WebGLNodesHandler.js:598`). */
+  readonly frameId: number;
   readonly object: THREE.Object3D;
   readonly camera: THREE.Camera;
 }
@@ -30,7 +31,7 @@ export interface CanvasColors {
 
 interface WrittenBlock {
   readonly block: CanvasDataBlock;
-  renderId: number;
+  frameId: number;
   camera: THREE.Camera | null;
   canvasModulate: Rgba;
   usesLinearColors: boolean;
@@ -69,7 +70,7 @@ export function canvasDataOf(
   }
   // A block of an earlier render is free, so a canvas holds as many blocks as one render's colour sets.
   const written = free ?? newWrittenBlock(blocks);
-  written.renderId = drawn.renderId;
+  written.frameId = drawn.frameId;
   written.camera = drawn.camera;
   written.canvasModulate = colors.canvasModulate;
   written.usesLinearColors = colors.usesLinearColors;
@@ -87,13 +88,13 @@ export function canvasDataOf(
 
 /** Whether `written` holds the block of the render and camera `drawn` belongs to. */
 function isWrittenFor(written: WrittenBlock, drawn: CanvasItemFrame): boolean {
-  return written.renderId === drawn.renderId && written.camera === drawn.camera;
+  return written.frameId === drawn.frameId && written.camera === drawn.camera;
 }
 
 function newWrittenBlock(blocks: WrittenBlock[]): WrittenBlock {
   const written = {
     block: canvasDataBlock(),
-    renderId: -1,
+    frameId: -1,
     camera: null,
     canvasModulate: WHITE,
     usesLinearColors: false,

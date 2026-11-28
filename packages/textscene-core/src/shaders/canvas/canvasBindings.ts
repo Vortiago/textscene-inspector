@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { srgbToLinearColor } from '../../godot/math/color.js';
 import type { Rgba } from '../../godot/math/math.js';
-import type { Transform2DColumns } from '../../godot/math/transform2d.js';
+import {
+  mutableTransform2D,
+  type MutableTransform2D,
+  type Transform2DColumns,
+} from '../../godot/math/transform2d.js';
 import { normalizedVector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasDraw } from './transpileCanvas.js';
@@ -85,19 +89,26 @@ export function writeCanvasData(block: CanvasDataBlock, frame: CanvasFrame): voi
 }
 
 /** Scratch of `canvasTransformInViewport`, overwritten by the next write. */
-const inViewport = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+const inViewport = mutableTransform2D();
 
 /** The frame's canvas transform, from target pixels into the pixels of Godot's viewport. */
 function canvasTransformInViewport({ canvasTransform, viewport }: CanvasFrame): Transform2DColumns {
-  if (!viewport) return canvasTransform;
-  const { x, y, scale } = viewport;
-  inViewport.a = canvasTransform.a / scale;
-  inViewport.b = canvasTransform.b / scale;
-  inViewport.c = canvasTransform.c / scale;
-  inViewport.d = canvasTransform.d / scale;
-  inViewport.tx = (canvasTransform.tx - x) / scale;
-  inViewport.ty = (canvasTransform.ty - y) / scale;
-  return inViewport;
+  return viewport ? transformInViewportInto(inViewport, canvasTransform, viewport) : canvasTransform;
+}
+
+/** Writes `inTarget`, a transform that ends in target pixels, as one that ends in `viewport`'s pixels. */
+export function transformInViewportInto(
+  out: MutableTransform2D,
+  inTarget: Transform2DColumns,
+  { x, y, scale }: TargetViewport
+): MutableTransform2D {
+  out.a = inTarget.a / scale;
+  out.b = inTarget.b / scale;
+  out.c = inTarget.c / scale;
+  out.d = inTarget.d / scale;
+  out.tx = (inTarget.tx - x) / scale;
+  out.ty = (inTarget.ty - y) / scale;
+  return out;
 }
 
 /** The whole target as its own viewport. */
@@ -137,7 +148,7 @@ function writeViewport(block: CanvasDataBlock, { width, height, viewport }: Canv
   block.viewportInTarget.set(viewport.x, viewport.y, 1 / viewport.scale, 1 / viewport.scale);
 }
 
-/** Each member of `CanvasData` the unlit variants read, by where Godot writes it. */
+/** Each member of `CanvasData` past the lights, by where Godot writes it. */
 export const CANVAS_BINDINGS: readonly Binding<CanvasDataBlock>[] = [
   {
     uniform: `${DATA}.canvas_transform`,
@@ -170,7 +181,6 @@ export const CANVAS_BINDINGS: readonly Binding<CanvasDataBlock>[] = [
     godot: 'renderer_canvas_render_rd.cpp:705',
     value: (block) => block.usesPixelSnap,
   },
-  { uniform: `${DATA}.directional_light_count`, godot: 'renderer_canvas_render_rd.cpp:707', value: () => 0 },
   { uniform: `${DATA}.flags`, godot: 'renderer_canvas_render_rd.cpp:729', value: (block) => block.flags },
 ];
 

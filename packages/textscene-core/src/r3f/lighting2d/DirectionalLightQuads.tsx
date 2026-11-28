@@ -20,6 +20,7 @@ import { FullScreenQuad } from './fullScreenQuad';
 import { createDirectionalLightMaterial, type DirectionalShadowSampling } from './directionalLightQuad';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { placeDirectionalLight, useApartLightOrigin } from './apartLight';
+import { useLightRowSource } from './lightRows';
 import { Light2DBlendMode } from '../../godot/scene/light2d';
 
 export function DirectionalLightQuads({ term }: { term: DirectionalLightTerm }) {
@@ -30,13 +31,16 @@ export function DirectionalLightQuads({ term }: { term: DirectionalLightTerm }) 
   const casters = useLightShadowCasters(shadow.enabled, shadow.itemCullMask);
   // Its shadow reaches every item it lights, so it declares no `shadow_item_cull_mask`.
   const tintsShadow = casters.length > 0 && shadowColorContributes(shadow.color, shadow.filter);
+  const rowSource = useLightRowSource(term);
   const ordinal = useRegisterCanvasLight2D(slot !== null, {
     reach: directionalLightCullKey(term.layerMin, term.layerMax),
     sequence: null,
     slot: slot ?? undefined,
     shadowItemCullMask: null,
+    castsShadow: casters.length > 0,
     tintsShadow,
     mixes: term.blendMode === Light2DBlendMode.MIX,
+    rowSource,
   });
 
   if (slot === null) return null;
@@ -44,6 +48,7 @@ export function DirectionalLightQuads({ term }: { term: DirectionalLightTerm }) 
     <DirectionalQuad
       term={term}
       ordinal={ordinal}
+      rowOrigin={rowSource.setOrigin}
       renderOrder={directionalRenderOrder(slot)}
       casters={casters}
     />
@@ -53,12 +58,15 @@ export function DirectionalLightQuads({ term }: { term: DirectionalLightTerm }) 
 function DirectionalQuad({
   term,
   ordinal,
+  rowOrigin,
   renderOrder,
   casters,
 }: {
   term: DirectionalLightTerm;
   /** This light's ordinal on the canvas, or null while undeclared. */
   ordinal: number | null;
+  /** The ref of the origin the template's light row reads. */
+  rowOrigin: (origin: THREE.Object3D | null) => void;
   /** Its draw order, from its slot in the directional list. */
   renderOrder: number;
   /** The occluders this light is allowed to see, in world space. */
@@ -99,6 +107,7 @@ function DirectionalQuad({
   return (
     <>
       <object3D ref={setOrigin} />
+      <object3D ref={rowOrigin} />
       <FullScreenQuad meshRef={litRef} material={material} renderOrder={renderOrder} />
     </>
   );
