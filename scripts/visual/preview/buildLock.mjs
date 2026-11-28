@@ -18,6 +18,8 @@ import { REPO_ROOT } from './paths.mjs';
 const DEFAULT_WAIT_MS = 20 * 60_000;
 const POLL_MS = 1_000;
 const UNREADABLE_GRACE_MS = 60_000;
+// A new capture can retry a failed release before its waiting period starts.
+const failedReleases = new Map();
 
 function pidExists(pid) {
   try {
@@ -98,18 +100,19 @@ function tryAcquire(lock, file) {
     if (error.code === 'EEXIST') return false;
     throw error;
   }
+  const release = releaseOnExit(lock, file);
   try {
     publishOwner(lock, file);
     // A waiter can remove an old empty directory between mkdir and the write. Verify sole ownership.
     const files = readdirSync(lock);
-    if (files.length === 1 && files[0] === file) return true;
+    if (files.length === 1 && files[0] === file) return release;
   } catch (error) {
     if (error.code !== 'ENOENT') {
-      removeOwner(lock, file);
+      release();
       throw error;
     }
   }
-  removeOwner(lock, file);
+  release();
   return false;
 }
 
@@ -119,7 +122,7 @@ function inspectLock(lock) {
     const file = files.find((name) => name.startsWith('harness-')) ?? files[0];
     const path = file ? join(lock, file) : lock;
     let text = '';
-    if (file) {
+    if (file && !file.endsWith('.tmp')) {
       try {
         text = readFileSync(path, 'utf8');
       } catch (error) {
@@ -143,10 +146,32 @@ function pruneStaleOwners(lock) {
 }
 
 function releaseOnExit(lock, file) {
-  const unregister = onHarnessExit(release);
+  let retryTimer;
+  let unregister = onHarnessExit(() => (retryTimer ? retry() : release()));
+  function retry() {
+    try {
+      release();
+    } catch {
+      // The releasing caller received the error. Waiters still have their own deadline.
+    }
+  }
   function release() {
-    if (!unregister()) return;
-    removeOwner(lock, file);
+    if (!unregister) return;
+    try {
+      removeOwner(lock, file);
+    } catch (error) {
+      if (!retryTimer) {
+        failedReleases.set(retry, lock);
+        retryTimer = setInterval(retry, POLL_MS).unref();
+      }
+      throw error;
+    }
+    if (retryTimer) {
+      clearInterval(retryTimer);
+      failedReleases.delete(retry);
+    }
+    unregister();
+    unregister = undefined;
     pruneStaleOwners(lock);
   }
   return Object.assign(release, { ownerPath: join(lock, file) });
@@ -156,15 +181,16 @@ function releaseOnExit(lock, file) {
 export function joinBuildLock(ownerPath) {
   const lock = dirname(ownerPath);
   const file = `${randomUUID()}.json`;
+  const release = releaseOnExit(lock, file);
   try {
     publishOwner(lock, file);
     // A child spawned before a takeover can start after it. It must still see its own generation.
     statSync(ownerPath);
+    return release;
   } catch (error) {
-    removeOwner(lock, file);
+    release();
     throw error;
   }
-  return releaseOnExit(lock, file);
 }
 
 /** @canonical Lock one working copy for a preview build and capture */
@@ -184,7 +210,11 @@ export async function acquireBuildLock({
   const deadline = performance.now() + waitMs;
   let announced = false;
   for (;;) {
-    if (tryAcquire(lock, file)) return releaseOnExit(lock, file);
+    for (const [retry, checkoutLock] of failedReleases) {
+      if (checkoutLock === lock) retry();
+    }
+    const release = tryAcquire(lock, file);
+    if (release) return release;
     const current = pruneStaleOwners(lock);
     if (!current) continue;
     const holder = current.owner;
