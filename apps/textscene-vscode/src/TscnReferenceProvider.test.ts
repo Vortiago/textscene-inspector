@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import type { PathCase } from '@textscene/core/resources/resPath';
 import { TscnReferenceProvider } from './TscnReferenceProvider';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { createMockDocument } from './TscnDefinitionProvider.testkit';
 import { createMockFileData, createMockUri, vscode as vscodeMocks } from './test-setup';
 
@@ -52,7 +53,14 @@ async function referencesFound(
   position: vscode.Position = ON_PATH,
   token: vscode.CancellationToken = LIVE_TOKEN
 ): Promise<string[]> {
-  const provider = new TscnReferenceProvider({ pathsFor: async () => listing });
+  vscodeMocks.workspace.findFiles.mockImplementation((pattern: { pattern: string }) =>
+    Promise.resolve(
+      pattern.pattern === '**/*'
+        ? listing.map((resPath) => createMockUri(resPath.replace('res://', '/workspace/')))
+        : []
+    )
+  );
+  const provider = new TscnReferenceProvider(createWorkspaceResRoots());
   const locations = await provider.provideReferences(
     createMockDocument(LINE, '/workspace/scenes/door.tscn'),
     position,
@@ -117,9 +125,8 @@ describe('TscnReferenceProvider', () => {
 
   it('lists nothing when the cursor is off a res:// path', async () => {
     arrangeProject({});
-    const pathsFor = vi.fn(async () => []);
 
-    const locations = await new TscnReferenceProvider({ pathsFor }).provideReferences(
+    const locations = await new TscnReferenceProvider(createWorkspaceResRoots()).provideReferences(
       createMockDocument(LINE, '/workspace/scenes/door.tscn'),
       new vscode.Position(0, 3),
       { includeDeclaration: true },
@@ -127,7 +134,7 @@ describe('TscnReferenceProvider', () => {
     );
 
     expect(locations).toEqual([]);
-    expect(pathsFor).not.toHaveBeenCalled();
+    expect(vscodeMocks.workspace.findFiles).not.toHaveBeenCalled();
   });
 
   it('reads no file once the request is cancelled', async () => {

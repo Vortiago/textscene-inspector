@@ -1,6 +1,7 @@
 /** A scene's `res://` root, answered through an in-memory filesystem port: the seam a Node host's adapter fills. */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { inPathOrder } from './resPath';
 import { rootDirOf } from './testing/rootDirOf';
 import { createResRoots, type ResRoot, type ResRoots, type ResRootsPort } from './resRoots';
 
@@ -278,7 +279,7 @@ describe('a root listing', () => {
   it("lists each GDExtension the editor's scan finds, in any case, and none it skips", async () => {
     const root = await listedRoot(listedFiles());
 
-    expect([...(await root.listFiles('gdextension'))].sort()).toEqual([
+    expect(inPathOrder((await root.listFiles('gdextension')) ?? [])).toEqual([
       'res://addons/x/bin/B.GDExtension',
       'res://bin/a.gdextension',
     ]);
@@ -317,6 +318,80 @@ describe('a root listing', () => {
     files.set('/work/listed/models/late.glb', '');
 
     expect(await root.listPaths()).toEqual(first);
+  });
+});
+
+describe('host scan', () => {
+  const directory = '/work/game';
+  const scene = `${directory}/level.tscn`;
+
+  it('shares pending and completed searches per extension until invalidated', async () => {
+    const scan = vi.fn(async (_path: string, extension?: string) =>
+      extension === undefined
+        ? ['res://level.tscn', 'res://addons/a.gdextension']
+        : ['res://addons/a.gdextension']
+    );
+    const port = memoryPort(memoryFiles(scene));
+    const list = vi.spyOn(port, 'list');
+    const roots = createResRoots({ ...port, scan }, directory);
+    const root = (await roots.rootOf(scene))!;
+
+    const first = root.listPaths();
+    const second = root.listPaths();
+    const extensions = root.listFiles('GDExtension');
+    expect(root.listFiles('gdextension')).toBe(extensions);
+    expect(await first).toEqual(['res://level.tscn', 'res://addons/a.gdextension']);
+    expect(await second).toBe(await first);
+    expect(await extensions).toEqual(['res://addons/a.gdextension']);
+    expect(await root.listPaths()).toBe(await first);
+    expect(scan.mock.calls).toEqual([
+      [directory, undefined],
+      [directory, 'gdextension'],
+    ]);
+
+    roots.invalidate(`${directory}/addons/new.gdextension`);
+    await root.listPaths();
+    await root.listFiles('gdextension');
+    expect(scan).toHaveBeenCalledTimes(4);
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it('retries failed searches and exposes failure for an extension listing', async () => {
+    const scan = vi
+      .fn<NonNullable<ResRootsPort['scan']>>()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(['res://level.tscn'])
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(['res://addons/a.gdextension']);
+    const roots = createResRoots({ ...memoryPort(memoryFiles(scene)), scan }, directory);
+    const root = (await roots.rootOf(scene))!;
+
+    expect(await root.listPaths()).toEqual([]);
+    expect(await root.listPaths()).toEqual(['res://level.tscn']);
+    expect(await root.listFiles('gdextension')).toBeNull();
+    expect(await root.listFiles('gdextension')).toEqual(['res://addons/a.gdextension']);
+  });
+
+  it('keeps a replacement search when a superseded search fails', async () => {
+    let failFirst!: (files: null) => void;
+    const scan = vi
+      .fn<NonNullable<ResRootsPort['scan']>>()
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          failFirst = resolve;
+        })
+      )
+      .mockResolvedValue(['res://addons/new.gdextension']);
+    const roots = createResRoots({ ...memoryPort(memoryFiles(scene)), scan }, directory);
+    const root = (await roots.rootOf(scene))!;
+    const first = root.listFiles('gdextension');
+    roots.invalidate(`${directory}/addons/new.gdextension`);
+    const replacement = root.listFiles('gdextension');
+
+    failFirst(null);
+    expect(await first).toBeNull();
+    expect(await replacement).toEqual(['res://addons/new.gdextension']);
+    expect(root.listFiles('gdextension')).toBe(replacement);
   });
 });
 

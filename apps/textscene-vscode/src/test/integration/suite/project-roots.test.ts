@@ -208,4 +208,25 @@ suite('Project roots', () => {
     const paths = await offeredPaths(scene, PROJECT_PATH);
     assert.ok(paths.includes(PROJECT_PATH), `offered: ${paths.join(', ')}`);
   });
+  test('creating and deleting a project file switches the target of an open scene link', async () => {
+    const looseGrid = path.join(dir, 'scenes', 'art', 'grid.png');
+    const scenePath = path.join(dir, 'scenes', 'switch-root.tscn');
+    const projectFile = path.join(dir, 'project.godot');
+    fs.mkdirSync(path.dirname(looseGrid), { recursive: true });
+    fs.writeFileSync(looseGrid, '');
+    fs.writeFileSync(scenePath, sceneWith(PROJECT_PATH));
+    try {
+      const scene = await shown(scenePath);
+      assert.strictEqual(await linkTarget(scene), looseGrid);
+
+      await writeProjectFile(projectFile);
+      assert.strictEqual(await linkTarget(scene), grid);
+
+      await removeProjectFile(projectFile);
+      assert.strictEqual(await linkTarget(scene), looseGrid);
+    } finally {
+      fs.rmSync(looseGrid, { force: true });
+      fs.rmSync(scenePath, { force: true });
+    }
+  });
 });
