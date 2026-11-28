@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import { PendingSuspense } from '../../resources/PendingSuspense.js';
 import { editorHelperUserData } from '../editorHelpers.js';
-import { useRootScene } from '../SceneContents.js';
+import { useRootScene } from '../hooks/useRootScene.js';
 import { useViewShow } from '../viewShow/ViewShowContext.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.

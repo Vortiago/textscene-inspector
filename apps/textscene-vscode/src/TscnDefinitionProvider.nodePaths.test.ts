@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { createMockDocument } from './TscnDefinitionProvider.testkit';
 
 const token = { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) };
@@ -20,7 +21,7 @@ const SCENE = `[gd_scene format=3]
 async function definitionAt(line: number, needle: string): Promise<vscode.Location | null> {
   const document = createMockDocument(SCENE);
   const character = document.lineAt(line).text.indexOf(needle) + 1;
-  return (await new TscnDefinitionProvider().provideDefinition(
+  return (await new TscnDefinitionProvider(createWorkspaceResRoots()).provideDefinition(
     document,
     new vscode.Position(line, character),
     token
@@ -40,7 +41,9 @@ describe('TscnDefinitionProvider node paths', () => {
     const document = createMockDocument(SCENE.replace('from="Button"', 'from="Missing"'));
     const position = new vscode.Position(6, document.lineAt(6).text.indexOf('Missing') + 1);
 
-    expect(await new TscnDefinitionProvider().provideDefinition(document, position, token)).toBeNull();
+    expect(
+      await new TscnDefinitionProvider(createWorkspaceResRoots()).provideDefinition(document, position, token)
+    ).toBeNull();
   });
 
   it('goes from a path under an instanced scene to the heading seated there', async () => {
@@ -50,7 +53,7 @@ describe('TscnDefinitionProvider node paths', () => {
     ).replace('from="Button"', 'from="Inst/Sub/Button"');
     const document = createMockDocument(instanced);
     const position = new vscode.Position(7, document.lineAt(7).text.indexOf('Inst/Sub/Button') + 1);
-    const location = (await new TscnDefinitionProvider().provideDefinition(
+    const location = (await new TscnDefinitionProvider(createWorkspaceResRoots()).provideDefinition(
       document,
       position,
       token

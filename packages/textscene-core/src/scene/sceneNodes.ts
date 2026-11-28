@@ -8,7 +8,7 @@ import {
   ROOT_WINDOW_PREFIX,
   type WalkedTree,
 } from './nodePathWalk.js';
-import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from './sceneProperties.js';
+import { loadPropertyAccess, type PropertyAccess, type ScenePropertyState } from './loadPropertyAccess.js';
 import type { SceneWrites } from './sceneWrites.js';
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
 import type { LoadedResource } from './listed/listedProperties.js';
@@ -16,7 +16,6 @@ import { sceneValueOf, valueOfSceneValue, variantOf, type SceneValue } from './v
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import { strToVar } from '../godot/variant/strToVar.js';
 import { projectViewportSize } from '../parser/projectSettingsParser.js';
-import { isWritable } from './writtenScene.js';
 import {
   argumentCountError,
   findPortedMethod,
@@ -65,14 +64,14 @@ export class SceneNodes implements HandleHost {
 
   constructor(
     private readonly source: SceneNodesSource,
-    private readonly properties: SceneProperties,
+    private readonly properties: ScenePropertyState,
     private readonly onWritten: (path: string) => void
   ) {
     this.cameras = new ViewportCameras(
       {
         cameras: () => this.source.tree()?.cameras() ?? null,
         enabledText: ({ path, rawProperties }) =>
-          this.properties.writes().get(path)?.enabled ?? rawProperties.enabled,
+          this.properties.current?.writes().get(path)?.enabled ?? rawProperties.enabled,
       },
       (livePaths) => livePaths.forEach((livePath) => this.onWritten(absolutePathOf(livePath)))
     );
@@ -81,7 +80,7 @@ export class SceneNodes implements HandleHost {
   /** A new text frees every node. */
   clear(): void {
     this.handles.clear();
-    this.properties.clear();
+    this.properties.current?.clear();
     this.cameras.reset();
     this.generation++;
   }
@@ -253,7 +252,7 @@ export class SceneNodes implements HandleHost {
 
   private async getStored(path: string, property: string): Promise<SceneValue | null> {
     const { access, node } = await this.propertyTarget(path);
-    return this.properties.get(access, livePathOf(path), node, property);
+    return this.properties.forAccess(access).get(access, livePathOf(path), node, property);
   }
 
   private async setStored(path: string, property: string, value: SceneValue): Promise<boolean> {
@@ -264,14 +263,15 @@ export class SceneNodes implements HandleHost {
     }
     const { access, node } = await this.propertyTarget(path);
     const graph = this.source.graph();
-    if (!graph || !isWritable(graph, livePathOf(path))) {
+    if (!graph || !access.isWritable(graph, livePathOf(path))) {
       throw new Error(
         `expected a node the scene file reaches, got ${path}: no heading of the file can hold a write to it`
       );
     }
-    const before = this.properties.writes();
-    const isValid = this.properties.set(access, livePathOf(path), node, property, value);
-    for (const livePath of changedPaths(before, this.properties.writes()))
+    const properties = this.properties.forAccess(access);
+    const before = properties.writes();
+    const isValid = properties.set(access, livePathOf(path), node, property, value);
+    for (const livePath of changedPaths(before, properties.writes()))
       this.onWritten(absolutePathOf(livePath));
     return isValid;
   }

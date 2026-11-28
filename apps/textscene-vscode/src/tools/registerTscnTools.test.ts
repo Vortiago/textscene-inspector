@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
+import { TscnDiagnostics } from '../TscnDiagnostics';
+import { createWorkspaceResRoots } from '../resRoots/workspaceResRoots';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from '../watchPatterns';
 import type { PreviewCapture } from '../previewCaptureQueue';
 import type { TscnToolHost } from './registerTscnTools';
 import { registerTscnTools, TOOL_IDS } from './registerTscnTools';
@@ -20,7 +23,8 @@ function host(overrides: Partial<TscnToolHost> = {}): TscnToolHost {
   return {
     openPreview: vi.fn(),
     capturePreview: vi.fn().mockResolvedValue({ error: 'not ready' }),
-    lintProviderFor: vi.fn().mockResolvedValue(null),
+    lintComplete: vi.fn().mockResolvedValue([]),
+    rootFor: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
 }
@@ -120,15 +124,64 @@ describe('registerTscnTools', () => {
     expect(result.content[0]!.value).toContain('no findings');
   });
 
-  it("the lint tool lints over the Problems panel's provider for the scene", async () => {
-    vscodeMocks.workspace.fs.readFile.mockResolvedValue(
-      createMockFileData('[node name="Root" type="Node3D"]')
-    );
-    const lintProviderFor = vi.fn().mockResolvedValue(null);
-    registerTscnTools(context(), host({ lintProviderFor }));
-    await registeredTool(TOOL_IDS.lint).invoke({ input: { path: 'scenes/Main.tscn' } }, TOKEN);
-    expect(lintProviderFor).toHaveBeenCalledTimes(1);
-    expect(lintProviderFor.mock.calls[0]![0].path).toMatch(/\/game\/scenes\/Main\.tscn$/);
+  it('reuses the Problems panel linter and reads an unchanged glTF once', async () => {
+    const project = createMockUri('/game');
+    const scene = [
+      '[gd_scene format=3]',
+      '[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]',
+      '[node name="Tree" instance=ExtResource("1_tree")]',
+    ].join('\n');
+    const glb = '/game/tree.glb';
+    const files = new Map([
+      [
+        glb,
+        new Uint8Array(
+          readFileSync(
+            join(
+              import.meta.dirname,
+              '../../../../scenes/fixtures/gltf-unsupported-required-extension/instanced-tree.glb'
+            )
+          )
+        ),
+      ],
+      ['/game/project.godot', createMockFileData('config_version=5\n')],
+      ['/game/scenes/Main.tscn', createMockFileData(scene)],
+    ]);
+    vscodeMocks.workspace.getWorkspaceFolder.mockReturnValue({ uri: project });
+    vscodeMocks.workspace.fs.stat.mockImplementation(async (uri: vscode.Uri) => {
+      const bytes = files.get(uri.path);
+      if (!bytes) throw new Error('Not found');
+      return { type: vscode.FileType.File, size: bytes.length, ctime: 0, mtime: 1 };
+    });
+    vscodeMocks.workspace.fs.readFile.mockImplementation(async (uri: vscode.Uri) => {
+      const bytes = files.get(uri.path);
+      if (!bytes) throw new Error('Not found');
+      return bytes;
+    });
+    const roots = createWorkspaceResRoots();
+    const filesWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
+    const projectWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
+    const diagnostics = new TscnDiagnostics(roots, filesWatcher, projectWatcher);
+    try {
+      registerTscnTools(
+        context(),
+        host({ lintComplete: (uri, text) => diagnostics.lintComplete(uri, text) })
+      );
+      const invocation = { input: { path: 'scenes/Main.tscn' } };
+      const first = await registeredTool(TOOL_IDS.lint).invoke(invocation, TOKEN);
+      const second = await registeredTool(TOOL_IDS.lint).invoke(invocation, TOKEN);
+
+      expect(first.content[0]!.value).toContain('gltf-required-extension-unsupported');
+      expect(second.content[0]!.value).toBe(first.content[0]!.value);
+      expect(
+        vscodeMocks.workspace.fs.readFile.mock.calls.filter(([uri]: [vscode.Uri]) => uri.path === glb)
+      ).toHaveLength(1);
+    } finally {
+      diagnostics.dispose();
+      projectWatcher.dispose();
+      filesWatcher.dispose();
+      roots.dispose();
+    }
   });
 
   it("the missing-resources tool checks over the Problems panel's provider for the scene", async () => {
@@ -136,13 +189,13 @@ describe('registerTscnTools', () => {
       createMockFileData('[ext_resource type="PackedScene" path="res://door.tscn" id="1"]')
     );
     const stamp = vi.fn().mockResolvedValue(null);
-    const lintProviderFor = vi.fn().mockResolvedValue({ stamp });
-    registerTscnTools(context(), host({ lintProviderFor }));
+    const rootFor = vi.fn().mockResolvedValue({ root: { stamp } });
+    registerTscnTools(context(), host({ rootFor }));
     const result = await registeredTool(TOOL_IDS.missingResources).invoke(
       { input: { path: 'scenes/Main.tscn' } },
       TOKEN
     );
-    expect(lintProviderFor.mock.calls[0]![0].path).toMatch(/\/game\/scenes\/Main\.tscn$/);
+    expect(rootFor.mock.calls[0]![0].path).toMatch(/\/game\/scenes\/Main\.tscn$/);
     expect(stamp).toHaveBeenCalledWith('res://door.tscn');
     expect(result.content[0]!.value).toContain('res://door.tscn');
   });

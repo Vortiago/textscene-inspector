@@ -8,6 +8,8 @@ vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="canvas-stub" />,
 }));
 
+import { useHierarchy, useWrittenGraph, type HierarchyContextValue } from '../../contexts/HierarchyContext';
+import { TscnSceneProvider } from '../../TscnSceneProvider';
 import { TscnPreviewShell } from './TscnPreviewShell';
 import { TextShell } from './TscnPreviewShell.testkit';
 
@@ -31,6 +33,31 @@ describe('<TscnPreviewShell> scene', () => {
 });
 
 describe('<TscnPreviewShell> with the host’s scene', () => {
+  it.each(['shell', 'provider'])('keeps the hierarchy stable across a %s write', async (host) => {
+    const scene = openScene({ source: LEVEL, provider: NO_FILES });
+    const values = new Set<HierarchyContextValue>();
+    const written = new Set<unknown>();
+    function Probe() {
+      values.add(useHierarchy());
+      written.add(useWrittenGraph());
+      return null;
+    }
+    render(
+      host === 'shell' ? (
+        <TscnPreviewShell panelId="host-scene" scene={scene} toolbar={<Probe />} />
+      ) : (
+        <TscnSceneProvider scene={scene}>
+          <Probe />
+        </TscnSceneProvider>
+      )
+    );
+    await act(async () => {
+      await scene.getNode('Player').set('visible', false);
+    });
+    expect(written.size).toBe(2);
+    expect(values.size).toBe(1);
+  });
+
   it('draws the scene the host opened, and the text the host sets on it', async () => {
     const scene = openScene({ source: LEVEL, provider: NO_FILES, rootScenePath: 'res://level.tscn' });
     render(<TscnPreviewShell panelId="host-scene" scene={scene} />);

@@ -6,9 +6,8 @@ import { createMockUri, vscode } from './test-setup';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
 import { TscnDiagnostics } from './TscnDiagnostics';
-import { TscnResPathListing } from './TscnResPathListing';
 import { resRootOf } from './resRoot';
-import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 vi.mock('./TscnPreviewPanel', () => ({
   TscnPreviewPanel: {
@@ -143,11 +142,9 @@ describe('Extension', () => {
 
     it('forgets them when the window gains focus', async () => {
       const firstWalk = await activateAndLookUp();
-      const onWindowState = (vscode.window.onDidChangeWindowState as Mock).mock.calls[0]![0] as (state: {
-        focused: boolean;
-      }) => void;
-
-      onWindowState({ focused: true });
+      for (const [onWindowState] of (vscode.window.onDidChangeWindowState as Mock).mock.calls) {
+        onWindowState({ focused: true });
+      }
       await resRootOf(SCENE);
 
       expect(statCalls()).toBe(2 * firstWalk);
@@ -192,7 +189,7 @@ describe('Extension', () => {
       // folding, highlight and reference providers, five agent tools, diagnostics, save listener,
       // each of the two watchers itself plus its three handlers, the project file watcher's three
       // forget handlers, the window focus listener, and the stop-file watcher itself plus its two handlers.
-      expect(mockContext.subscriptions.length).toBe(33);
+      expect(mockContext.subscriptions.length).toBe(31);
     });
 
     it('should register a reference provider for Find All References on a res:// path', () => {
@@ -490,32 +487,23 @@ describe('Extension', () => {
   });
 
   describe('Resource Watcher', () => {
-    it('creates the resource and project-file watchers once each and hands both to the diagnostics', () => {
+    it('shares the resource and project-file watchers with diagnostics and watches root changes', () => {
       activate(mockContext);
 
       const createWatcher = vscode.workspace.createFileSystemWatcher as Mock;
       expect(createWatcher.mock.calls).toEqual([
+        ['**/*', false, true, false],
         [RESOURCE_FILES_PATTERN],
         [PROJECT_FILE_PATTERN],
-        [SCAN_STOP_FILES_PATTERN, false, true],
       ]);
-      const [resourceWatcher, projectFileWatcher] = createWatcher.mock.results.map((result) => result.value);
-      expect(TscnDiagnostics).toHaveBeenCalledWith(resourceWatcher, projectFileWatcher);
-    });
-
-    it('lists the res:// paths again once a .gdignore is created or deleted', async () => {
-      const clear = vi.spyOn(TscnResPathListing.prototype, 'clear');
-      try {
-        activate(mockContext);
-        const gdignore = createMockUri('/workspace/raw/.gdignore');
-
-        await fireCreate(SCAN_STOP_FILES_PATTERN, gdignore);
-        await fireDelete(SCAN_STOP_FILES_PATTERN, gdignore);
-
-        expect(clear).toHaveBeenCalledTimes(2);
-      } finally {
-        clear.mockRestore();
-      }
+      const [, resourceWatcher, projectFileWatcher] = createWatcher.mock.results.map(
+        (result) => result.value
+      );
+      expect(TscnDiagnostics).toHaveBeenCalledWith(
+        expect.objectContaining({ rootOf: expect.any(Function), onDidInvalidate: expect.any(Function) }),
+        resourceWatcher,
+        projectFileWatcher
+      );
     });
 
     it('routes a changed project file to the panel for re-fetch', async () => {

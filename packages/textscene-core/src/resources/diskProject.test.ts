@@ -175,7 +175,7 @@ describe('a disk root listing', () => {
 
     expect(listed).toContain('res://bin/a.gdextension');
     expect(listed).toContain('res://addons/x/bin/B.GDExtension');
-    expect(listed.filter((path) => !path.startsWith('res://addons/x/loop/')).sort()).toEqual([
+    expect(listed?.filter((path) => !path.startsWith('res://addons/x/loop/')).sort()).toEqual([
       'res://addons/x/bin/B.GDExtension',
       'res://bin/a.gdextension',
     ]);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatMissingResources, missingResourcePaths } from './missingResources';
-import { LintResourceProvider } from '../LintResourceProvider';
+import type { ResRoot } from '@textscene/core/resources/resRoots';
+import { createWorkspaceResRoots } from '../resRoots/workspaceResRoots';
 import { createMockUri, vscode as vscodeMocks } from '../test-setup';
 
 const SCENE = [
@@ -9,29 +10,34 @@ const SCENE = [
   '[node name="R" type="Node"]',
 ].join('\n');
 
-/** A provider rooted at /game whose `stat` finds each of `files`. */
-function providerFinding(files: readonly string[]): LintResourceProvider {
+async function rootFinding(files: readonly string[]): Promise<ResRoot> {
+  vscodeMocks.workspace.getWorkspaceFolder.mockReturnValue({ uri: createMockUri('/game') });
   vscodeMocks.workspace.fs.stat.mockImplementation((uri: { fsPath: string }) =>
     files.includes(uri.fsPath.replace(/\\/g, '/'))
       ? Promise.resolve({ type: 1, size: 1, ctime: 0, mtime: 0 })
       : Promise.reject(new Error('Not found'))
   );
-  return new LintResourceProvider(createMockUri('/game'));
+  const roots = createWorkspaceResRoots();
+  try {
+    return (await roots.rootOf(createMockUri('/game/scene.tscn')))!.root;
+  } finally {
+    roots.dispose();
+  }
 }
 
 describe('missingResourcePaths', () => {
   it('names the res:// paths no file answers', async () => {
-    expect(await missingResourcePaths(providerFinding(['/game/scenes/Door.tscn']), SCENE)).toEqual([
+    expect(await missingResourcePaths(await rootFinding(['/game/scenes/Door.tscn']), SCENE)).toEqual([
       'res://missing.png',
     ]);
   });
 
   it('returns nothing when every referenced file is present', async () => {
-    const provider = providerFinding(['/game/scenes/Door.tscn', '/game/missing.png']);
-    expect(await missingResourcePaths(provider, SCENE)).toEqual([]);
+    const root = await rootFinding(['/game/scenes/Door.tscn', '/game/missing.png']);
+    expect(await missingResourcePaths(root, SCENE)).toEqual([]);
   });
 
-  it('returns nothing with no provider, outside every workspace folder', async () => {
+  it('returns nothing with no root, outside every workspace folder', async () => {
     expect(await missingResourcePaths(null, SCENE)).toEqual([]);
   });
 });

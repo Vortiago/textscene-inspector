@@ -1,8 +1,6 @@
-/** The `res://` paths of the files a workspace search found, as the editor's scan reaches them. */
-
 import { describe, expect, it } from 'vitest';
 import { scannedResPaths } from './scannedResPaths';
-import { createMockUri } from './test-setup';
+import { createMockUri } from '../test-setup';
 
 describe('scannedResPaths', () => {
   it('names each file by its res:// path under the root', () => {

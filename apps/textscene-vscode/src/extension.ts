@@ -14,18 +14,20 @@ import { TscnCompletionItemProvider } from './TscnCompletionItemProvider';
 import { TscnCodeActionProvider } from './TscnCodeActionProvider';
 import { TscnFoldingRangeProvider } from './TscnFoldingRangeProvider';
 import { TscnDocumentHighlightProvider } from './TscnDocumentHighlightProvider';
-import { TscnResPathListing } from './TscnResPathListing';
+import { createWorkspaceResRoots, type WorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { registerTscnTools } from './tools/registerTscnTools';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { copyNodePathAtCursor } from './copyNodePath';
 import { isUri } from './uriArgument';
-import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 import { forgetProjectFiles } from './resRoot';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
 
+  const roots = createWorkspaceResRoots();
+  context.subscriptions.push(roots);
   const panels = new Map<string, TscnPreviewPanel>();
 
   const getOrCreatePanel = (resource: vscode.Uri): TscnPreviewPanel => {
@@ -80,28 +82,28 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.languages.registerDefinitionProvider({ language: 'tscn' }, new TscnDefinitionProvider())
+    vscode.languages.registerDefinitionProvider({ language: 'tscn' }, new TscnDefinitionProvider(roots))
   );
 
   // Turn `res://` references into clickable links that open the target file.
   context.subscriptions.push(
-    vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider())
+    vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider(roots))
   );
 
-  const resPathListing = new TscnResPathListing();
-  context.subscriptions.push(...registerLanguageFeatureProviders(resPathListing));
+  context.subscriptions.push(...registerLanguageFeatureProviders(roots));
 
   // External changes to every file a scene can load, and to the project file. Each watcher
   // serves the previews and the linter diagnostics in the Problems panel.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
   const projectFileWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
   context.subscriptions.push(...forgetProjectFilesOnChange(projectFileWatcher));
-  const diagnostics = new TscnDiagnostics(resourceWatcher, projectFileWatcher);
+  const diagnostics = new TscnDiagnostics(roots, resourceWatcher, projectFileWatcher);
 
   registerTscnTools(context, {
     openPreview: (uri) => void getOrCreatePanel(uri),
     capturePreview: (uri, signal) => getOrCreatePanel(uri).capture(signal),
-    lintProviderFor: (uri) => diagnostics.providerFor(uri),
+    lintComplete: (uri, text) => diagnostics.lintComplete(uri, text),
+    rootFor: (uri) => roots.rootOf(uri),
   });
 
   context.subscriptions.push(resourceWatcher, projectFileWatcher, diagnostics);
@@ -142,35 +144,23 @@ export function activate(context: vscode.ExtensionContext) {
   for (const watcher of [resourceWatcher, projectFileWatcher]) {
     context.subscriptions.push(
       watcher.onDidChange(handleResourceChange),
-      // A created or deleted file changes what `res://` completion may offer. An edit does not.
-      watcher.onDidCreate((uri) => {
-        resPathListing.clear();
-        return handleResourceChange(uri, 'created');
-      }),
-      watcher.onDidDelete((uri) => {
-        resPathListing.clear();
-        return handleResourceChange(uri, 'deleted');
-      })
+      watcher.onDidCreate((uri) => handleResourceChange(uri, 'created')),
+      watcher.onDidDelete((uri) => handleResourceChange(uri, 'deleted'))
     );
   }
-
-  context.subscriptions.push(...watchScanStopFiles(resPathListing));
 }
 
 /**
  * The providers over `@textscene/core/languageFeatures`, the engine the standalone
  * `tscn-lsp` server uses too, so both hosts give the same answers.
  */
-function registerLanguageFeatureProviders(resPathListing: TscnResPathListing): vscode.Disposable[] {
+function registerLanguageFeatureProviders(roots: WorkspaceResRoots): vscode.Disposable[] {
   return [
     vscode.languages.registerHoverProvider({ language: 'tscn' }, new TscnHoverProvider()),
-    vscode.languages.registerReferenceProvider(
-      { language: 'tscn' },
-      new TscnReferenceProvider(resPathListing)
-    ),
+    vscode.languages.registerReferenceProvider({ language: 'tscn' }, new TscnReferenceProvider(roots)),
     vscode.languages.registerCompletionItemProvider(
       { language: 'tscn' },
-      new TscnCompletionItemProvider(resPathListing),
+      new TscnCompletionItemProvider(roots),
       ...COMPLETION_TRIGGER_CHARACTERS
     ),
     vscode.languages.registerCodeActionsProvider({ language: 'tscn' }, new TscnCodeActionProvider(), {
@@ -184,10 +174,7 @@ function registerLanguageFeatureProviders(resPathListing: TscnResPathListing): v
   ];
 }
 
-/**
- * Forgets the shared `project.godot` answers on each event of the watcher, subscribed before every walk that follows the
- * same event. A directory above the workspace has no watcher, so a return to the window forgets them too.
- */
+// The preview still needs fresh project answers before its reload listeners run.
 function forgetProjectFilesOnChange(projectFileWatcher: vscode.FileSystemWatcher): vscode.Disposable[] {
   return [
     projectFileWatcher.onDidCreate(forgetProjectFiles),
@@ -196,16 +183,6 @@ function forgetProjectFilesOnChange(projectFileWatcher: vscode.FileSystemWatcher
     vscode.window.onDidChangeWindowState((state) => {
       if (state.focused) forgetProjectFiles();
     }),
-  ];
-}
-
-/** A `.gdignore` created or deleted moves a directory into or out of the scan the listing follows. */
-function watchScanStopFiles(resPathListing: TscnResPathListing): vscode.Disposable[] {
-  const watcher = vscode.workspace.createFileSystemWatcher(SCAN_STOP_FILES_PATTERN, false, true);
-  return [
-    watcher,
-    watcher.onDidCreate(() => resPathListing.clear()),
-    watcher.onDidDelete(() => resPathListing.clear()),
   ];
 }
 

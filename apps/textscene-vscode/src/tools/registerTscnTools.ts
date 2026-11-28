@@ -5,8 +5,8 @@
  */
 
 import * as vscode from 'vscode';
-import { Linter } from '@textscene/core/linter';
-import type { LintResourceProvider } from '../LintResourceProvider';
+import type { Diagnostic } from '@textscene/core/linter';
+import type { WorkspaceResRoot } from '../resRoots/workspaceResRoots';
 import type { PreviewCapture } from '../previewCaptureQueue';
 import { formatLintResult } from './formatLintResult';
 import { hostReturnsImageParts } from './imageResultSupport';
@@ -33,8 +33,8 @@ export interface TscnToolHost {
    * abort of `signal` ends the capture.
    */
   capturePreview(uri: vscode.Uri, signal: AbortSignal): Promise<PreviewCapture>;
-  /** The Problems panel's provider for the `res://` root of `uri`, or null outside every workspace folder. */
-  lintProviderFor(uri: vscode.Uri): Promise<LintResourceProvider | null>;
+  lintComplete(uri: vscode.Uri, text: string): Promise<readonly Diagnostic[]>;
+  rootFor(uri: vscode.Uri): Promise<WorkspaceResRoot | null>;
 }
 
 interface SceneFile {
@@ -87,8 +87,7 @@ function sceneTextTool(
 
 /** The lint answer, over the Problems panel's provider, so an agent and the user see one verdict. */
 function lintAnswer(host: TscnToolHost): (uri: vscode.Uri, text: string) => Promise<string> {
-  return async (uri, text) =>
-    formatLintResult(uri.fsPath, await new Linter().lintComplete(text, await host.lintProviderFor(uri)));
+  return async (uri, text) => formatLintResult(uri.fsPath, await host.lintComplete(uri, text));
 }
 
 function sceneTreeAnswer(uri: vscode.Uri, text: string): string {
@@ -98,7 +97,10 @@ function sceneTreeAnswer(uri: vscode.Uri, text: string): string {
 /** The missing-resource answer, over the Problems panel's provider, so an agent and the user see one verdict. */
 function missingResourcesAnswer(host: TscnToolHost): (uri: vscode.Uri, text: string) => Promise<string> {
   return async (uri, text) =>
-    formatMissingResources(uri.fsPath, await missingResourcePaths(await host.lintProviderFor(uri), text));
+    formatMissingResources(
+      uri.fsPath,
+      await missingResourcePaths((await host.rootFor(uri))?.root ?? null, text)
+    );
 }
 
 class TscnOpenPreviewTool implements vscode.LanguageModelTool<ScenePathToolInput> {

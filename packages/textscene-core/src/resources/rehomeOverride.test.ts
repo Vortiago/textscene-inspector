@@ -5,6 +5,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { TscnParser } from '../parser/TscnParser';
+import { propertyWrites } from '../parser/overridePropertyWrites';
 import { rehomeOverride } from './rehomeOverride';
 import { findExtResource, findSubResource } from './SubResourceResolver';
 import { extResourcePathOf } from './testing/extResourcePathOf';
@@ -29,6 +31,20 @@ describe('rehomeOverride', () => {
 
     expect(extResourcePathOf(raw.texture, scope)).toBe('res://outer.png');
     expect(findExtResource(scope.externalResources, '1')?.path).toBe('res://inner.png');
+  });
+
+  it('re-homes a resource written before a repeated property clears it', () => {
+    const node = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://sprite.tscn" id="scene"]
+[ext_resource type="Texture2D" path="res://outer.png" id="1"]
+[node name="Sprite" instance=ExtResource("scene")]
+texture = ExtResource("1")
+texture = null`).nodes[0]!;
+    const { raw, scope } = rehomeOverride(node.rawProperties, outer, inner);
+    const [first, last] = propertyWrites(raw);
+    expect(extResourcePathOf(first?.[1], scope)).toBe('res://outer.png');
+    expect(last).toEqual(['texture', 'null']);
+    expect(raw.texture).toBe('null');
   });
 
   it('keeps an id the inner scope does not hold', () => {
@@ -68,9 +84,10 @@ describe('rehomeOverride', () => {
   });
 
   it('returns the inner scope itself for an override that names no resource', () => {
-    const { raw, scope } = rehomeOverride({ visible: 'false' }, outer, inner);
+    const properties = { visible: 'false' };
+    const { raw, scope } = rehomeOverride(properties, outer, inner);
 
-    expect(raw).toEqual({ visible: 'false' });
+    expect(raw).toBe(properties);
     expect(scope).toBe(inner);
   });
 });
