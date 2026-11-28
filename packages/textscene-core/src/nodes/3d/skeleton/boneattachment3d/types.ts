@@ -1,3 +1,4 @@
+import type { OverridePhase } from '../../../../core/NodeRegistry';
 import type { Node3DProperties } from '../../../base/node3d/types';
 
 export interface AttachmentSettings {
@@ -14,11 +15,8 @@ export type AttachmentWrite =
     }[keyof AttachmentSettings]
   | { key: 'transform' };
 
-export interface AttachmentLayer {
+export interface AttachmentLayer extends OverridePhase {
   writes: readonly AttachmentWrite[];
-  beforeParenting: boolean;
-  writerScene?: string;
-  line: number;
 }
 
 export interface BoneAttachment3DProperties extends Node3DProperties, AttachmentSettings {

@@ -1,5 +1,5 @@
 import { nodePathLiteral } from '../../../../godot/variant/variantParser.js';
-import { parentPathOf } from '../../../../utils/nodePath.js';
+import { parentPathOf, pathBetween } from '../../../../utils/nodePath.js';
 import { perObject } from '../../../../utils/perObject.js';
 import type { Transform3D } from '../../../../godot/math/transform3d.js';
 import type { LiveLink, LiveTree } from '../../../../r3f/liveSceneTree.js';
@@ -26,12 +26,14 @@ class Attachment {
   private readonly state: AttachmentSettings;
   private heldLocal?: Transform3D;
   private bound = false;
+  private cachedExternal: LiveLink | null = null;
   readonly layers;
 
   constructor(
     private readonly link: LiveLink,
     private readonly tree: LiveTree,
-    private readonly poses: (skeleton: LiveLink) => LoadedSkeletonPose
+    private readonly poses: (skeleton: LiveLink) => LoadedSkeletonPose,
+    private readonly attachments: ReadonlyMap<string, Attachment>
   ) {
     const properties = link.step.node.properties as BoneAttachment3DProperties;
     this.state = { ...(properties.bindingOverrides?.base ?? properties) };
@@ -40,7 +42,7 @@ class Attachment {
 
   write(write: AttachmentWrite, load: Load): void {
     const skeleton = () => {
-      const link = skeletonOf(this.state, this.link.path, this.tree);
+      const link = this.skeleton(load);
       return link && load.canReach(link) ? this.poses(link) : null;
     };
     switch (write.key) {
@@ -64,10 +66,12 @@ class Attachment {
         break;
       case 'externalSkeleton':
         this.state.externalSkeleton = write.value;
+        this.updateExternal(load);
         break;
       case 'useExternalSkeleton':
         this.state.useExternalSkeleton = write.value;
         if (write.value) {
+          this.updateExternal(load);
           const rig = skeleton();
           if (rig && this.state.boneIdx < 0) this.state.boneIdx = rig.findBone(this.state.boneName);
           this.bound = !!rig && this.state.boneIdx >= 0;
@@ -77,7 +81,8 @@ class Attachment {
   }
 
   result(): AttachmentBinding {
-    const skeleton = skeletonOf(this.state, this.link.path, this.tree);
+    if (this.state.useExternalSkeleton) this.updateExternal();
+    const skeleton = this.skeleton();
     let bone = this.state.boneIdx;
     if (skeleton && !this.bound && bone < 0) {
       const { bones } = skeleton.step.node.properties as Skeleton3DProperties;
@@ -89,6 +94,37 @@ class Attachment {
       external: this.state.useExternalSkeleton,
       heldLocal: this.heldLocal,
     };
+  }
+
+  private skeleton(load?: Load): LiveLink | null {
+    if (this.state.useExternalSkeleton) return this.cachedExternal ?? this.updateExternal(load);
+    const parent = this.parent(load);
+    return parent?.step.node.type === 'Skeleton3D' ? parent : null;
+  }
+
+  private parent(load?: Load): LiveLink | null {
+    const path = parentPathOf(this.link.path);
+    const link = path ? this.tree.at(path) : null;
+    return link && (!load || load.canReach(link)) ? link : null;
+  }
+
+  private updateExternal(load?: Load): LiveLink | null {
+    const literal = this.state.externalSkeleton;
+    if (pathTextOf(literal) !== '') {
+      const boundary = load
+        ? { depth: load.depth, exists: (path: string) => load.exists(path) }
+        : { depth: 1, exists: (path: string) => !!this.tree.at(path) };
+      const path = resolveLiteralOnLiveTree(this.link.path, literal, this.tree, boundary);
+      const target = path ? this.tree.at(path) : null;
+      this.cachedExternal = target?.step.node.type === 'Skeleton3D' ? target : null;
+    } else {
+      const parent = this.parent(load);
+      this.cachedExternal = parent ? (this.attachments.get(parent.path)?.updateExternal(load) ?? null) : null;
+      // bone_attachment_3d.cpp:93-107
+      if (this.cachedExternal)
+        this.state.externalSkeleton = pathBetween(this.link.path, this.cachedExternal.path);
+    }
+    return this.cachedExternal;
   }
 
   private setIndex(index: number, rig: LoadedSkeletonPose | null): void {
@@ -115,53 +151,42 @@ export const attachmentBindings = perObject((tree: LiveTree) => {
     loading.set(skeleton.path, rig);
     return rig;
   };
-  const pending: { target: Attachment; load: Load; writes: readonly AttachmentWrite[] }[] = [];
+  const pending: { order: readonly number[]; apply(): void }[] = [];
   tree.fold<void, void>(undefined, (link, _, descend) => {
     if (link.step.node.type === 'BoneAttachment3D') {
-      const target = new Attachment(link, tree, rigAt);
+      const target = new Attachment(link, tree, rigAt, attachments);
       attachments.set(link.path, target);
-      for (const layer of target.layers)
-        pending.push({ target, load: attachmentLoad(link, tree, layer), writes: layer.writes });
+      for (const layer of target.layers) {
+        const load = attachmentLoad(link, tree, layer);
+        pending.push({
+          order: load.order,
+          apply() {
+            for (const write of layer.writes) target.write(write, load);
+          },
+        });
+      }
+    } else if (link.step.node.type === 'Skeleton3D') {
+      const history = (link.step.node.properties as Skeleton3DProperties).poseOverrides;
+      for (const layer of history?.layers ?? []) {
+        const load = attachmentLoad(link, tree, layer);
+        pending.push({
+          order: load.order,
+          apply() {
+            rigAt(link).apply(layer);
+          },
+        });
+      }
     }
     descend();
   });
-  pending.sort((a, b) => compareLoadOrder(a.load.order, b.load.order));
-  for (const { target, load, writes } of pending) {
-    for (const write of writes) target.write(write, load);
-  }
+  pending.sort((a, b) => compareLoadOrder(a.order, b.order));
+  for (const step of pending) step.apply();
   const bindings = new Map<string, AttachmentBinding>();
   for (const [path, target] of attachments) bindings.set(path, target.result());
   const poses = new Map<string, LoadedPose>();
   for (const [path, rig] of loading) poses.set(path, rig.result());
   return { bindings, poses };
 });
-
-function skeletonOf(properties: AttachmentSettings, path: string, tree: LiveTree): LiveLink | null {
-  if (!properties.useExternalSkeleton) {
-    const parentPath = parentPathOf(path);
-    const parent = parentPath ? tree.at(parentPath) : null;
-    return parent?.step.node.type === 'Skeleton3D' ? parent : null;
-  }
-  if (pathTextOf(properties.externalSkeleton) !== '') {
-    const skeleton = skeletonAt(path, properties.externalSkeleton!, tree);
-    return skeleton;
-  }
-  for (let parentPath = parentPathOf(path); parentPath; parentPath = parentPathOf(parentPath)) {
-    const parent = tree.at(parentPath);
-    if (parent?.step.node.type !== 'BoneAttachment3D') return null;
-    const inherited = parent.step.node.properties as BoneAttachment3DProperties;
-    if (pathTextOf(inherited.externalSkeleton) !== '') {
-      return skeletonAt(parent.path, inherited.externalSkeleton!, tree);
-    }
-  }
-  return null;
-}
-
-function skeletonAt(from: string, literal: string, tree: LiveTree): LiveLink | null {
-  const resolved = resolveLiteralOnLiveTree(from, literal, tree);
-  const skeleton = resolved === null ? null : tree.at(resolved);
-  return skeleton?.step.node.type === 'Skeleton3D' ? skeleton : null;
-}
 
 function pathTextOf(literal: string | undefined): string {
   if (literal === undefined) return '';

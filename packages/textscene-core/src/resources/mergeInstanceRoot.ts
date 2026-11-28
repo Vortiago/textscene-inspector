@@ -21,13 +21,23 @@ import { perObject } from '../utils/perObject.js';
  * The sub-scene's scope replaces the instance node's own: the merged node sits inside it.
  */
 function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: InstanceScopes) {
-  const rehomed = rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content);
+  let scope = scopes.content;
+  let base = root;
+  for (const [index, raw] of (
+    instanceNode.instancePropertyLayers ?? [instanceNode.rawProperties]
+  ).entries()) {
+    const rehomed = rehomeOverride(raw, scopes.outer, scope);
+    scope = rehomed.scope;
+    base = {
+      ...base,
+      ...layerRawOverride(instanceNode, base, rehomed.raw, { beforeParenting: index === 0 }),
+    };
+  }
   return {
-    ...layerRawOverride(instanceNode, root, rehomed.raw, {
-      beforeParenting: true,
-      writerScene: scopes.outer.instancedScenePaths?.at(-1),
-    }),
-    scope: rehomed.scope,
+    properties: base.properties,
+    rawProperties: base.rawProperties,
+    rawPropertiesOrderReliable: base.rawPropertiesOrderReliable,
+    scope,
   };
 }
 
@@ -74,7 +84,12 @@ export function mergeInstanceRoot(
   // The graft below lands these settings. A root that inherits a base the cache could not
   // compose it over (the dispatcher's one-scene cache) carries its own file's settings on, so
   // the next collapse over that base lands them. A composed root carries none.
-  const { instanceNameSettings: settings = [], seatedPlacements, ...host } = instanceNode;
+  const {
+    instanceNameSettings: settings = [],
+    seatedPlacements,
+    instancePropertyLayers: _applied,
+    ...host
+  } = instanceNode;
   const composed = root.uniqueNames;
   const own = composed ? () => composed.paths() : () => cachedUniqueNamesBelowRoot(loadedScene.nodes);
   // A host child whose parent path descends into this instance is grafted at

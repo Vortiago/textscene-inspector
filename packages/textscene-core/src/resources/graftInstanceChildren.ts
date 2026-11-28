@@ -293,9 +293,15 @@ function foldOverride(
       ? existing
       : {
           ...existing,
-          ...layerRawOverride(existing, existing, raw, {
-            writerScene: overrideScope.instancedScenePaths?.at(-1),
-          }),
+          ...layerRawOverride(existing, existing, raw),
+          ...(existing.instance
+            ? {
+                instancePropertyLayers: [
+                  ...(existing.instancePropertyLayers ?? [existing.rawProperties]),
+                  raw,
+                ],
+              }
+            : {}),
         };
   const children = attachAll(layered.children, override.children, overrideScope, scope);
   const copy = [...siblings];

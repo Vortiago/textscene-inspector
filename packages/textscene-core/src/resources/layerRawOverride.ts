@@ -5,7 +5,12 @@
  */
 
 import { canonicalisePropertyBag, resolveDeprecatedProperty } from '../godot/classdb/deprecated.js';
-import { headingLine, keepHeadingLine, mapPropertyWrites } from '../parser/overridePropertyWrites.js';
+import {
+  headingFile,
+  headingLine,
+  keepHeadingLine,
+  mapPropertyWrites,
+} from '../parser/overridePropertyWrites.js';
 import type { TscnNode } from '../parser/types.js';
 import type { ParsedHeading } from '../parser/utils.js';
 import { nodeRegistry, type NodeTypeRegistration } from '../core/NodeRegistry.js';
@@ -22,7 +27,7 @@ export function layerRawOverride(
   seat: TscnNode,
   base: Pick<TscnNode, 'type' | 'properties' | 'rawProperties' | 'rawPropertiesOrderReliable'>,
   overrideRaw: Record<string, string>,
-  phase: { beforeParenting?: boolean; writerScene?: string } = {}
+  phase: { beforeParenting?: boolean } = {}
 ): Layered {
   const written = canonicalisePropertyBag(base.type, overrideRaw);
   const rawProperties = { ...canonicalisePropertyBag(base.type, base.rawProperties), ...written };
@@ -41,6 +46,7 @@ export function layerRawOverride(
       written,
       ...phase,
       line: headingLine(overrideRaw),
+      file: headingFile(overrideRaw),
     }),
     // An override that writes keys leaves neither file's order, so a file-order-sensitive
     // resolver falls back to editor save order (ADR-0035). One that writes none keeps the base's.

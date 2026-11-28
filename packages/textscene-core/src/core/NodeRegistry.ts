@@ -1,16 +1,20 @@
+/** The source heading and parenting state when Godot runs the setters. */
+export interface OverridePhase {
+  beforeParenting?: boolean;
+  file?: symbol;
+  line?: number;
+}
+
 /**
  * The override a merged property map holds. Godot runs the base's setters, then the override's in
  * its own file order (`packed_scene.cpp:264`, `:369-492`), so a setter that reads another property needs
  * what the base left and which keys the override writes.
  */
-export interface OverrideLayer<Properties> {
+export interface OverrideLayer<Properties> extends OverridePhase {
   /** The properties the node held before the override. */
   held: Properties;
   /** The keys the override writes, in its file's order. */
   written: Record<string, string>;
-  beforeParenting?: boolean;
-  writerScene?: string;
-  line?: number;
 }
 
 /**

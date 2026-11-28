@@ -324,6 +324,6 @@ framework.
   [ARCHITECTURE.md](../../ARCHITECTURE.md) and **Raw view** in
   [GLOSSARY.md](../../GLOSSARY.md).
 
-A typeless heading can write the same BoneAttachment3D property twice.
+An instance heading or a typeless override can write the same BoneAttachment3D property twice.
 The lenient scanner keeps its write sequence beside the property bag when keys repeat.
 The attachment replays those writes across instances (`resource_format_text.cpp:304`, `packed_scene.cpp:492,2329-2340`).

@@ -28,6 +28,8 @@ export interface EscapedChild {
 }
 
 export interface LiveNode extends TscnNode {
+  // packed_scene.cpp:261-265,492,541
+  readonly instancePropertyLayers?: readonly Record<string, string>[];
   /**
    * The scope this node's refs and its children's resolve against, where it differs from
    * the group's: the outer scene's for a node grafted from it, or the sub-scene's with

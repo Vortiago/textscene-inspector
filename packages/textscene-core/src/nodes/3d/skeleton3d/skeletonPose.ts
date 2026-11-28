@@ -406,14 +406,17 @@ export class BonePoses {
     const bone = this.bones[index];
     if (!bone) return;
     this.bones[index] = { ...bone, ...change };
-    if (this.retained) {
-      const dirty = new Set([index]);
-      for (const child of this.rig.order) {
-        if (dirty.has(this.parentOf(child))) dirty.add(child);
-      }
-      for (const child of dirty) this.retained.delete(child);
-    }
+    if (this.retained) this.forgetGlobalSubtree(index, this.retained);
     this.cache = undefined;
+  }
+
+  forgetGlobalSubtree(index: number, globals: Map<number, Transform3D>): void {
+    if (!globals.size) return;
+    const dirty = new Set([index]);
+    for (const bone of this.rig.order) {
+      if (dirty.has(this.parentOf(bone))) dirty.add(bone);
+      if (dirty.has(bone)) globals.delete(bone);
+    }
   }
 
   private globals(): Transform3D[] {

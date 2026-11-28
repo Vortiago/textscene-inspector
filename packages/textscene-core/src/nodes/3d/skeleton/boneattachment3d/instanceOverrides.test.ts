@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
-import { liveTreeOfText, runPass } from '../../../../r3f/liveSceneTree.testkit';
+import { TscnParser } from '../../../../parser/TscnParser';
+import { liveTreeOf } from '../../../../r3f/liveSceneTree';
+import { contextOver, liveTreeOfText, runPass } from '../../../../r3f/liveSceneTree.testkit';
 import { liveGlobalTransform3D } from '../../../../r3f/liveGlobalTransform';
 import { bindMeshesToSkeletons } from '../../skeleton3d/skeletonBindings';
 import { seatBoneAttachments } from './boneAttachmentSeats';
@@ -186,13 +188,15 @@ ${second}
   });
 });
 
-it('looks up an external skeleton only after its heading arrives', () => {
+it.each([
+  ['.', '../../../Later'],
+  ['Rig', '../../Later'],
+])('waits for an external skeleton added under %s', (parent, path) => {
   const base = riders.replace(
     'bone_idx = 5',
-    'bone_idx = 5\nuse_external_skeleton = true\nexternal_skeleton = NodePath("../../../Later")'
+    `bone_idx = 5\nuse_external_skeleton = true\nexternal_skeleton = NodePath("${path}")`
   );
-  const later =
-    '[node name="Later" type="Skeleton3D" parent="."]\nbones/0/name = "b2"\nbones/0/position = Vector3(1, 2, 3)';
+  const later = `[node name="Later" type="Skeleton3D" parent="${parent}"]\nbones/0/name = "b2"\nbones/0/position = Vector3(1, 2, 3)`;
   const main = host('bone_name = "b2"').replace('[editable path="Rig"]', later + '\n[editable path="Rig"]');
   const result = runPass(seatBoneAttachments, liveTreeOfText(main, { 'res://riders.tscn': base })).get(
     riderPath
@@ -205,4 +209,171 @@ it('keeps a transform written between selecting a bone and unbinding it', () => 
   const writes =
     'bone_idx = 4\ntransform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 7, 3)\nbone_name = "zz"';
   expect(measuredSeat(writes).global?.origin).toEqual({ x: 2, y: 7, z: 3 });
+});
+
+it('completes a base file before a derived file with shorter headings overrides it', () => {
+  const inherit = (name: string, lines: string) => `[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://${name}.tscn" id="1"]
+[node name="Root" instance=ExtResource("1")]
+${lines}`;
+  const change = '[node name="GreenRider" parent="Skeleton3D" index="0"]\nbone_idx = ';
+  const main = host('', 'derived').split('[node name="GreenRider"')[0]!;
+  const tree = liveTreeOfText(main, {
+    'res://riders.tscn': riders,
+    'res://middle.tscn': inherit('riders', '\n\n\n' + change + '4'),
+    'res://derived.tscn': inherit('middle', change + '2'),
+  });
+  expect(runPass(seatBoneAttachments, tree).get(riderPath)?.bone).toBe(2);
+});
+
+it('retains the bone pose read before a later skeleton heading changes a position', () => {
+  const main = host('bone_idx = 4\nbone_name = "missing"').replace(
+    '[editable path="Rig"]',
+    '[node name="Skeleton3D" parent="Rig" index="0"]\nbones/4/position = Vector3(20, 20, 20)\n[editable path="Rig"]'
+  );
+  const tree = liveTreeOfText(main, { 'res://riders.tscn': riders });
+  const seat = runPass(seatBoneAttachments, tree).get(riderPath);
+  expect(seat?.global.origin).toEqual({ x: expect.closeTo(0.34641, 5), y: expect.closeTo(-0.1, 5), z: 0 });
+});
+
+it('keeps the external skeleton path inherited before its parent changes skeleton', () => {
+  const rig = `[gd_scene format=3]
+[node name="Rig" type="Node3D"]
+[node name="A" type="Skeleton3D" parent="."]
+bones/0/name = "tip"
+bones/0/position = Vector3(5,0,0)
+[node name="B" type="Skeleton3D" parent="."]
+bones/0/name = "tip"
+bones/0/position = Vector3(9,0,0)
+[node name="Parent" type="BoneAttachment3D" parent="."]
+use_external_skeleton = true
+external_skeleton = NodePath("../A")
+bone_idx = 0
+[node name="Child" type="BoneAttachment3D" parent="Parent"]
+use_external_skeleton = true
+bone_idx = 0`;
+  const main = `[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://rig.tscn" id="1"]
+[node name="Root" type="Node3D"]
+[node name="Rig" parent="." instance=ExtResource("1")]
+[node name="Child" parent="Rig/Parent" index="0"]
+bone_name = "tip"
+[node name="Parent" parent="Rig" index="2"]
+external_skeleton = NodePath("../B")
+[editable path="Rig"]`;
+  const seats = runPass(seatBoneAttachments, liveTreeOfText(main, { 'res://rig.tscn': rig }));
+  expect(seats.get('Root/Rig/Parent')?.global.origin.x).toBe(9);
+  expect(seats.get('Root/Rig/Parent/Child')?.global.origin.x).toBe(5);
+});
+
+it('applies an outer override after an attachment instance root joins its skeleton', () => {
+  const grip =
+    '[gd_scene format=3]\n[node name="Grip" type="BoneAttachment3D"]\nbone_name = "b5"\nbone_idx = 5';
+  const base = riders
+    .replace(
+      '[sub_resource',
+      '[ext_resource type="PackedScene" path="res://grip.tscn" id="grip"]\n[sub_resource'
+    )
+    .replace(
+      /type="BoneAttachment3D" parent="Skeleton3D"\]\nbone_name = "b5"\nbone_idx = 5/,
+      'parent="Skeleton3D" instance=ExtResource("grip")]\nbone_idx = 4'
+    );
+  const tree = liveTreeOfText(host('bone_name = "b2"'), {
+    'res://riders.tscn': base,
+    'res://grip.tscn': grip,
+  });
+  expect(runPass(seatBoneAttachments, tree).get(riderPath)?.bone).toBe(2);
+});
+
+it.each([
+  ['Inside', 'bone_idx = 1\nbone_idx = 99', 1, 9],
+  ['../Holder/Inside', 'bone_name = "second"', 0, 5],
+] as const)('applies a typed instance heading while its root resolves %s', (path, writes, index, x) => {
+  const main = `[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://holder.tscn" id="1"]
+[node name="Root" type="Node3D"]
+[node name="Holder" type="BoneAttachment3D" parent="." instance=ExtResource("1")]
+${writes}`;
+  const base = `[gd_scene format=3]
+[node name="Holder" type="BoneAttachment3D"]
+use_external_skeleton = true
+external_skeleton = NodePath("${path}")
+bone_name = "first"
+bone_idx = 0
+[node name="Inside" type="Skeleton3D" parent="."]
+bones/0/name = "first"
+bones/0/position = Vector3(5,0,0)
+bones/1/name = "second"
+bones/1/position = Vector3(9,0,0)`;
+  const tree = liveTreeOfText(main, { 'res://holder.tscn': base });
+  const seat = runPass(seatBoneAttachments, tree).get('Root/Holder');
+  expect(seat?.bone).toBe(index);
+  expect(seat?.global.origin.x).toBe(x);
+});
+
+it('resolves the intermediate steps before an external path reaches the skeleton', () => {
+  const main = `[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://pbase.tscn" id="1"]
+[node name="Root" type="Node3D"]
+[node name="Rig" parent="." instance=ExtResource("1")]
+[node name="Child" parent="Rig" index="1"]
+bone_name = "second"
+[node name="Late" type="Node" parent="Rig"]
+[editable path="Rig"]`;
+  const base = `[gd_scene format=3]
+[node name="Rig" type="Node3D"]
+[node name="A" type="Skeleton3D" parent="."]
+bones/0/name = "first"
+bones/0/position = Vector3(5,0,0)
+bones/1/name = "second"
+bones/1/position = Vector3(9,0,0)
+[node name="Child" type="BoneAttachment3D" parent="."]
+use_external_skeleton = true
+external_skeleton = NodePath("../Late/../A")
+bone_name = "first"
+bone_idx = 0`;
+  const tree = liveTreeOfText(main, { 'res://pbase.tscn': base });
+  const seat = runPass(seatBoneAttachments, tree).get('Root/Rig/Child');
+  expect(seat?.bone).toBe(0);
+  expect(seat?.global.origin.x).toBe(5);
+});
+
+it('updates a shared skeleton when replacing the scene that resets it', () => {
+  const parse = (text: string) => new TscnParser().parse(text);
+  const main = parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://riders.tscn" id="rig"]
+[ext_resource type="PackedScene" path="res://loaders.tscn" id="d"]
+[node name="Root" type="Node3D"]
+[node name="Rig" parent="." instance=ExtResource("rig")]
+[node name="Drivers" parent="." instance=ExtResource("d")]
+[node name="Early" parent="Drivers" index="0"]
+override_pose = false
+[node name="Skeleton3D" parent="Rig" index="0"]
+bones/5/position = Vector3(20,20,20)
+[node name="Late" parent="Drivers" index="1"]
+override_pose = false
+[editable path="Rig"]
+[editable path="Drivers"]`);
+  const rig = parse(riders);
+  const pose = (early: boolean) => {
+    const drivers = parse(`[gd_scene format=3]
+[node name="Drivers" type="Node3D"]
+[node name="Early" type="BoneAttachment3D" parent="."]
+use_external_skeleton = true
+external_skeleton = NodePath("../../Rig/Skeleton3D")
+bone_idx = 5
+override_pose = ${early}
+[node name="Late" type="BoneAttachment3D" parent="."]
+use_external_skeleton = true
+external_skeleton = NodePath("../../Rig/Skeleton3D")
+bone_idx = 5
+override_pose = ${!early}`);
+    const tree = liveTreeOf(
+      main.nodes,
+      contextOver(main, { 'res://riders.tscn': rig, 'res://loaders.tscn': drivers })
+    );
+    return runPass(seatBoneAttachments, tree).get(riderPath)?.global.origin;
+  };
+  expect(pose(true)?.x).toBeCloseTo(-6.974113, 5);
+  expect(pose(false)?.x).toBeCloseTo(0.519615, 5);
 });
