@@ -1,4 +1,5 @@
-import { SCAN_STOP_FILES } from '@textscene/core/godot';
+import type { Uri } from 'vscode';
+import { PROJECT_FILE_NAME, SCAN_STOP_FILES } from '@textscene/core/godot';
 import { LOADED_FILE_EXTENSIONS } from '@textscene/core/resources/resourceProviderUtils';
 import { anyCase } from './anyCaseGlob';
 
@@ -10,7 +11,11 @@ import { anyCase } from './anyCaseGlob';
 export const RESOURCE_FILES_PATTERN = `**/*.{${LOADED_FILE_EXTENSIONS.map((extension) => anyCase(extension.slice(1))).join(',')}}`;
 
 /** The project file watcher in extension.ts feeds the previews and diagnostics. */
-export const PROJECT_FILE_PATTERN = '**/project.godot';
+export const PROJECT_FILE_PATTERN = `**/${PROJECT_FILE_NAME}`;
+
+export function isProjectFile(uri: Uri): boolean {
+  return uri.path.split('/').pop() === PROJECT_FILE_NAME;
+}
 
 /** The GDExtension list the plugin probe reads, in the hidden data directory or the plain one. */
 export const EXTENSION_LIST_PATTERN = '**/{.godot,godot}/extension_list.cfg';

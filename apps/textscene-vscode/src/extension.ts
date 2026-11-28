@@ -20,8 +20,7 @@ import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { copyNodePathAtCursor } from './copyNodePath';
 import { isUri } from './uriArgument';
-import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
-import { forgetProjectFiles } from './resRoot';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, isProjectFile } from './watchPatterns';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
@@ -39,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
       return panel;
     }
 
-    panel = TscnPreviewPanel.create(context.extensionUri, resource);
+    panel = TscnPreviewPanel.create(context.extensionUri, resource, roots);
     panels.set(key, panel);
 
     panel.onDidDispose(() => {
@@ -96,7 +95,6 @@ export function activate(context: vscode.ExtensionContext) {
   // serves the previews and the linter diagnostics in the Problems panel.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
   const projectFileWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
-  context.subscriptions.push(...forgetProjectFilesOnChange(projectFileWatcher));
   const diagnostics = new TscnDiagnostics(roots, resourceWatcher, projectFileWatcher);
 
   registerTscnTools(context, {
@@ -141,13 +139,15 @@ export function activate(context: vscode.ExtensionContext) {
     );
   };
 
-  for (const watcher of [resourceWatcher, projectFileWatcher]) {
-    context.subscriptions.push(
-      watcher.onDidChange(handleResourceChange),
-      watcher.onDidCreate((uri) => handleResourceChange(uri, 'created')),
-      watcher.onDidDelete((uri) => handleResourceChange(uri, 'deleted'))
-    );
-  }
+  context.subscriptions.push(
+    resourceWatcher.onDidChange(handleResourceChange),
+    resourceWatcher.onDidCreate((uri) => handleResourceChange(uri, 'created')),
+    resourceWatcher.onDidDelete((uri) => handleResourceChange(uri, 'deleted')),
+    projectFileWatcher.onDidChange(handleResourceChange),
+    roots.onDidInvalidate((uri) => {
+      if (isProjectFile(uri)) void handleResourceChange(uri, 'created-or-deleted');
+    })
+  );
 }
 
 /**
@@ -171,18 +171,6 @@ function registerLanguageFeatureProviders(roots: WorkspaceResRoots): vscode.Disp
       { language: 'tscn' },
       new TscnDocumentHighlightProvider()
     ),
-  ];
-}
-
-// The preview still needs fresh project answers before its reload listeners run.
-function forgetProjectFilesOnChange(projectFileWatcher: vscode.FileSystemWatcher): vscode.Disposable[] {
-  return [
-    projectFileWatcher.onDidCreate(forgetProjectFiles),
-    projectFileWatcher.onDidChange(forgetProjectFiles),
-    projectFileWatcher.onDidDelete(forgetProjectFiles),
-    vscode.window.onDidChangeWindowState((state) => {
-      if (state.focused) forgetProjectFiles();
-    }),
   ];
 }
 
