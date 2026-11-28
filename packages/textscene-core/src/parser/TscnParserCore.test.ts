@@ -17,6 +17,24 @@ describe('TscnParserCore', () => {
     children: [],
   });
 
+  it('keeps an empty value empty and reads the key on the next line', () => {
+    const content = '[node name="Root" type="Node2D"]\ntexture =\nposition = Vector2(1, 2)\n';
+    const { scene } = parser.parse(content, simpleCreator);
+    expect(scene.nodes[0]?.rawProperties).toEqual({ texture: '', position: 'Vector2(1, 2)' });
+  });
+
+  it('reads a string that holds an `=` on the line after its key as the value', () => {
+    const content = '[node name="Root" type="Node2D"]\nmetadata/a =\n"x=y"\nvisible = false\n';
+    const { scene } = parser.parse(content, simpleCreator);
+    expect(scene.nodes[0]?.rawProperties).toEqual({ 'metadata/a': '"x=y"', visible: 'false' });
+  });
+
+  it('keeps an empty value empty before a heading after a control code Godot skips', () => {
+    const content = '[node name="Root" type="Node2D"]\nkey =\n\x01[node name="B" type="Node" parent="."]\n';
+    const { scene } = parser.parse(content, simpleCreator);
+    expect(scene.nodes[0]?.rawProperties).toEqual({ key: '' });
+  });
+
   describe('callback pattern', () => {
     it('should call node creator for each node heading', () => {
       const content = `
@@ -354,6 +372,14 @@ garbage-line-without-equals
       expect(observed.origins).toEqual(bare.origins);
     });
 
+    it('places a refused heading at its `[`, past a control character Godot skips', () => {
+      const onError = vi.fn<NonNullable<ParseObserver['onError']>>();
+
+      parser.parse('[gd_scene format=3]\n\x01[node name=]\n', simpleCreator, { onError });
+
+      expect(onError.mock.calls[0]![0]).toMatchObject({ code: 'INVALID_HEADING_FORMAT', line: 2, column: 2 });
+    });
+
     it('fires onError with INVALID_HEADING_FORMAT and line number for a malformed heading', () => {
       const content = `[gd_scene format=3]
 
@@ -431,6 +457,9 @@ visible = true
         key: 'size',
         value: 'Vector3(1, 2, 3)',
         line: 4,
+        column: 0,
+        valueStart: { line: 4, column: 7 },
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'size', value: 'Vector3(1, 2, 3)' },
       });
@@ -441,6 +470,9 @@ visible = true
         key: 'text',
         value: '"first\nsecond"',
         line: 7,
+        column: 0,
+        valueStart: { line: 7, column: 7 },
+        endLine: 8,
         isMultiline: true,
         stored: { key: 'text', value: '"first\nsecond"' },
       });
@@ -451,14 +483,47 @@ visible = true
         key: 'visible',
         value: 'true',
         line: 9,
+        column: 0,
+        valueStart: { line: 9, column: 10 },
+        endLine: 9,
         isMultiline: false,
         stored: { key: 'visible', value: 'true' },
       });
     });
 
+    it('gives the key column past a heading and the start of a value on a later line', () => {
+      const content = '[node name="R" type="Node2D"] visible =\n  false\n';
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty.mock.calls[0]![0]).toMatchObject({ column: 30, valueStart: { line: 2, column: 2 } });
+    });
+
+    it.each([
+      ["on its key's line", 'position = Vector2(1, 2)   '],
+      ['on a later line', 'position =\n    Vector2(1, 2)   '],
+    ])('reads a value %s without the space around it', (_place, body) => {
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(`[node name="R" type="Node2D"]\n${body}\n`, simpleCreator, { onProperty });
+
+      expect(onProperty.mock.calls[0]![0]).toMatchObject({
+        value: 'Vector2(1, 2)',
+        stored: { value: 'Vector2(1, 2)' },
+      });
+    });
+
+    it('gives the start of a value written with no spaces around `=`', () => {
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse('[node name="R" type="Node2D"]\nvisible=false\n', simpleCreator, { onProperty });
+
+      expect(onProperty.mock.calls[0]![0].valueStart).toEqual({ line: 2, column: 8 });
+    });
+
     it('passes ownerType=undefined where the section names no type', () => {
       const content = `[gd_scene format=3]
-config = 1
 
 [node name="Root" index="0"]
 visible = true
@@ -467,27 +532,29 @@ visible = true
 
       parser.parse(content, simpleCreator, { onProperty });
 
-      expect(onProperty).toHaveBeenCalledTimes(2);
-      // gd_scene body property: section 'none', no owner type
-      expect(onProperty).toHaveBeenNthCalledWith(1, {
-        section: 'none',
-        ownerType: undefined,
-        key: 'config',
-        value: '1',
-        line: 2,
-        isMultiline: false,
-        stored: { key: 'config', value: '1' },
-      });
       // index= node has no type attribute: ownerType undefined
-      expect(onProperty).toHaveBeenNthCalledWith(2, {
+      expect(onProperty).toHaveBeenCalledExactlyOnceWith({
         section: 'node',
         ownerType: undefined,
         key: 'visible',
         value: 'true',
-        line: 5,
+        line: 4,
+        column: 0,
+        valueStart: { line: 4, column: 10 },
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'visible', value: 'true' },
       });
+    });
+
+    it('records no property after the header, where Godot reads no body', () => {
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+      const onError = vi.fn<NonNullable<ParseObserver['onError']>>();
+
+      parser.parse('[gd_scene format=3]\nconfig = 1\n', simpleCreator, { onProperty, onError });
+
+      expect(onProperty).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ line: 2, column: 1 }));
     });
 
     it("takes a [resource] body's ownerType from the [gd_resource] header", () => {
@@ -509,6 +576,9 @@ background_mode = 1
         key: 'radiance_size',
         value: '2',
         line: 4,
+        column: 0,
+        valueStart: { line: 4, column: 16 },
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'radiance_size', value: '2' },
       });
@@ -518,6 +588,9 @@ background_mode = 1
         key: 'background_mode',
         value: '1',
         line: 7,
+        column: 0,
+        valueStart: { line: 7, column: 18 },
+        endLine: 7,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
       });
@@ -534,7 +607,8 @@ background_mode = 1
         2,
         expect.objectContaining({ type: 'resource' }),
         'resource',
-        3
+        3,
+        expect.anything()
       );
     });
 
@@ -554,6 +628,9 @@ background_mode = 1
         key: 'background_mode',
         value: '1',
         line: 4,
+        column: 0,
+        valueStart: { line: 4, column: 18 },
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
       });
@@ -573,6 +650,9 @@ background_mode = 1
         key: 'background_mode',
         value: '1',
         line: 2,
+        column: 0,
+        valueStart: { line: 2, column: 18 },
+        endLine: 2,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
       });
@@ -594,9 +674,25 @@ frames = SubResource("sf")
         key: 'frames',
         value: 'SubResource("sf")',
         line: 4,
+        column: 0,
+        valueStart: { line: 4, column: 9 },
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'sprite_frames', value: 'SubResource("sf")' },
       });
+    });
+
+    it('gives each heading on one line its own columns', () => {
+      const onSectionStart = vi.fn<NonNullable<ParseObserver['onSectionStart']>>();
+
+      parser.parse('[node name="R" type="Node2D"] [node name="C" parent="."]\n', simpleCreator, {
+        onSectionStart,
+      });
+
+      expect(onSectionStart.mock.calls.map((call) => call[3])).toEqual([
+        { start: 0, end: 29 },
+        { start: 30, end: 56 },
+      ]);
     });
 
     it('fires onSectionStart for each section with its kind and line', () => {
@@ -617,21 +713,30 @@ frames = SubResource("sf")
         1,
         expect.objectContaining({ type: 'gd_scene' }),
         'none',
-        1
+        1,
+        expect.anything()
       );
       expect(onSectionStart).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({ type: 'ext_resource' }),
         'ext_resource',
-        3
+        3,
+        expect.anything()
       );
       expect(onSectionStart).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({ type: 'sub_resource' }),
         'sub_resource',
-        5
+        5,
+        expect.anything()
       );
-      expect(onSectionStart).toHaveBeenNthCalledWith(4, expect.objectContaining({ type: 'node' }), 'node', 7);
+      expect(onSectionStart).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({ type: 'node' }),
+        'node',
+        7,
+        expect.anything()
+      );
     });
 
     describe('onSectionBuilt', () => {
@@ -769,7 +874,7 @@ describe('the file values and heading order of a scan', () => {
     const late =
       '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[sub_resource type="Resource" id="a"]\n';
 
-    expect(new TscnParserCore().parse(late, () => null).scene.misplacedHeading).toEqual({
+    expect(new TscnParserCore().parse(late, () => null).scene.headingStop).toEqual({
       type: 'sub_resource',
       line: 5,
       reason: 'unknown tag',
@@ -778,13 +883,32 @@ describe('the file values and heading order of a scan', () => {
 
   it('records no value after a heading line that does not parse', () => {
     const broken =
-      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="A" parent="."\nm = ExtResource("1")\n';
+      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name=A parent="."]\nm = ExtResource("1")\n';
 
     expect(new TscnParserCore().parse(broken, () => null).scene).not.toHaveProperty('fileValues');
   });
 
+  it('reads an old-style number id in a heading, as `ext_func` reads it', () => {
+    const oldStyle =
+      '[gd_scene format=2]\n\n[ext_resource path="res://a.tscn" type="PackedScene" id=1]\n\n' +
+      '[node name="Root" type="Node2D"]\n\n[node name="A" parent="." instance=ExtResource( 1 )]\n';
+
+    expect(new TscnParserCore().parse(oldStyle, () => null).scene).not.toHaveProperty('headingStop');
+  });
+
+  it('keeps only the error, code and line of a heading that does not parse', () => {
+    const broken = '[gd_scene format=3]\n\n[node name="Root" type=]\n';
+
+    expect(new TscnParserCore().parse(broken, () => null).scene.headingStop).toEqual({
+      error: "Expected value, got '']''",
+      code: 'ERR_PARSE_ERROR',
+      line: 3,
+      readBy: 'opening tag',
+    });
+  });
+
   it('records no misplaced heading where each heading is in its place', () => {
-    expect(new TscnParserCore().parse(content, () => null).scene).not.toHaveProperty('misplacedHeading');
+    expect(new TscnParserCore().parse(content, () => null).scene).not.toHaveProperty('headingStop');
   });
 
   it('puts each value on the scene in file order, with its line and place', () => {
@@ -795,17 +919,21 @@ describe('the file values and heading order of a scan', () => {
         text: 'ExtResource("1")',
         line: 3,
         place: 'section',
-        subResourcesBefore: 0,
+        subResourcesNamed: 0,
         extResourcesBefore: 0,
         isOpeningTag: true,
+        isHeadingField: true,
+        skippedNewlines: [],
       },
       {
         text: '[Resource("res://a.tres")]',
         line: 5,
         place: 'binds',
-        subResourcesBefore: 0,
+        subResourcesNamed: 0,
         extResourcesBefore: 0,
         isOpeningTag: false,
+        isHeadingField: true,
+        skippedNewlines: [],
       },
     ]);
   });
@@ -826,7 +954,7 @@ texture = ExtResource("2")
     ]);
   });
 
-  it('counts the [sub_resource] sections before a value, its own section inside one', () => {
+  it('counts the [sub_resource] ids a value can name, its own section inside one', () => {
     const { scene } = new TscnParserCore().parse(
       `[sub_resource type="Resource" id="a"]
 x = SubResource("b")
@@ -840,7 +968,7 @@ texture = SubResource("a")
       () => null
     );
 
-    expect(scene.fileValues?.map(({ subResourcesBefore }) => subResourcesBefore)).toEqual([0, 1, 2]);
+    expect(scene.fileValues?.map(({ subResourcesNamed }) => subResourcesNamed)).toEqual([1, 2, 2]);
   });
 
   it('records no value that names no resource, as it holds no read', () => {
@@ -866,9 +994,11 @@ Resource("res://a.tres")]
         text: '[1,\nResource("res://a.tres")]',
         line: 2,
         place: 'node',
-        subResourcesBefore: 0,
+        subResourcesNamed: 0,
         extResourcesBefore: 0,
         isOpeningTag: false,
+        isHeadingField: false,
+        skippedNewlines: [],
       },
     ]);
   });

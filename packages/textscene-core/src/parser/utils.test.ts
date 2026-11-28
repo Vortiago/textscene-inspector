@@ -3,7 +3,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseHeading, parseProperty, isHeading, isEmpty } from './utils';
+import {
+  parseHeading,
+  parseProperty,
+  isHeading,
+  isGodotBlank,
+  godotIndent,
+  headerIndent,
+  leadingSpace,
+  trimEndSpace,
+  isSectionHeading,
+} from './utils';
 
 describe('parseHeading', () => {
   it('should parse simple heading without attributes', () => {
@@ -288,18 +298,84 @@ describe('isHeading', () => {
   });
 });
 
-describe('isEmpty', () => {
+describe('isGodotBlank', () => {
   it('should identify empty lines', () => {
-    expect(isEmpty('')).toBe(true);
-    expect(isEmpty('   ')).toBe(true);
-    expect(isEmpty('\t')).toBe(true);
-    expect(isEmpty('  \t  ')).toBe(true);
+    expect(isGodotBlank('')).toBe(true);
+    expect(isGodotBlank('   ')).toBe(true);
+    expect(isGodotBlank('\t')).toBe(true);
+    expect(isGodotBlank('  \t  ')).toBe(true);
+    expect(isGodotBlank('\x01\x1f')).toBe(true);
   });
 
   it('should reject non-empty lines', () => {
-    expect(isEmpty('[node]')).toBe(false);
-    expect(isEmpty('; comment')).toBe(false);
-    expect(isEmpty('a')).toBe(false);
-    expect(isEmpty('  a  ')).toBe(false);
+    expect(isGodotBlank('[node]')).toBe(false);
+    expect(isGodotBlank('; comment')).toBe(false);
+    expect(isGodotBlank('a')).toBe(false);
+    expect(isGodotBlank('  a  ')).toBe(false);
+  });
+});
+
+describe('godotIndent', () => {
+  it('counts the codes up to 32 that start a line', () => {
+    expect(godotIndent('\0\x01\t \x1f[node]')).toBe(5);
+  });
+
+  it('stops at a code above 32, such as an NBSP', () => {
+    expect(godotIndent(' [node]')).toBe(0);
+    expect(godotIndent(' 　[node]')).toBe(1);
+  });
+
+  it('covers a line of only spaces, and is zero on an empty line', () => {
+    expect(godotIndent('   ')).toBe(3);
+    expect(godotIndent('')).toBe(0);
+  });
+});
+
+describe('headerIndent', () => {
+  it('starts the header past the codes Godot skips', () => {
+    expect(headerIndent(' \t[gd_scene]')).toBe(2);
+  });
+
+  it('starts at a NUL before the header, which ends the stream', () => {
+    expect(headerIndent(' \0[gd_scene]')).toBe(1);
+  });
+
+  it('gives the line length for a line of skipped codes only', () => {
+    expect(headerIndent(' \t ')).toBe(3);
+  });
+});
+
+describe('leadingSpace', () => {
+  it('counts the codes up to 32 that start a line', () => {
+    expect(leadingSpace('\0\x01\t \x1fkey')).toBe(5);
+  });
+
+  it('counts the JavaScript white space Godot does not, such as an NBSP', () => {
+    expect(leadingSpace('  　key')).toBe(3);
+  });
+
+  it('covers a line of only spaces, and is zero on an empty line', () => {
+    expect(leadingSpace('   ')).toBe(3);
+    expect(leadingSpace('')).toBe(0);
+  });
+});
+
+describe('trimEndSpace', () => {
+  it('drops the codes up to 32 that end a string, where trimEnd keeps a control code', () => {
+    expect(trimEndSpace('true\x01\t \x1f')).toBe('true');
+  });
+
+  it('keeps the white space that starts a string', () => {
+    expect(trimEndSpace(' \x01true')).toBe(' \x01true');
+  });
+});
+
+describe('isSectionHeading', () => {
+  it('opens a section after a code up to 32 that Godot skips, where trim keeps a control code', () => {
+    expect(isSectionHeading('\x01[node name="B" type="Node"]')).toBe(true);
+  });
+
+  it('opens no section at a bracket that names no section keyword', () => {
+    expect(isSectionHeading('[b]bold[/b]')).toBe(false);
   });
 });

@@ -1,9 +1,3 @@
-/**
- * The `location` of a diagnostic about a section or one of its properties, read from the strict
- * parse's line table. A rule reaches its subject through the tree, which carries no lines.
- * Column 1, since the whole line is the subject.
- */
-
 import type { BuiltSection } from '../parser/types.js';
 import type { Diagnostic, SourceLines } from './types.js';
 
@@ -15,7 +9,7 @@ type Location = NonNullable<Diagnostic['location']>;
  */
 export function headingLocation(lines: SourceLines, owner: BuiltSection): Location | undefined {
   const section = lines.get(owner);
-  return section && { line: section.heading, column: 1 };
+  return section && { line: section.heading, column: section.headingColumn };
 }
 
 /**
@@ -23,6 +17,7 @@ export function headingLocation(lines: SourceLines, owner: BuiltSection): Locati
  * section wrote no such key.
  */
 export function propertyLocation(lines: SourceLines, owner: BuiltSection, key: string): Location | undefined {
-  const line = lines.get(owner)?.properties.get(key);
-  return line === undefined ? undefined : { line, column: 1 };
+  const section = lines.get(owner);
+  const line = section?.properties.get(key);
+  return line === undefined ? undefined : { line, column: section!.propertyColumns.get(key)! };
 }

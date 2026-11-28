@@ -5,7 +5,7 @@ import { ENTRY, WEBVIEW_DIR } from './paths.mjs';
 import { reportGzipBudget } from './gzipBudget.mjs';
 
 // The report reads growth against the last measure, so a real trend stays visible.
-const MEASURED_GZ = 1_798_797;
+const MEASURED_GZ = 1_801_797;
 // The budget is a fixed limit, 200 KB above the last measure (ADR-0090).
 const BUDGET_GZ = 2_003_597;
 

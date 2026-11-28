@@ -241,12 +241,11 @@ describe('parseHeading value text', () => {
     expect(result!.attributes.node_paths).toBe('PackedStringArray("a\\nb")');
   });
 
-  it('unwraps a quoted scalar and decodes \\" only', () => {
+  it('unwraps a quoted scalar and decodes its escapes', () => {
     const result = parseHeading('[node name="say \\"hi\\"" path="a\\nb" type="Node2D"]');
     expect(result).not.toBeNull();
     expect(result!.attributes.name).toBe('say "hi"');
-    // heading values are source text: a node parser decodes the rest downstream
-    expect(result!.attributes.path).toBe('a\\nb');
+    expect(result!.attributes.path).toBe('a\nb');
   });
 
   it('leaves a value quoted at only its leading end verbatim, escapes undecoded', () => {

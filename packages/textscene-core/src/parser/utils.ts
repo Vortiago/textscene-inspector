@@ -1,4 +1,7 @@
 import { stringArrayBodies } from '../godot/variant/variantParser';
+import { strToVar } from '../godot/variant/strToVar.js';
+import { VARIANT_TYPE } from '../godot/variant/variantType.js';
+import { isTokenGap } from '../godot/variant/tokenGap.js';
 
 /** Zero-based character offsets on one line, `end` exclusive. */
 export interface ValueSpan {
@@ -19,13 +22,9 @@ interface SpannedHeading extends ParsedHeading {
   unclosed: ReadonlySet<string>;
 }
 
-/**
- * Whitespace, as `\s` matches it. Splitting on the non-ASCII tail is the lenient
- * reading: it keeps the attribute, and so the node, where gluing the space into the
- * next key would drop a node the tree needs.
- */
+/** A code up to 32 or a `\s` space, split on so the lenient reading keeps the node. A body NUL loads. */
 function isSpaceCode(code: number): boolean {
-  if (code === 32 || (code >= 9 && code <= 13)) return true;
+  if (isTokenGap(code)) return true;
   // Godot rejects this tail: a heading key is `[A-Za-z_][A-Za-z0-9_]*`
   // (variant_parser.cpp:493), and an NBSP is neither whitespace (`cchar <= 32`) nor
   // an identifier character, so it raises "Unexpected character" (:508).
@@ -41,6 +40,65 @@ function isSpaceCode(code: number): boolean {
     code === 0x3000 ||
     code === 0xfeff
   );
+}
+
+/**
+ * The first character `get_token` reads, which skips only codes up to 32, not every JavaScript space.
+ *
+ * @canonical Where Godot's tokenizer starts reading a line
+ */
+export function godotIndent(line: string): number {
+  let at = 0;
+  while (at < line.length && isTokenGap(line.charCodeAt(at))) at++;
+  return at;
+}
+
+/**
+ * Where the header tag starts: a NUL before it ends the stream (measured), but a body line skips one.
+ *
+ * @canonical Where Godot's tokenizer starts reading the header line
+ */
+export function headerIndent(line: string): number {
+  const nul = line.indexOf('\0');
+  const indent = godotIndent(line);
+  return nul === -1 ? indent : Math.min(nul, indent);
+}
+
+/**
+ * A line with nothing to read: codes `get_token` skips, or JavaScript white space the lenient path skips.
+ *
+ * @canonical Whether a line holds nothing Godot reads
+ */
+export function isGodotBlank(line: string): boolean {
+  return godotIndent(line) === line.length || line.trim().length === 0;
+}
+
+/**
+ * The length of the white space `str` starts with, Godot's or JavaScript's.
+ *
+ * @canonical Where the lenient reading starts a line
+ */
+export function leadingSpace(str: string): number {
+  let at = 0;
+  while (at < str.length && isSpaceCode(str.charCodeAt(at))) at++;
+  return at;
+}
+
+/**
+ * `str` without the white space at its end, where `String.prototype.trimEnd` keeps a control character.
+ *
+ * @canonical Trim the end of a value as Godot's tokenizer does
+ */
+export function trimEndSpace(str: string): string {
+  let end = str.length;
+  while (end > 0 && isSpaceCode(str.charCodeAt(end - 1))) end--;
+  return str.slice(0, end);
+}
+
+/** `str` without the white space at either end, where `String.prototype.trim` keeps a control character. */
+function trimSpace(str: string): string {
+  const trimmed = trimEndSpace(str);
+  return trimmed.slice(leadingSpace(trimmed));
 }
 
 /** `[A-Za-z0-9_]`: the characters a constructor name is built from. */
@@ -167,12 +225,7 @@ function stringLiteralBody(value: string): string | null {
   return isWholeString(bare) ? bare.slice(1, -1) : null;
 }
 
-/**
- * A heading value's content and the width of the quote on each side of it. A whole
- * string loses its quotes and decodes `\"`, both or neither: decoding an unclosed value
- * destroys the `\"` that keeps it re-parseable. Other escapes are a node parser's
- * business ({@link unquoteString}), and a structured value stays verbatim.
- */
+/** A heading value's content and quote width: only a whole string loses its quotes and decodes escapes. */
 function readHeadingValue(value: string): { content: string; quoteWidth: 0 | 1 } {
   // An opening quote and nothing else carries no content, and the empty string
   // is what says so: `name` has to stay falsy for the strict parser to go on
@@ -182,7 +235,7 @@ function readHeadingValue(value: string): { content: string; quoteWidth: 0 | 1 }
   // string ends.
   if (!isWholeString(value)) return { content: value, quoteWidth: 0 };
   const inner = value.slice(1, -1);
-  return { content: inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner, quoteWidth: 1 };
+  return { content: decodeEscapes(inner), quoteWidth: 1 };
 }
 
 /**
@@ -194,16 +247,16 @@ function keyedByAttribute<T>(): Record<string, T> {
 }
 
 export function parseHeading(line: string): SpannedHeading | null {
-  const trimmed = line.trim();
+  const trimmed = trimSpace(line);
 
   if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
     return null;
   }
 
   const inner = trimmed.slice(1, -1);
-  const content = inner.trim();
+  const content = trimSpace(inner);
   // Offset of `content` within `line`: the white space before `[` and before the type.
-  const contentOffset = line.length - line.trimStart().length + 1 + (inner.length - inner.trimStart().length);
+  const contentOffset = leadingSpace(line) + 1 + leadingSpace(inner);
 
   // No whitespace means `spaceIndex === content.length`, so the type is the
   // whole content and the attribute scan runs over an empty string.
@@ -277,7 +330,7 @@ export function parseHeading(line: string): SpannedHeading | null {
 }
 
 export function parseProperty(line: string): { key: string; value: string } | null {
-  const trimmed = line.trim();
+  const trimmed = trimSpace(line);
 
   if (!trimmed || trimmed.startsWith(';')) {
     return null;
@@ -288,14 +341,14 @@ export function parseProperty(line: string): { key: string; value: string } | nu
     return null;
   }
 
-  const key = trimmed.slice(0, equalsIndex).trim();
-  const value = trimmed.slice(equalsIndex + 1).trim();
+  const key = trimSpace(trimmed.slice(0, equalsIndex));
+  const value = trimSpace(trimmed.slice(equalsIndex + 1));
 
   return { key, value };
 }
 
 export function isHeading(line: string): boolean {
-  const trimmed = line.trim();
+  const trimmed = trimSpace(line);
   return trimmed.startsWith('[') && trimmed.endsWith(']');
 }
 
@@ -308,7 +361,7 @@ const SECTION_HEADING_RE =
   /^\[(gd_scene|gd_resource|ext_resource|sub_resource|node|resource|connection|editable)\b/;
 
 export function isSectionHeading(line: string): boolean {
-  return SECTION_HEADING_RE.test(line.trim());
+  return SECTION_HEADING_RE.test(trimSpace(line));
 }
 
 /**
@@ -317,10 +370,6 @@ export function isSectionHeading(line: string): boolean {
  */
 export function splitLines(text: string): string[] {
   return text.split(/\r?\n/);
-}
-
-export function isEmpty(line: string): boolean {
-  return line.trim().length === 0;
 }
 
 /**
@@ -385,34 +434,24 @@ export function isIncompleteState(state: ValueScanState): boolean {
   return state.inString || state.depth > 0;
 }
 
-/** The escapes the tokenizer maps to a control character (`variant_parser.cpp:299-312`). */
-const ESCAPE_MAP: Record<string, string> = {
-  b: '\b',
-  t: '\t',
-  n: '\n',
-  f: '\f',
-  r: '\r',
-};
-
-/**
- * A string's text with its escapes decoded as the tokenizer does: `\b \t \n \f \r`,
- * `\uXXXX` and `\UXXXXXX`, and any other escaped character to itself
- * (`variant_parser.cpp:350-351`).
- */
+/** A string's text, decoded as the tokenizer reads it from a file. Text Godot refuses stays as written. */
 function decodeEscapes(text: string): string {
   if (!text.includes('\\')) return text;
-  // One left-to-right pass, so `\\u1234` is `\` plus literal `u1234`. A `\u` without
-  // four hex digits stays as written: the tokenizer's `case 'u'` errors there rather
-  // than passing the character through.
-  return text.replace(/\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|[^uU])/g, (_match, seq: string) => {
-    if (seq[0] === 'u' || seq[0] === 'U') {
-      const code = parseInt(seq.slice(1), 16);
-      // `\UXXXXXX` accepts six hex digits, past the Unicode maximum, and a
-      // literal beyond it would throw and abort the whole scene parse.
-      return code <= 0x10ffff ? String.fromCodePoint(code) : `\\${seq}`;
-    }
-    return ESCAPE_MAP[seq] ?? seq;
-  });
+  const read = strToVar(`"${escapeBareQuotes(text)}"`);
+  return read.type === VARIANT_TYPE.STRING ? read.value : text;
+}
+
+/** `text` with each quote no backslash escapes escaped, so the tokenizer reads it whole as one string. */
+function escapeBareQuotes(text: string): string {
+  if (!text.includes('"')) return text;
+  let escaped = '';
+  let backslashes = 0;
+  for (const c of text) {
+    if (c === '"' && backslashes % 2 === 0) escaped += '\\';
+    escaped += c;
+    backslashes = c === '\\' ? backslashes + 1 : 0;
+  }
+  return escaped;
 }
 
 /**

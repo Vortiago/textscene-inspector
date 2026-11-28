@@ -46,7 +46,12 @@ size = Vector3(1, 2, 3)
 `);
     const box = scene!.internalResources[0]!;
 
-    expect(lines.get(box)).toEqual({ heading: 3, properties: new Map([['size', 4]]) });
+    expect(lines.get(box)).toEqual({
+      heading: 3,
+      headingColumn: 1,
+      properties: new Map([['size', 4]]),
+      propertyColumns: new Map([['size', 1]]),
+    });
   });
 
   it('records an ext-resource heading under the object the scene holds', () => {
@@ -58,7 +63,12 @@ size = Vector3(1, 2, 3)
 `);
     const tree = scene!.externalResources[0]!;
 
-    expect(lines.get(tree)).toEqual({ heading: 3, properties: new Map() });
+    expect(lines.get(tree)).toEqual({
+      heading: 3,
+      headingColumn: 1,
+      properties: new Map(),
+      propertyColumns: new Map(),
+    });
   });
 
   it('keeps the line of a property whose value the validators refuse', () => {
@@ -112,9 +122,8 @@ visible = true
     ]);
   });
 
-  it("mirrors the bag where the scan's recovery reads a heading with no ']' as a property", () => {
-    // The lenient loop keeps the broken line and what follows it in the section above,
-    // and the bag is what the rules read, so the table must name the same keys.
+  it("gives the section above no line that a heading with no ']' reads", () => {
+    // The bag is what the rules read, so the table must name the same keys.
     const { lines, root } = parse(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
@@ -125,7 +134,7 @@ z_index = 3
 `);
 
     expect([...lines.get(root)!.properties.keys()]).toEqual(Object.keys(root.rawProperties));
-    expect(lines.get(root)?.properties.get('z_index')).toBe(7);
+    expect(lines.get(root)?.properties.has('z_index')).toBe(false);
   });
 
   it("files a [resource] body's heading and property lines under the scene's main resource, and nothing for the header", () => {
@@ -138,7 +147,9 @@ background_mode = 1
     expect(lines.size).toBe(1);
     expect(lines.get(scene!.mainResource!)).toEqual({
       heading: 3,
+      headingColumn: 1,
       properties: new Map([['background_mode', 4]]),
+      propertyColumns: new Map([['background_mode', 1]]),
     });
   });
 

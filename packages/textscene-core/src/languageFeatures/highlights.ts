@@ -36,8 +36,7 @@ export function documentHighlights(
 
   const declaration = declarationOf(document, reference);
   if (declaration) {
-    const line = document.lines[declaration.headingLine - 1] ?? '';
-    const attribute = headingAttribute(line, 'id');
+    const attribute = headingAttribute(document.headingText(declaration), 'id');
     if (attribute) highlights.push({ range: lineRange(declaration.headingLine - 1, attribute.span) });
   }
   return highlights;

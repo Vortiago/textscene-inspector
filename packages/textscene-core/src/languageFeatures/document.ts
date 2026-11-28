@@ -7,8 +7,13 @@
  * convention. Every range a feature returns is zero-based. See `types.ts`.
  */
 
-import { TscnParserCore, type ParseObserver, type SectionType } from '../parser/TscnParserCore.js';
-import { splitLines, type ParsedHeading } from '../parser/utils.js';
+import {
+  TscnParserCore,
+  type HeadingColumns,
+  type ParseObserver,
+  type SectionType,
+} from '../parser/TscnParserCore.js';
+import { godotIndent, splitLines, stripLineComment, type ParsedHeading } from '../parser/utils.js';
 
 /** The four section tags a feature reads, and `other` for the rest (`gd_scene`, `connection`). */
 type SectionKind = 'node' | 'sub_resource' | 'ext_resource' | 'resource' | 'other';
@@ -19,8 +24,10 @@ export interface PropertySlot {
   /** The key the engine stores it under, a deprecated spelling resolved. */
   readonly storedKey: string;
   readonly value: string;
-  /** One-based line the value starts on. */
+  /** One-based line the key sits on. */
   readonly startLine: number;
+  /** The 0-based column its key starts at, past a heading's `]` where it follows one. */
+  readonly startColumn: number;
   /** One-based line the value ends on, the same line unless the value is multiline. */
   readonly endLine: number;
   readonly isMultiline: boolean;
@@ -32,6 +39,8 @@ export interface DocumentSection {
   /** The heading's tag, for example `node`. */
   readonly tag: string;
   readonly headingLine: number;
+  /** The columns the heading spans on its first line, so a second heading on that line reads alone. */
+  readonly headingColumns: HeadingColumns;
   readonly endLine: number;
   readonly attributes: Readonly<Record<string, string>>;
   /**
@@ -46,6 +55,11 @@ export interface DocumentSection {
 export interface PropertyLocation {
   readonly section: DocumentSection;
   readonly property: PropertySlot;
+}
+
+/** Where a property starts on a one-based line: its key's column on its first line, else the line start. */
+function startColumnOn(property: PropertySlot, line: number): number {
+  return property.startLine === line ? property.startColumn : 0;
 }
 
 function toKind(section: SectionType): SectionKind {
@@ -65,6 +79,7 @@ function ownerTypeOf(heading: ParsedHeading, resourceHeaderType: string | undefi
 /** A heading as the scan meets it, before the next heading fixes where its body ends. */
 interface ScannedHeading {
   readonly line: number;
+  readonly columns: HeadingColumns;
   readonly tag: string;
   readonly kind: SectionKind;
   readonly ownerType?: string;
@@ -88,10 +103,11 @@ function scanHeadings(text: string): ScannedHeading[] {
   let resourceHeaderType: string | undefined;
 
   const observer: ParseObserver = {
-    onSectionStart(heading: ParsedHeading, section: SectionType, line: number) {
+    onSectionStart(heading: ParsedHeading, section: SectionType, line: number, columns: HeadingColumns) {
       if (heading.type === 'gd_resource') resourceHeaderType = heading.attributes.type;
       headings.push({
         line,
+        columns,
         tag: heading.type,
         kind: toKind(section),
         ownerType: ownerTypeOf(heading, resourceHeaderType),
@@ -100,13 +116,13 @@ function scanHeadings(text: string): ScannedHeading[] {
       });
     },
     onProperty(property) {
-      const continuations = property.value.split('\n').length - 1;
       headings.at(-1)?.properties.push({
         key: property.key,
         storedKey: property.stored.key,
         value: property.value,
         startLine: property.line,
-        endLine: property.line + continuations,
+        startColumn: property.column,
+        endLine: property.endLine,
         isMultiline: property.isMultiline,
       });
     },
@@ -121,11 +137,13 @@ function scanSections(text: string, lines: readonly string[]): DocumentSection[]
   const headings = scanHeadings(text);
   return headings.map((heading, index) => {
     const next = headings[index + 1];
-    const lastLine = next ? next.line - 1 : lines.length;
+    // A heading that shares its line with the next one still holds that line.
+    const lastLine = next ? Math.max(heading.line, next.line - 1) : lines.length;
     return {
       kind: heading.kind,
       tag: heading.tag,
       headingLine: heading.line,
+      headingColumns: heading.columns,
       endLine: lastContentLine(lines, heading.line, lastLine),
       attributes: heading.attributes,
       ...(heading.ownerType !== undefined ? { ownerType: heading.ownerType } : {}),
@@ -142,32 +160,76 @@ export class LanguageDocument {
   readonly lines: readonly string[];
   readonly sections: readonly DocumentSection[];
   private readonly sectionByLine: Map<number, DocumentSection>;
-  private readonly propertyByLine: Map<number, PropertyLocation>;
+  /** The sections whose heading starts on each line, in order: a line can hold several. */
+  private readonly headingsByLine: Map<number, DocumentSection[]>;
+  /** The properties on each line, in order: a heading between two puts both on one line. */
+  private readonly propertiesByLine: Map<number, PropertyLocation[]>;
 
   constructor(readonly text: string) {
     this.lines = splitLines(text);
     this.sections = scanSections(text, this.lines);
     this.sectionByLine = new Map();
-    this.propertyByLine = new Map();
+    this.headingsByLine = new Map();
+    this.propertiesByLine = new Map();
     for (const section of this.sections) {
+      const sharing = this.headingsByLine.get(section.headingLine);
+      if (sharing) sharing.push(section);
+      else this.headingsByLine.set(section.headingLine, [section]);
       for (let line = section.headingLine; line <= section.endLine; line++) {
         this.sectionByLine.set(line, section);
       }
       for (const property of section.properties) {
         for (let line = property.startLine; line <= property.endLine; line++) {
-          this.propertyByLine.set(line, { section, property });
+          const sharing = this.propertiesByLine.get(line);
+          if (sharing) sharing.push({ section, property });
+          else this.propertiesByLine.set(line, [{ section, property }]);
         }
       }
     }
   }
 
-  /** The section a one-based line belongs to, or undefined outside every heading. */
-  sectionAt(line: number): DocumentSection | undefined {
-    return this.sectionByLine.get(line);
+  /** The section a one-based line and a zero-based column belong to, or undefined outside every heading. */
+  sectionAt(line: number, character: number): DocumentSection | undefined {
+    const section = this.sectionByLine.get(line);
+    if (section?.headingLine !== line) return section;
+    // The last heading started at the column wins. Before them all, body text is the section before's.
+    const onLine = this.headingsByLine.get(line)!;
+    const started = onLine.filter((found) => found.headingColumns.start <= character);
+    if (started.length === 0 && this.holdsBodyBefore(onLine[0]!)) return this.sectionBefore(onLine[0]!);
+    return started.at(-1) ?? onLine[0];
   }
 
-  /** The property a one-based line belongs to, with its section. */
-  propertyAt(line: number): PropertyLocation | undefined {
-    return this.propertyByLine.get(line);
+  /** Whether text, not only an indent, comes before a heading on its line: the body of the section before. */
+  private holdsBodyBefore(section: DocumentSection): boolean {
+    const line = this.lines[section.headingLine - 1] ?? '';
+    return godotIndent(line) < section.headingColumns.start;
+  }
+
+  private sectionBefore(section: DocumentSection): DocumentSection | undefined {
+    return this.sections[this.sections.indexOf(section) - 1];
+  }
+
+  /** A heading's first line, blank outside its own columns and without a comment: each offset is a column. */
+  headingText(section: DocumentSection): string {
+    const line = this.lines[section.headingLine - 1] ?? '';
+    const { start, end } = section.headingColumns;
+    return stripLineComment(' '.repeat(start) + line.slice(start, end)).trimEnd();
+  }
+
+  /** Whether a one-based line and a zero-based column fall in a heading, not in a property after its `]`. */
+  isInHeading(line: number, character: number): boolean {
+    const section = this.sectionAt(line, character);
+    if (section?.headingLine !== line) return false;
+    // Past a `]` that closes the heading before its line ends is body: a property, or a key being typed.
+    const { end } = section.headingColumns;
+    return character < end || end === (this.lines[line - 1]?.length ?? 0);
+  }
+
+  /** The property at a one-based line and a zero-based column: the last started there, else the first. */
+  propertyAt(line: number, character: number): PropertyLocation | undefined {
+    const onLine = this.propertiesByLine.get(line);
+    if (!onLine) return undefined;
+    const started = onLine.filter(({ property }) => startColumnOn(property, line) <= character);
+    return started.at(-1) ?? onLine[0];
   }
 }

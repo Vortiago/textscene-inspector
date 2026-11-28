@@ -101,12 +101,16 @@ export interface ParseError {
 /** Where one `[ext_resource]`, `[sub_resource]` or `[node]` section sits in the file. Every line is 1-based. */
 export interface SectionLines {
   readonly heading: number;
+  /** The 1-based column the heading's `[` sits at, past another heading on its line. */
+  readonly headingColumn: number;
   /**
    * Each stored property's line, keyed as the section's bag stores it: a deprecated spelling
    * under the key it resolves to, and a key written twice at its last line, whose value the
    * bag keeps.
    */
   readonly properties: ReadonlyMap<string, number>;
+  /** Each stored property's 1-based key column, keyed as {@link properties} is. */
+  readonly propertyColumns: ReadonlyMap<string, number>;
 }
 
 /**

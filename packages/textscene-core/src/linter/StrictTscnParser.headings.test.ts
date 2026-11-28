@@ -14,6 +14,21 @@ describe('StrictTscnParser', () => {
   });
 
   describe('Invalid Heading Format', () => {
+    it('reports no property error for the line a refused heading stops on', () => {
+      const result = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"\n@\n');
+
+      expect(result.errors.map(({ code, line }) => [code, line])).toEqual([['INVALID_HEADING_FORMAT', 3]]);
+    });
+
+    it('reads an array on the line a refused heading stops in as that heading, not as a new one', () => {
+      const result = parser.parse(
+        '[gd_scene format=3]\n\n[node name="Root" type="Node3D" groups=\n[1, x]]\n'
+      );
+
+      expect(result.errors.map(({ code, line }) => [code, line])).toEqual([['INVALID_HEADING_FORMAT', 3]]);
+      expect(result.scene?.nodes).toEqual([]);
+    });
+
     it('should report INVALID_HEADING_FORMAT for a heading missing its closing bracket', () => {
       const content = `[gd_scene load_steps=1 format=3]
 
@@ -70,6 +85,33 @@ animations = [{
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
       expect(result.scene!.internalResources).toHaveLength(1);
+    });
+
+    it('reads a heading split over lines as one heading, as Godot 4.6.3 loads it', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Root"
+type="Node3D"]
+`;
+
+      const result = parser.parse(content);
+
+      expect(result.errors).toEqual([]);
+      expect(result.scene?.nodes.map(({ name, type }) => ({ name, type }))).toEqual([
+        { name: 'Root', type: 'Node3D' },
+      ]);
+    });
+
+    it('reports a heading split over lines that does not parse at the line it starts on', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Root"
+type=]
+`;
+
+      expect(parser.parse(content).errors).toEqual([
+        expect.objectContaining({ code: 'INVALID_HEADING_FORMAT', line: 3 }),
+      ]);
     });
 
     it('should report error for heading without attributes', () => {

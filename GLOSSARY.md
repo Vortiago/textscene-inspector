@@ -10,6 +10,10 @@ This glossary names the project's own concepts for parsing Godot text-scene (`.t
 Godot's text scene file format: a sequence of `[heading key=value]` sections of the kinds `node`, `ext_resource` and `sub_resource`.
 _Avoid_: "scene file", "godot file".
 
+**Heading** (`godot/variant/tagReader.ts`):
+A `[name field=value …]` tag that opens a section, read as `VariantParser::parse_tag` reads it. The tag runs across lines up to its `]`, with comments skipped, and any text after the `]` is the section's body. The core scan reads each one this way, and draws what it can of one Godot refuses.
+_Avoid_: reading a heading as one line.
+
 **Node**:
 One entry in a scene tree, with a `type`, `name`, parent path, `properties`, optional `instance` reference and `children`, which the parser emits as `TscnNode`.
 _Avoid_: "element", "entity".
@@ -1176,7 +1180,7 @@ One `res://` file a scene loads, as a row of Godot's Load Errors dialog: its pat
 The walk starts at the values of the scene after the host's writes, and follows each text file to the files its values read. A file that a heading declares and no value reads is in no list, as in Godot. `res://project.godot` and the files its settings name for every scene are rows too.
 
 **Scene failure** (`resources/loadFailure/sceneFailure.ts`):
-The failure through which the game refuses to load the whole scene: Godot's error line with its number, the chain from the file the scene reads, and the cause. `scene.sceneFailure()` gives it for the scene, not for a **Scene file**: it is the first failure in the scene's read order. A `[sub_resource]` read, a `Resource("…")` literal, a `[connection]` `binds=` and the base scene of an inherited scene fail the scene. An `ExtResource` read of any other `[node]` does not (resource_format_text.cpp:647-650). A value at which the parse fails, such as an id no heading before it declares, fails it with an empty chain. So does a heading out of the loader's order: `[ext_resource]`, then `[sub_resource]`, then the `[node]` or `[resource]` tags. The failure is judged on the file's text, so a host write does not change it. The load banner shows it.
+The failure through which the game refuses to load the whole scene: Godot's error line with its number, the chain from the file the scene reads, and the cause. `scene.sceneFailure()` gives it for the scene, not for a **Scene file**: it is the first failure in the scene's read order. A `[sub_resource]` read, a `Resource("…")` literal, a `[connection]` `binds=` and the base scene of an inherited scene fail the scene. An `ExtResource` read of any other `[node]` does not (resource_format_text.cpp:647-650). A value at which the parse fails, such as an id no heading before it declares, fails it with an empty chain. So does a heading out of the loader's order: `[ext_resource]`, then `[sub_resource]`, then the `[node]` or `[resource]` tags, and a **Heading** the tag parser refuses, at the line where it stops. The failure is judged on the file's text, so a host write does not change it. The load banner shows it.
 _Avoid_: "load error" for the whole scene.
 
 ### Animation

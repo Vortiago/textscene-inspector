@@ -17,12 +17,7 @@ const OUTER_RE = ARRAY_LITERAL_RE;
 const PACKED_STRING_ARRAY_RE = packedArrayLiteral('PackedStringArray');
 const FORMAT_CODE = 'INVALID_RESOURCES_FORMAT';
 
-/**
- * `_get_resources` (resource_preloader.cpp:33-49) builds an untyped 2-element Array,
- * written on one line as `[PackedStringArray(...), [...]]` (variant_parser.cpp:2338),
- * so `isMultiline` never skips it. `_set_resources` (:51-71) checks the shape, the
- * equal lengths and each resource, in that order.
- */
+/** `_set_resources` (resource_preloader.cpp:51-71) checks the shape, the lengths and each resource. */
 const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
   const trimmed = value.trim();
   const outer = OUTER_RE.exec(trimmed);

@@ -235,6 +235,27 @@ albedo_texture = ExtResource("1")
     ]);
   });
 
+  it('lists the file a .tres header field names, read as a path', () => {
+    const reads = resourceFilesRead(
+      MAIN_TRES,
+      parseTresFile('[gd_resource type="Curve" format=3 x=ExtResource("res://a.tres")]\n[resource]\n')
+    );
+
+    expect(reads).toEqual([{ path: 'res://a.tres', type: null }]);
+  });
+
+  it('lists the file a [sub_resource] heading field reads', () => {
+    const reads = sceneFilesRead(
+      MAIN,
+      scene(`[gd_scene format=3]
+[sub_resource type="Resource" id="a" x=Resource("res://b.tres")]
+[node name="Root" type="Node2D"]
+`)
+    );
+
+    expect(reads).toEqual([{ path: 'res://b.tres', type: null }]);
+  });
+
   it('lists nothing for a .tres that reads no file', () => {
     const reads = resourceFilesRead(
       MAIN_TRES,
@@ -324,9 +345,15 @@ texture = Resource("res://node.png")
     );
 
     expect(reads).toEqual([
-      { path: 'res://literal.png', kind: 'section Resource', uid: 'uid://b1', line: 4 },
-      { path: 'res://ext.png', kind: 'section ExtResource', uid: '', line: 6 },
-      { path: 'res://node.png', kind: 'node Resource', uid: '', line: 8 },
+      {
+        path: 'res://literal.png',
+        written: 'res://literal.png',
+        kind: 'section Resource',
+        uid: 'uid://b1',
+        line: 4,
+      },
+      { path: 'res://ext.png', written: 'res://ext.png', kind: 'section ExtResource', uid: '', line: 6 },
+      { path: 'res://node.png', written: 'res://node.png', kind: 'node Resource', uid: '', line: 8 },
     ]);
   });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readVariant, strToVar } from './strToVar';
+import { isEscapedNewline, readVariant, strToVar, Tokens, ValueReader, variantEnd } from './strToVar';
+import { ParseError } from './parseError';
 import { varToStr } from './varToStr';
 import { VARIANT_TYPE as T } from './variantType';
 
@@ -7,6 +8,10 @@ import { VARIANT_TYPE as T } from './variantType';
 const roundTrip = (input: string) => varToStr(strToVar(input));
 
 describe('strToVar', () => {
+  it("stops a value that opens with a refused token with the token's own message", () => {
+    expect(readVariant('"abc')).toEqual({ error: 'Unterminated string' });
+  });
+
   it('reads a vector and writes its components in the canonical spelling', () => {
     expect(roundTrip('Vector3(0.1, -0, 1e20)')).toBe('Vector3(0.1, 0, 1e+20)');
   });
@@ -34,6 +39,23 @@ describe('strToVar', () => {
     expect(roundTrip('"tab\\there \\"q\\" é"')).toBe('"tab\there \\"q\\" é"');
     expect(roundTrip('&"name"')).toBe('&"name"');
     expect(roundTrip('NodePath("a/b:c")')).toBe('NodePath("a/b:c")');
+  });
+
+  it('keeps a character past U+FFFF whole in a string with an escape', () => {
+    expect(strToVar('"😀\\n"')).toEqual({ type: T.STRING, value: '😀\n' });
+    expect(strToVar('"\\😀"')).toEqual({ type: T.STRING, value: '😀' });
+  });
+
+  // `append_utf8` reads each byte of a sequence the end cuts off as its own U+FFFD (ustring.cpp:1847).
+  it('reads each byte of a UTF-8 sequence the string end cuts off as one U+FFFD', () => {
+    expect(strToVar('"\\u00E2\\u0082"')).toEqual({ type: T.STRING, value: '��' });
+    expect(strToVar('"\\u00F0\\u009F\\u0098"')).toEqual({ type: T.STRING, value: '�'.repeat(3) });
+    expect(strToVar('"\\u00E2\\u0082x"')).toEqual({ type: T.STRING, value: '�x' });
+  });
+
+  it('drops a BOM that opens a string, as the UTF-8 re-read does', () => {
+    expect(strToVar('"﻿a"')).toEqual({ type: T.STRING, value: 'a' });
+    expect(strToVar('"﻿a\\n"')).toEqual({ type: T.STRING, value: 'a\n' });
   });
 
   it('writes a dictionary with its keys sorted, numbers before strings', () => {
@@ -75,5 +97,116 @@ describe('strToVar', () => {
 
   it('refuses an object of a class that does not exist', () => {
     expect(readVariant('Object(NoSuchClass,"a":1)', { classExists: () => false })).toHaveProperty('error');
+  });
+});
+
+describe('Tokens', () => {
+  const lineOfSecondToken = (text: string) => {
+    const tokens = new Tokens(text);
+    tokens.next();
+    tokens.next();
+    return tokens.tokenStart.line;
+  };
+
+  it('counts a newline read as white space', () => {
+    expect(lineOfSecondToken('a\n\nb')).toBe(3);
+  });
+
+  it('counts the newline that ends a comment', () => {
+    expect(lineOfSecondToken('a ; note\nb')).toBe(2);
+  });
+
+  it('skips a newline a string escapes, as the string counter does', () => {
+    expect(lineOfSecondToken('"x\\\ny" b')).toBe(1);
+  });
+
+  it('counts a newline inside a string that no backslash escapes', () => {
+    expect(lineOfSecondToken('"x\ny" b')).toBe(2);
+  });
+
+  it('reads a NUL as the end of the stream', () => {
+    expect(new Tokens('\0a').next()).toEqual({ kind: 'eof' });
+  });
+
+  it('refuses a string a NUL cuts, as Godot does', () => {
+    expect(new Tokens('"a\0b"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
+    expect(new Tokens('"a\\\0b"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
+  });
+
+  it('drops the NUL that ends a word, a number or a colour, as `saved` holds none', () => {
+    const second = (text: string) => {
+      const tokens = new Tokens(text);
+      tokens.next();
+      return tokens.next();
+    };
+    expect(second('a\0b')).toEqual({ kind: 'identifier', text: 'b' });
+    expect(second('1\0b')).toEqual({ kind: 'identifier', text: 'b' });
+    expect(second('#fff\0b')).toEqual({ kind: 'identifier', text: 'b' });
+    expect(second('"a"\0b')).toEqual({ kind: 'eof' });
+  });
+
+  it('refuses a hex escape a NUL cuts as an unterminated string (variant_parser.cpp:321)', () => {
+    expect(new Tokens('"\\u00\0a"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
+  });
+
+  it('is not at the end before a read finds it', () => {
+    const tokens = new Tokens('a');
+    expect(tokens.isEof).toBe(false);
+    tokens.next();
+    expect(tokens.next()).toEqual({ kind: 'eof' });
+    expect(tokens.isEof).toBe(true);
+  });
+});
+
+describe('variantEnd', () => {
+  it('ends past the first value, before the text after it', () => {
+    expect(variantEnd('{ "a": [1] } [node]', {})).toBe(12);
+  });
+
+  it('gives null where the value does not parse', () => {
+    expect(variantEnd('Vector2(1, ', {})).toBeNull();
+  });
+
+  it('ends a string over two lines at the text length', () => {
+    expect(variantEnd('"a\nb"', {})).toBe(5);
+  });
+});
+
+describe('isEscapedNewline', () => {
+  it('is true after an odd run of backslashes', () => {
+    expect(isEscapedNewline('"a\\\\\\\n', 5)).toBe(true);
+  });
+
+  it('is false after an even run of backslashes', () => {
+    expect(isEscapedNewline('"a\\\\\n', 4)).toBe(false);
+  });
+
+  it('counts a run that starts the text', () => {
+    expect(isEscapedNewline('\\\n', 1)).toBe(true);
+  });
+
+  it('is false where a carriage return sits between the backslash and the newline', () => {
+    expect(isEscapedNewline('"a\\\r\n', 4)).toBe(false);
+  });
+});
+
+describe('ValueReader', () => {
+  const valueOf = (text: string) => {
+    const tokens = new Tokens(text);
+    return new ValueReader(tokens, {}).value(tokens.next());
+  };
+
+  it('reads a value from the token it is given', () => {
+    expect(valueOf('5')).toEqual(strToVar('5'));
+  });
+
+  it('throws a ParseError for a value Godot refuses', () => {
+    expect(() => valueOf('[1 2]')).toThrow(ParseError);
+  });
+
+  it('leaves the tokens just past the value it read', () => {
+    const tokens = new Tokens('[1] x');
+    new ValueReader(tokens, {}).value(tokens.next());
+    expect(tokens.next()).toEqual({ kind: 'identifier', text: 'x' });
   });
 });

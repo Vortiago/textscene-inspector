@@ -9,6 +9,8 @@ import {
   type VariantValue,
 } from './variantValue.js';
 import { DEFAULT_COLOR, htmlColor } from '../math/color.js';
+import { GodotError, ParseError } from './parseError.js';
+import { isTokenGap } from './tokenGap.js';
 
 const T = VARIANT_TYPE;
 
@@ -18,10 +20,32 @@ type Token =
   | { kind: 'identifier'; text: string }
   | { kind: 'string' | 'stringName'; text: string }
   | { kind: 'number'; value: number; isFloat: boolean }
-  | { kind: 'color'; value: readonly number[] };
+  | { kind: 'color'; value: readonly number[] }
+  | { kind: 'error'; message: string };
 
-/** A parse error, with Godot's own message. */
-class ParseError extends Error {}
+/** A token `get_token` refuses: the reader sees a `TK_ERROR` token, and the message stays beside it. */
+class TokenError extends Error {}
+
+/** `VariantParser::tk_name`, the name a message gives each token (`variant_parser.cpp:129-147`). */
+const TOKEN_NAMES: Readonly<Record<Token['kind'], string>> = {
+  curlyOpen: "'{'",
+  curlyClose: "'}'",
+  bracketOpen: "'['",
+  bracketClose: "']'",
+  parenOpen: "'('",
+  parenClose: "')'",
+  identifier: 'identifier',
+  string: 'string',
+  stringName: 'string_name',
+  number: 'number',
+  color: 'color',
+  colon: "':'",
+  comma: "','",
+  period: "'.'",
+  equal: "'='",
+  eof: 'EOF',
+  error: 'ERROR',
+};
 
 const PUNCTUATION: Readonly<Record<string, Token['kind']>> = {
   '{': 'curlyOpen',
@@ -39,8 +63,8 @@ const PUNCTUATION: Readonly<Record<string, Token['kind']>> = {
 const ESCAPES: Readonly<Record<string, number>> = { b: 8, t: 9, n: 10, f: 12, r: 13 };
 
 const isDigit = (c: string) => c >= '0' && c <= '9';
-const isHexDigit = (c: string) => /^[0-9a-fA-F]$/.test(c);
-const isIdentifierStart = (c: string) => /^[A-Za-z_]$/.test(c);
+const isHexDigit = (c: string) => isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+const isIdentifierStart = (c: string) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_';
 
 /** The int64 a `String::to_int` reads, clamped at the ends as Godot's overflow check returns them. */
 function int64Of(text: string): number {
@@ -50,20 +74,142 @@ function int64Of(text: string): number {
   return Number(value > max ? max : value < min ? min : value);
 }
 
-/** One token at a time over `text`, as `get_token` reads a stream. */
-class Tokens {
-  private at = 0;
+/**
+ * True when a string escapes the newline at `at`, so Godot's counter skips it (variant_parser.cpp:386).
+ *
+ * @canonical Whether a string escapes a newline
+ */
+export function isEscapedNewline(text: string, at: number): boolean {
+  let backslashes = 0;
+  while (text[at - 1 - backslashes] === '\\') backslashes++;
+  return backslashes % 2 === 1;
+}
 
-  constructor(private readonly text: string) {}
+const UTF8_ENCODER = new TextEncoder();
+const UTF8_DECODER = new TextDecoder();
+
+/** The string a token builds: raw text as the stream reads it, and each code an escape names. */
+interface GodotString {
+  addRaw(text: string): void;
+  addCode(code: number): void;
+  read(): string;
+}
+
+/** A file is `StreamFile`, `str_to_var` text is `StreamString`: only a file re-reads escapes as UTF-8. */
+export type GodotStream = 'file' | 'string';
+
+/** A file's string: each escape one Latin-1 byte, all bytes read as UTF-8 (variant_parser.cpp:399-403). */
+class GodotFileString implements GodotString {
+  private readonly bytes: number[] = [];
+  /** Raw text not yet encoded, so a surrogate pair reaches the encoder whole. Cleared by `encodeRaw`. */
+  private raw = '';
+
+  addRaw(text: string): void {
+    this.raw += text;
+  }
+
+  /** NUL or past U+10FFFF is U+FFFD, and `ascii` writes past 0xFF as a space (ustring.cpp:199, :1707). */
+  addCode(code: number): void {
+    this.encodeRaw();
+    this.bytes.push(code > 0 && code <= 0xff ? code : 0x20);
+  }
+
+  read(): string {
+    this.encodeRaw();
+    const text = UTF8_DECODER.decode(Uint8Array.from(this.bytes), { stream: true });
+    // A sequence the end cuts off is one U+FFFD to TextDecoder, but one per byte to Godot (ustring.cpp:1847).
+    return UTF8_DECODER.decode() ? text + '�'.repeat(this.cutSequenceLength()) : text;
+  }
+
+  private encodeRaw(): void {
+    for (const byte of UTF8_ENCODER.encode(this.raw)) this.bytes.push(byte);
+    this.raw = '';
+  }
+
+  /** The bytes from the last lead byte on: the sequence the end cuts off, when TextDecoder holds one. */
+  private cutSequenceLength(): number {
+    let lead = this.bytes.length - 1;
+    while (this.bytes[lead]! < 0xc0) lead--;
+    return this.bytes.length - lead;
+  }
+}
+
+/** A `StreamString` string: each escape one code point, NUL, a surrogate or past U+10FFFF as U+FFFD. */
+class GodotTextString implements GodotString {
+  private text = '';
+
+  addRaw(text: string): void {
+    this.text += text;
+  }
+
+  /** `append_utf32` replaces each code it refuses (ustring.cpp:199-213). */
+  addCode(code: number): void {
+    const isRefused = code === 0 || (code & 0xfffff800) === 0xd800 || code > 0x10ffff;
+    this.text += isRefused ? '\uFFFD' : String.fromCodePoint(code);
+  }
+
+  read(): string {
+    return this.text;
+  }
+}
+
+const STRINGS: Readonly<Record<GodotStream, new () => GodotString>> = {
+  file: GodotFileString,
+  string: GodotTextString,
+};
+
+/** One token at a time over `text` from `at`, as `get_token` reads a stream, counting lines as it does. */
+export class Tokens {
+  constructor(
+    private readonly text: string,
+    private at = 0,
+    private lineAt = 1,
+    private readonly stream: GodotStream = 'file'
+  ) {}
+
+  private startAt = 0;
+  private startLine = 0;
+
+  /** Where the last token read starts, and its line. */
+  get tokenStart(): { readonly offset: number; readonly line: number } {
+    return { offset: this.startAt, line: this.startLine };
+  }
+
+  /** The line Godot's counter stands on: a `\n` read as white space, in a comment or in a string counts. */
+  get line(): number {
+    return this.lineAt;
+  }
+
+  /** The offset of the next character to read. */
+  get offset(): number {
+    return this.at;
+  }
+
+  /** `Stream::is_eof`: true once a read has found the end, not when the last character is read. */
+  get isEof(): boolean {
+    return this.at > this.text.length;
+  }
 
   private char(): string {
     return this.text[this.at++] ?? '';
   }
 
   next(): Token {
+    try {
+      return this.token();
+    } catch (error) {
+      if (error instanceof TokenError) return { kind: 'error', message: error.message };
+      throw error;
+    }
+  }
+
+  private token(): Token {
     for (;;) {
+      this.startAt = this.at;
+      this.startLine = this.lineAt;
       const c = this.char();
-      if (c === '') return { kind: 'eof' };
+      // A NUL ends the stream for `get_token`, as the end of the text does (variant_parser.cpp:182).
+      if (c === '' || c === '\0') return { kind: 'eof' };
       const punctuation = PUNCTUATION[c];
       if (punctuation) return { kind: punctuation } as Token;
       if (c === ';') {
@@ -72,17 +218,22 @@ class Tokens {
       }
       if (c === '#') return this.color();
       if (c === '&' || c === '@') {
-        if (this.char() !== '"') throw new ParseError(`Expected '"' after '&'`);
+        if (this.char() !== '"') throw new TokenError(`Expected '"' after '&'`);
         return { kind: 'stringName', text: this.quoted() };
       }
       if (c === '"') return { kind: 'string', text: this.quoted() };
-      if (c.charCodeAt(0) <= 32) continue;
+      if (c === '\n') this.lineAt++;
+      if (isTokenGap(c.charCodeAt(0))) continue;
       return this.word(c);
     }
   }
 
   private skipComment(): void {
-    while (this.at < this.text.length && this.char() !== '\n');
+    while (this.at < this.text.length) {
+      if (this.char() !== '\n') continue;
+      this.lineAt++;
+      return;
+    }
   }
 
   private color(): Token {
@@ -90,51 +241,74 @@ class Tokens {
     while (this.at < this.text.length && isHexDigit(this.text[this.at]!)) html += this.char();
     // A colour that runs to the end of the text reads as the end: `variant_parser.cpp:246-248`.
     if (this.at >= this.text.length) return { kind: 'eof' };
+    if (this.text[this.at] === '\0') this.at++;
     const { r, g, b, a } = htmlColor(`#${html}`) ?? DEFAULT_COLOR;
     return { kind: 'color', value: [r, g, b, a].map(Math.fround) };
   }
 
   /** The body of a string after its opening quote, escapes read (`variant_parser.cpp:276-385`). */
   private quoted(): string {
-    let text = '';
+    const plain = this.plainQuoted();
+    if (plain !== null) return plain;
+    const text = new STRINGS[this.stream]();
     let lead = 0;
     for (;;) {
       const c = this.char();
-      if (c === '') throw new ParseError('Unterminated string');
+      if (c === '' || c === '\0') throw new TokenError('Unterminated string');
       if (c === '"') break;
       if (c !== '\\') {
-        if (lead) throw new ParseError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-        text += c;
+        if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
+        // Only an unescaped newline counts (`variant_parser.cpp:387-389`).
+        if (c === '\n') this.lineAt++;
+        text.addRaw(c);
         continue;
       }
       const code = this.escaped();
+      if (typeof code === 'string') {
+        if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
+        text.addRaw(code);
+        continue;
+      }
       if ((code & 0xfffffc00) === 0xd800) {
-        if (lead) throw new ParseError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
+        if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
         lead = code;
         continue;
       }
       if ((code & 0xfffffc00) === 0xdc00) {
-        if (!lead) throw new ParseError('Invalid UTF-16 sequence in string, unpaired trail surrogate');
-        text += String.fromCodePoint((lead << 10) + code - ((0xd800 << 10) + 0xdc00 - 0x10000));
+        if (!lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired trail surrogate');
+        text.addCode((lead << 10) + code - ((0xd800 << 10) + 0xdc00 - 0x10000));
         lead = 0;
         continue;
       }
-      if (lead) throw new ParseError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-      text += String.fromCodePoint(code);
+      if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
+      text.addCode(code);
     }
-    if (lead) throw new ParseError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-    return text;
+    if (lead) throw new TokenError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
+    return text.read();
   }
 
-  private escaped(): number {
+  /** A string with no escape, sliced whole: most strings, read once per heading of every parse. */
+  private plainQuoted(): string | null {
+    const close = this.text.indexOf('"', this.at);
+    if (close === -1) return null;
+    const body = this.text.slice(this.at, close);
+    // The UTF-8 re-read drops a leading BOM (ustring.cpp:1755), so such a string takes the slow path.
+    if (body.includes('\\') || body.includes('\0') || body.startsWith('\uFEFF')) return null;
+    for (let at = body.indexOf('\n'); at !== -1; at = body.indexOf('\n', at + 1)) this.lineAt++;
+    this.at = close + 1;
+    return body;
+  }
+
+  /** The code an escape names, or the text of an escaped character Godot reads as written. */
+  private escaped(): number | string {
     const next = this.char();
-    if (next === '') throw new ParseError('Unterminated string');
-    if (next !== 'u' && next !== 'U') return ESCAPES[next] ?? next.codePointAt(0)!;
+    if (next === '' || next === '\0') throw new TokenError('Unterminated string');
+    if (next !== 'u' && next !== 'U') return ESCAPES[next] ?? next;
     let code = 0;
     for (let i = 0; i < (next === 'U' ? 6 : 4); i++) {
       const digit = this.char();
-      if (digit === '') throw new ParseError('Unterminated string');
-      if (!isHexDigit(digit)) throw new ParseError('Malformed hex constant in string');
+      if (digit === '' || digit === '\0') throw new TokenError('Unterminated string');
+      if (!isHexDigit(digit)) throw new TokenError('Malformed hex constant in string');
       code = code * 16 + Number.parseInt(digit, 16);
     }
     return code;
@@ -148,7 +322,7 @@ class Tokens {
       c = this.char();
     }
     if (isDigit(c)) return this.number(text, c);
-    if (!isIdentifierStart(c)) throw new ParseError('Unexpected character');
+    if (!isIdentifierStart(c)) throw new TokenError('Unexpected character');
     while (isIdentifierStart(c) || (text.length > 0 && text !== '-' && isDigit(c))) {
       text += c;
       c = this.char();
@@ -186,8 +360,9 @@ class Tokens {
     return { kind: 'number', value: isFloat ? Number.parseFloat(text) : int64Of(text), isFloat };
   }
 
+  // `saved` holds no NUL (variant_parser.cpp:166), so a NUL that ends a word or a number is dropped.
   private unread(c: string): void {
-    if (c !== '') this.at--;
+    if (c !== '' && c !== '\0') this.at--;
   }
 }
 
@@ -307,9 +482,11 @@ export interface VariantReading {
   readonly classExists?: (className: string) => boolean;
   /** The file an `ExtResource` or a `SubResource` id names. Absent reads the id as a path. */
   readonly resourceOf?: (kind: 'ExtResource' | 'SubResource', id: string) => ResourceReference | null;
+  /** The stream the text comes from. Absent reads it as a file's. */
+  readonly stream?: GodotStream;
 }
 
-class ValueReader {
+export class ValueReader {
   private readonly classExists: (className: string) => boolean;
 
   constructor(
@@ -342,7 +519,7 @@ class ValueReader {
       case 'color':
         return { type: T.COLOR, value: token.value };
       default:
-        throw new ParseError(`Expected value, got '${token.kind}'`);
+        throw new ParseError(`Expected value, got '${TOKEN_NAMES[token.kind]}'`);
     }
   }
 
@@ -480,8 +657,7 @@ class ValueReader {
     this.expect('comma', "Expected ',' after object type");
     const properties: [string, VariantValue][] = [];
     for (let needsComma = false; ;) {
-      const token = this.tokens.next();
-      if (token.kind === 'eof') throw new ParseError('Unexpected EOF while parsing Object()');
+      const token = this.containerToken('Object()');
       if (token.kind === 'parenClose') return { type: T.OBJECT, className: type.text, properties };
       if (needsComma) {
         if (token.kind !== 'comma') throw new ParseError("Expected '}' or ','");
@@ -489,8 +665,8 @@ class ValueReader {
         continue;
       }
       if (token.kind !== 'string') throw new ParseError('Expected property name as string');
-      this.expect('colon', "Expected ':'");
-      properties.push([token.text, this.value(this.tokens.next())]);
+      this.expectChecked('colon', "Expected ':'");
+      properties.push([token.text, this.value(this.checkedToken())]);
       needsComma = true;
     }
   }
@@ -576,8 +752,7 @@ class ValueReader {
   private arrayBody(): VariantValue[] {
     const elements: VariantValue[] = [];
     for (let needsComma = false; ;) {
-      const token = this.tokens.next();
-      if (token.kind === 'eof') throw new ParseError('Unexpected EOF while parsing array');
+      const token = this.containerToken('array');
       if (token.kind === 'bracketClose') return elements;
       if (needsComma) {
         if (token.kind !== 'comma') throw new ParseError("Expected ','");
@@ -593,8 +768,7 @@ class ValueReader {
   private dictionaryBody(): [VariantValue, VariantValue][] {
     const entries: [VariantValue, VariantValue][] = [];
     for (let needsComma = false; ;) {
-      const token = this.tokens.next();
-      if (token.kind === 'eof') throw new ParseError('Unexpected EOF while parsing dictionary');
+      const token = this.containerToken('dictionary');
       if (token.kind === 'curlyClose') return entries;
       if (needsComma) {
         if (token.kind !== 'comma') throw new ParseError("Expected '}' or ','");
@@ -602,10 +776,28 @@ class ValueReader {
         continue;
       }
       const key = this.value(token);
-      this.expect('colon', "Expected ':'");
-      entries.push([key, this.value(this.tokens.next())]);
+      this.expectChecked('colon', "Expected ':'");
+      entries.push([key, this.value(this.checkedToken())]);
       needsComma = true;
     }
+  }
+
+  /** `is_eof` before the read (variant_parser.cpp:1647): `[1, "a"` ends on a missing `,`, `[1, 2` on EOF. */
+  private containerToken(container: string): Token {
+    if (this.tokens.isEof)
+      throw new ParseError(`Unexpected EOF while parsing ${container}`, GodotError.FileCorrupt);
+    return this.checkedToken();
+  }
+
+  /** For a caller that returns `get_token`'s `Error`: a refused token stops with its own message. */
+  private checkedToken(): Token {
+    const token = this.tokens.next();
+    if (token.kind === 'error') throw new ParseError(token.message);
+    return token;
+  }
+
+  private expectChecked(kind: Token['kind'], message: string): void {
+    if (this.checkedToken().kind !== kind) throw new ParseError(message);
   }
 }
 
@@ -622,16 +814,33 @@ export type VariantRead = { readonly value: VariantValue } | { readonly error: s
 
 /** `VariantParser::parse`: the first value, the rest unread. */
 export function readVariant(text: string, reading: VariantReading = {}): VariantRead {
-  const tokens = new Tokens(text);
+  const tokens = new Tokens(text, 0, 1, reading.stream);
+  const first = tokens.next();
+  // `parse` returns `get_token`'s own error, so `"abc` stops with `Unterminated string`.
+  if (first.kind === 'error') return { error: first.message };
   try {
-    return { value: new ValueReader(tokens, reading).value(tokens.next()) };
+    return { value: new ValueReader(tokens, reading).value(first) };
   } catch (error) {
     if (error instanceof ParseError) return { error: error.message };
     throw error;
   }
 }
 
-/** `str_to_var`: the value, or null (Nil) where the text does not parse. */
+/** The offset past the first value in `text`, where `parse_tag_assign_eof` returns, or null. */
+export function variantEnd(text: string, reading: VariantReading): number | null {
+  const tokens = new Tokens(text, 0, 1, reading.stream);
+  const first = tokens.next();
+  if (first.kind === 'error') return null;
+  try {
+    new ValueReader(tokens, reading).value(first);
+    return tokens.offset;
+  } catch (error) {
+    if (error instanceof ParseError) return null;
+    throw error;
+  }
+}
+
+/** A value as Godot's parser reads it, from a file unless `reading` names a stream, or Nil if refused. */
 export function strToVar(text: string, reading?: VariantReading): VariantValue {
   const read = readVariant(text, reading);
   return 'value' in read ? read.value : NIL_VALUE;

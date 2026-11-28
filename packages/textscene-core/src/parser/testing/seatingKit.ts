@@ -23,6 +23,7 @@ export function originsOf(nodes: TscnNode[], uniqueIds: Record<string, number> =
   return nodes.map((heading, i) => ({
     node: heading,
     line: i + 1,
+    column: 1,
     declaredParent: heading.parent,
     uniqueId: uniqueIds[heading.name] ?? 0,
   }));

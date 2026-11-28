@@ -5,7 +5,7 @@
 import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { InstanceNameSetting } from './nodeOwner';
 import type { ConnectionEndResolver } from './connectionEnd.js';
-import type { MisplacedHeading } from './headingOrder.js';
+import type { HeadingStop } from './headingOrder.js';
 
 /**
  * One `[node]` heading as the scan saw it, before `seatScene` placed it. Kept off
@@ -15,6 +15,8 @@ export interface NodeOrigin<N extends RawNode> {
   readonly node: N;
   /** 1-based line of the node's own heading. */
   readonly line: number;
+  /** 1-based column of the heading's `[`, past another heading on its line. */
+  readonly column: number;
   /**
    * The heading's `parent=` as written, or undefined where it declares none. Not
    * `node.parent`, which both parsers leave unset for an empty one: `add_node_path`
@@ -74,8 +76,8 @@ export interface TscnScene<N extends RawNode = TscnNode> {
   editableInstances?: readonly string[];
   /** Each value the loader reads a resource in, in file order. Absent where none. */
   fileValues?: readonly FileValue[];
-  /** The first heading the loader refuses for its place in the file. Absent where it takes each one. */
-  misplacedHeading?: MisplacedHeading;
+  /** The first heading the loader stops at: misplaced, or one it cannot parse. Absent where it takes each. */
+  headingStop?: HeadingStop;
   /**
    * A `.tres` file's own `[resource]` body. Absent in a `.tscn`, where the loader refuses the tag
    * (`resource_format_text.cpp:723-728`).
@@ -207,6 +209,8 @@ export type SceneNode<N> = RawNode & { children: N[] };
 export interface ConnectionHeading {
   /** 1-based. */
   line: number;
+  /** 1-based column of the heading's `[`. */
+  column: number;
   signal: string | undefined;
   from: string | undefined;
   to: string | undefined;
@@ -257,25 +261,29 @@ export interface HeadingFacts {
   resolveConnectionEnd: ConnectionEndResolver<RawNode>;
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
-  /** The line of each `[editable]` heading that states no `path=`, which the loader refuses. */
-  pathlessEditableLines: readonly number[];
+  /** Where each `[editable]` heading that states no `path=` starts, which the loader refuses. */
+  pathlessEditables: readonly { line: number; column: number }[];
 }
 
 /** `node` skips a failed `ExtResource`, and each other place ends the load (resource_format_text.cpp:288). */
-export type FileValuePlace = 'section' | 'node' | 'binds';
+export type FileValuePlace = 'header' | 'section' | 'node' | 'binds';
 
 /** One value of a section or heading that the loader parses, as written. */
 export interface FileValue {
   readonly text: string;
-  /** The line the value starts on. */
+  /** Godot's line at the value's start: its counter skips a newline a string escapes. */
   readonly line: number;
   readonly place: FileValuePlace;
-  /** The `[sub_resource]` sections built before it, so its own section's index inside one. */
-  readonly subResourcesBefore: number;
+  /** The `[sub_resource]` ids it can name in file order: those before it, and its own in a body. */
+  readonly subResourcesNamed: number;
   /** The `[ext_resource]` headings before it, the only ids it can name (resource_format_text.cpp:930). */
   readonly extResourcesBefore: number;
   /** True for a value of the first heading after the header, which the loader reads as it opens the file. */
   readonly isOpeningTag: boolean;
+  /** True for a heading's field, which the live tree does not hold, false for a body value. */
+  readonly isHeadingField: boolean;
+  /** The offset in `text` of each newline a string escapes, which Godot's counter skips. */
+  readonly skippedNewlines: readonly number[];
 }
 
 /** The **Raw view** of a scene: the tree a **Lint rule** reads. */

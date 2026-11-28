@@ -5,7 +5,7 @@ import type { NodeOrigin, RawNode } from './types';
 
 function origin(name: string, declaredParent: string | undefined, overrides: Partial<RawNode> = {}) {
   const node: RawNode = { name, type: 'Node3D', children: [], rawProperties: {}, ...overrides };
-  return { node, line: 1, declaredParent, uniqueId: 0 } satisfies NodeOrigin<RawNode>;
+  return { node, line: 1, column: 1, declaredParent, uniqueId: 0 } satisfies NodeOrigin<RawNode>;
 }
 
 describe('refusesToInstantiate', () => {

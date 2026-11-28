@@ -10,6 +10,8 @@ import type { SectionOwner } from './sectionOwner.js';
 
 export interface NodeHeadingContext {
   line: number;
+  /** 1-based, where the heading's `[` sits. */
+  column: number;
   isRoot: boolean;
   owner: SectionOwner;
   /** Asked only for a type-less heading below the root. */
@@ -25,9 +27,9 @@ export function nodeHeadingErrors(heading: ParsedHeading, context: NodeHeadingCo
   return errors;
 }
 
-function missingNameError(heading: ParsedHeading, { line, owner }: NodeHeadingContext): ParseError | null {
+function missingNameError(heading: ParsedHeading, context: NodeHeadingContext): ParseError | null {
   if (heading.attributes.name) return null;
-  return headingError('error', 'Node heading must have "name=" attribute', 'MISSING_NODE_NAME', line, owner);
+  return headingError('error', 'Node heading must have "name=" attribute', 'MISSING_NODE_NAME', context);
 }
 
 /**
@@ -36,7 +38,7 @@ function missingNameError(heading: ParsedHeading, { line, owner }: NodeHeadingCo
  * InstancePlaceholder (packed_scene.cpp:239-258).
  */
 function missingIdentifierError(heading: ParsedHeading, context: NodeHeadingContext): ParseError | null {
-  const { line, isRoot, owner } = context;
+  const { isRoot } = context;
   if (isRoot && heading.attributes.instance_placeholder) {
     // Refused before anything instantiates, with ERR_FILE_CORRUPT (resource_format_text.cpp:247-251).
     return headingError(
@@ -45,8 +47,7 @@ function missingIdentifierError(heading: ParsedHeading, context: NodeHeadingCont
         '"Instance Placeholder can\'t be used for inheritance" (resource_format_text.cpp:247-251). ' +
         'The file does not load.',
       'INSTANCE_PLACEHOLDER_ROOT',
-      line,
-      owner
+      context
     );
   }
   // A heading that declares what it is takes neither arm below.
@@ -60,8 +61,7 @@ function missingIdentifierError(heading: ParsedHeading, context: NodeHeadingCont
         'from an instanced scene with no base scene and refuses to instantiate the scene ' +
         '(packed_scene.cpp:220).',
       'MISSING_NODE_IDENTIFIER',
-      line,
-      owner
+      context
     );
   }
   // `packed_scene.cpp` looks the node up by name under its parent (:283), which finds it only inside content an
@@ -74,8 +74,7 @@ function missingIdentifierError(heading: ParsedHeading, context: NodeHeadingCont
       'so Godot looks for it inside instanced content that is not there and drops it: ' +
       '"was modified from inside an instance, but it has vanished." (packed_scene.cpp:310).',
     'MISSING_NODE_IDENTIFIER',
-    line,
-    owner
+    context
   );
 }
 
@@ -83,8 +82,7 @@ function headingError(
   severity: ParseError['severity'],
   message: string,
   code: string,
-  line: number,
-  owner: SectionOwner
+  { line, column, owner }: NodeHeadingContext
 ): ParseError {
-  return { severity, message, line, column: 1, code, ...owner };
+  return { severity, message, line, column, code, ...owner };
 }

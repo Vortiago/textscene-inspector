@@ -82,7 +82,7 @@ export function nodeOfReference(
 function buildNodeUses(document: LanguageDocument): NodeUses {
   const usesByNode = new Map<DocumentSection, NodePathReference[]>();
   for (const section of document.sections) {
-    for (const reference of referencesOnHeading(section, document.lines[section.headingLine - 1] ?? '')) {
+    for (const reference of referencesOnHeading(section, document.headingText(section))) {
       const node = nodeOfReference(document, reference);
       if (!node) continue;
       const uses = usesByNode.get(node) ?? [];
@@ -106,9 +106,9 @@ export function nodePathReferenceAt(
   document: LanguageDocument,
   position: Position
 ): NodePathReference | undefined {
-  const section = document.sectionAt(position.line + 1);
+  const section = document.sectionAt(position.line + 1, position.character);
   if (section?.headingLine !== position.line + 1) return undefined;
-  return referencesOnHeading(section, document.lines[position.line] ?? '').find(({ range }) =>
+  return referencesOnHeading(section, document.headingText(section)).find(({ range }) =>
     lineRangeContains(range, position.character)
   );
 }
@@ -116,7 +116,7 @@ export function nodePathReferenceAt(
 /** The `name=` value of a node heading, or undefined. */
 export function nodeNameRange(document: LanguageDocument, section: DocumentSection): Range | undefined {
   const line = section.headingLine - 1;
-  const attribute = headingAttribute(document.lines[line] ?? '', 'name');
+  const attribute = headingAttribute(document.headingText(section), 'name');
   return attribute && lineRange(line, attribute.span);
 }
 
@@ -124,7 +124,7 @@ export function nodeNameRange(document: LanguageDocument, section: DocumentSecti
 export function nodeAt(document: LanguageDocument, position: Position): DocumentSection | undefined {
   const reference = nodePathReferenceAt(document, position);
   if (reference) return nodeOfReference(document, reference);
-  const section = document.sectionAt(position.line + 1);
+  const section = document.sectionAt(position.line + 1, position.character);
   if (section?.tag !== 'node' || section.headingLine !== position.line + 1) return undefined;
   const name = nodeNameRange(document, section);
   return name && lineRangeContains(name, position.character) ? section : undefined;

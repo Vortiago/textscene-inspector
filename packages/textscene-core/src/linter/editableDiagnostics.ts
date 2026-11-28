@@ -12,13 +12,13 @@ import { armDiagnostic, headingSubject } from './ruleArms.js';
 const EDITABLE_SUBJECT = headingSubject('editable');
 
 export function editableDiagnostics(scene: StrictScene): Diagnostic[] {
-  return scene.pathlessEditableLines.map((line) =>
+  return scene.pathlessEditables.map((place) =>
     armDiagnostic(
       FILE_DIAGNOSTICS.editableMissingPath,
       EDITABLE_SUBJECT,
       "Editable heading is missing 'path'. Godot cannot load the file at all: the text loader refuses an " +
         '[editable] tag without one, so nothing in the file is read.',
-      { line, column: 1 }
+      place
     )
   );
 }

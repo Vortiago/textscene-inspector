@@ -214,8 +214,8 @@ texture_filter = null
 
       const nil = result.errors.find((e) => e.message.includes('cannot hold'));
       expect(nil).toBeDefined();
-      // Same anchor as every other property diagnostic: just past `key = `.
-      expect(nil!.column).toBe('texture_filter'.length + 3);
+      // Same anchor as every other property diagnostic: the 1-based column of the value after `key = `.
+      expect(nil!.column).toBe('texture_filter'.length + 4);
       expect(nil!.line).toBe(4);
     });
 

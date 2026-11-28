@@ -125,7 +125,7 @@ export function synthesiseGLBScene(glbPath: string): TscnScene {
     properties: { glbPath } as Record<string, unknown>,
   };
   // Seated like a parsed root, so every `%Name` reader finds its (empty) claim table.
-  const { roots } = seatScene([{ node: root, line: 0, declaredParent: undefined, uniqueId: 0 }]);
+  const { roots } = seatScene([{ node: root, line: 0, column: 1, declaredParent: undefined, uniqueId: 0 }]);
   return {
     nodes: roots,
     externalResources: [],

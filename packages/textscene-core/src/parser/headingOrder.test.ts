@@ -4,18 +4,19 @@ import { headingOrder } from './headingOrder.js';
 function misplacedIn(...types: string[]) {
   const order = headingOrder();
   types.forEach((type, index) => order.read(type, index + 1));
-  return order.misplaced();
+  return order.stop();
 }
 
 describe('headingOrder', () => {
-  it('answers the type of the heading before each heading', () => {
+  it('answers the type of the last heading read', () => {
     const order = headingOrder();
+    const previous = ['gd_scene', 'node'].map((type, index) => {
+      const before = order.previous();
+      order.read(type, index + 1);
+      return before;
+    });
 
-    expect(['gd_scene', 'node', 'editable'].map((type, index) => order.read(type, index + 1))).toEqual([
-      null,
-      'gd_scene',
-      'node',
-    ]);
+    expect([...previous, order.previous()]).toEqual([null, 'gd_scene', 'node']);
   });
 
   it.each([
@@ -41,13 +42,68 @@ describe('headingOrder', () => {
     expect(misplacedIn('gd_scene', 'node', 'sub_resource', 'ext_resource')).toMatchObject({ line: 3 });
   });
 
-  it('judges no heading after a heading line that does not parse, as the loader stops there', () => {
+  it('stops at a heading in its place that lacks a required field', () => {
     const order = headingOrder();
     order.read('gd_scene', 1);
-    order.stop();
-    order.read('ext_resource', 3);
+    order.read('ext_resource', 3, 'id');
+    order.read('node', 5);
 
-    expect([order.misplaced(), order.isStopped()]).toEqual([null, true]);
+    expect(order.stop()).toEqual({ type: 'ext_resource', line: 3, missing: 'id' });
+  });
+
+  it('judges the place before the fields', () => {
+    const order = headingOrder();
+    ['gd_scene', 'node'].forEach((type, index) => order.read(type, index + 1));
+    order.read('ext_resource', 3, 'id');
+
+    expect(order.stop()).toEqual({ type: 'ext_resource', line: 3, reason: 'unknown tag' });
+  });
+
+  it('stops at a header that lacks a required field', () => {
+    const order = headingOrder();
+    order.read('gd_resource', 2, 'type');
+
+    expect(order.stop()).toEqual({ type: 'gd_resource', line: 2, missing: 'type' });
+  });
+
+  const unparsed = { error: 'Expected identifier', code: 'ERR_PARSE_ERROR', line: 3 } as const;
+
+  it('stops at a heading that does not parse, and judges no heading after it', () => {
+    const order = headingOrder();
+    order.read('gd_scene', 1);
+    order.refuse(unparsed);
+    order.read('ext_resource', 5);
+
+    expect([order.stop(), order.isStopped()]).toEqual([{ ...unparsed, readBy: 'opening tag' }, true]);
+  });
+
+  it.each([
+    [[], 'header'],
+    [['gd_scene', 'node'], 'node body'],
+    [['gd_scene', 'ext_resource'], 'section'],
+    [['gd_resource', 'resource'], 'section'],
+  ])('names the call that reads a heading after %j: %s', (types, readBy) => {
+    const order = headingOrder();
+    types.forEach((type, index) => order.read(type, index + 1));
+    order.refuse(unparsed);
+
+    expect(order.stop()).toMatchObject({ readBy });
+  });
+
+  it('keeps a misplaced heading before one that does not parse', () => {
+    const order = headingOrder();
+    ['gd_scene', 'node', 'sub_resource'].forEach((type, index) => order.read(type, index + 1));
+    order.refuse(unparsed);
+
+    expect(order.stop()).toMatchObject({ type: 'sub_resource' });
+  });
+
+  it('records no stop of a file whose first heading is no header', () => {
+    const order = headingOrder();
+    order.read('node', 1);
+    order.refuse(unparsed);
+
+    expect([order.stop(), order.isStopped()]).toEqual([null, true]);
   });
 
   it('judges no heading of a file with no header line', () => {

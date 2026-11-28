@@ -6,6 +6,7 @@
  */
 
 import { headingOrder } from './headingOrder.js';
+import { hasBody, missingField } from '../godot/scene/textResourceTags.js';
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/classdb/deprecated.js';
 import type {
   TscnScene,
@@ -22,20 +23,38 @@ import {
   parseProperty,
   isHeading,
   isSectionHeading,
-  isEmpty,
   scanValueChunk,
   isIncompleteState,
   INITIAL_SCAN_STATE,
   stripLineComment,
+  leadingSpace,
+  godotIndent,
+  headerIndent,
+  trimEndSpace,
+  isGodotBlank,
   splitLines,
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
+import { HEADER_READING, readTag, SECTION_READING, type TagField } from '../godot/variant/tagReader.js';
+import { readVariant, strToVar, variantEnd } from '../godot/variant/strToVar.js';
+import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
+import {
+  escapedNewlinesIn,
+  escapesItsNewline,
+  headingText,
+  lineAndColumnOf,
+  lineStartsOf,
+  opensKey,
+  valueOffset,
+  withoutComments,
+} from './sourceOffsets.js';
 import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import * as logger from '../logger.js';
 import { nodeOrigin } from './rawNode.js';
 import { simplifiedNodePath } from '../godot/string/nodePath.js';
+import { GodotError } from '../godot/variant/parseError.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
@@ -73,11 +92,23 @@ export interface ParsedProperty {
   key: string;
   /** The value as written. */
   value: string;
-  /** The line the value starts on. */
+  /** The line the key sits on. */
   line: number;
+  /** The 0-based column the key starts at, past a heading's `]` where it follows one. */
+  column: number;
+  /** The line and 0-based column the value's text starts at, a later line where it starts after its key's. */
+  valueStart: { line: number; column: number };
+  /** The line the value ends on, a later line where the value starts after its key's line. */
+  endLine: number;
   isMultiline: boolean;
   /** The pair the section's bag holds, a deprecated spelling resolved, so no observer derives it again. */
   stored: ResolvedProperty;
+}
+
+/** The 0-based columns a heading spans on its first line, the end exclusive. */
+export interface HeadingColumns {
+  start: number;
+  end: number;
 }
 
 /**
@@ -85,10 +116,10 @@ export interface ParsedProperty {
  * purely additive: it never changes what the lenient loop parses or recovers.
  */
 export interface ParseObserver {
-  /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
+  /** A line Godot refuses: INVALID_HEADING_FORMAT, INVALID_PROPERTY_FORMAT or MISSING_HEADING_FIELD. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;
-  /** A heading parsed successfully and a new section begins. */
-  onSectionStart?(heading: ParsedHeading, section: SectionType, line: number): void;
+  /** A heading parsed successfully and a new section begins. `columns` spans its text on its first line. */
+  onSectionStart?(heading: ParsedHeading, section: SectionType, line: number, columns: HeadingColumns): void;
   /** A property value completed. */
   onProperty?(property: ParsedProperty): void;
   /**
@@ -119,6 +150,7 @@ export class TscnParserCore {
     // Debug, not info: an editor host parses on each keystroke.
     logger.debug('[Parser] Starting TSCN parsing');
     const lines = splitLines(content);
+    const lineStarts = lineStartsOf(content);
 
     // Every node beside its heading's line, in scan order. The line stays off the node:
     // the orphan report reads it here, and a strict observer gets it from `onSectionBuilt`.
@@ -136,6 +168,11 @@ export class TscnParserCore {
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
     let currentHeadingLine = 0;
+    let currentHeadingColumn = 1;
+    // Where the next pass starts on its line: past a heading's `]`, Godot reads the rest of the line as body.
+    let resumeColumn = 0;
+    // The newlines a string escapes so far, which Godot's line counter skips (variant_parser.cpp:386).
+    let skippedLines = 0;
     // The type a `.tres` header declares. Its `[resource]` body has no type:
     // `res_type` comes from the header (resource_format_text.cpp:1166) and
     // `ClassDB::instantiate(res_type)` builds it when the tag opens (:741). A `.tscn`
@@ -149,7 +186,15 @@ export class TscnParserCore {
     let pendingMultiline: {
       key: string;
       lines: string[];
+      /** The length of `lines` joined, so the offset of the newline after the last line. */
+      joinedLength: number;
+      /** The offset of each newline in the joined value that a string escapes. */
+      skippedNewlines: number[];
       startLine: number;
+      startColumn: number;
+      valueStart: { line: number; column: number };
+      endLine: number;
+      godotStartLine: number;
       scanState: ValueScanState;
     } | null = null;
 
@@ -159,7 +204,9 @@ export class TscnParserCore {
       if (currentSection === 'node') {
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
-          origins.push(nodeOrigin(currentHeading, node, currentHeadingLine));
+          origins.push(
+            nodeOrigin(currentHeading, node, { line: currentHeadingLine, column: currentHeadingColumn })
+          );
           observer?.onSectionBuilt?.(node, currentHeadingLine);
         }
       } else if (currentSection === 'ext_resource') {
@@ -193,168 +240,353 @@ export class TscnParserCore {
     };
 
     // The value as written, not as stored: the loader parses the text the file holds.
-    const addFileValue = (value: Omit<FileValue, 'subResourcesBefore' | 'extResourcesBefore'>) => {
+    const addFileValue = (
+      value: Omit<FileValue, 'subResourcesNamed' | 'extResourcesBefore'>,
+      subResourcesNamed: number
+    ) => {
       // Every read names `Resource`, so a value without it holds no read and costs no object.
       if (headings.isStopped() || !value.text.includes('Resource')) return;
-      const before = {
-        subResourcesBefore: internalResources.length,
-        extResourcesBefore: externalResources.length,
-      };
-      fileValues.push({ ...value, ...before });
+      fileValues.push({ ...value, subResourcesNamed, extResourcesBefore: externalResources.length });
     };
     // A body is read after the file opens, so no body value sits in the opening tag.
-    const addBodyValue = (text: string, line: number) => {
-      if (currentSection === 'node') addFileValue({ text, line, place: 'node', isOpeningTag: false });
-      else if (currentSection === 'sub_resource' || currentSection === 'resource')
-        addFileValue({ text, line, place: 'section', isOpeningTag: false });
+    const addBodyValue = (text: string, line: number, skippedNewlines: readonly number[] = []) => {
+      const place = currentSection === 'node' ? 'node' : 'section';
+      // The loader names a `[sub_resource]` before it reads the body (resource_format_text.cpp:629).
+      const ownSection = currentSection === 'sub_resource' ? 1 : 0;
+      if (currentSection === 'node' || currentSection === 'sub_resource' || currentSection === 'resource')
+        addFileValue(
+          { text, line, place, isOpeningTag: false, isHeadingField: false, skippedNewlines },
+          internalResources.length + ownSection
+        );
     };
 
     const storePending = () => {
       if (pendingMultiline && currentHeading) {
         // The one join per value: O(total length), not one per appended line.
-        const value = pendingMultiline.lines.join('\n');
+        const joined = pendingMultiline.lines.join('\n');
+        // A complete value ends where its key's line would trim it, so a value reads the same on either line.
+        const value = isIncompleteState(pendingMultiline.scanState) ? joined : trimEndSpace(joined);
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
-        addBodyValue(value, pendingMultiline.startLine);
+        addBodyValue(value, pendingMultiline.godotStartLine, pendingMultiline.skippedNewlines);
         observer?.onProperty?.({
           section: currentSection,
           ownerType: currentOwnerType(),
           key: pendingMultiline.key,
           value,
           line: pendingMultiline.startLine,
-          isMultiline: pendingMultiline.lines.length > 1,
+          column: pendingMultiline.startColumn,
+          valueStart: pendingMultiline.valueStart,
+          endLine: pendingMultiline.endLine,
+          isMultiline: pendingMultiline.endLine > pendingMultiline.startLine,
           stored: resolved,
         });
       }
       pendingMultiline = null;
     };
 
+    // Every field the loader parses in a heading, read before the heading opens its section.
+    const addFieldValues = (fields: readonly TagField[], type: string, previous: string | null) => {
+      const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
+      const place =
+        previous === null
+          ? 'header'
+          : type === 'connection'
+            ? 'binds'
+            : previous === 'node'
+              ? 'node'
+              : 'section';
+      for (const { start, end, line } of fields) {
+        // A field is one value, so one that opens with a quote is a string and holds no read.
+        if (content[start] !== '"') {
+          const text = withoutComments(content.slice(start, end));
+          const skippedNewlines = escapedNewlinesIn(text);
+          addFileValue(
+            { text, line, place, isOpeningTag, isHeadingField: true, skippedNewlines },
+            internalResources.length
+          );
+        }
+      }
+    };
+
+    const openSection = (
+      heading: ParsedHeading,
+      line: number,
+      columns: HeadingColumns,
+      endLine: number,
+      fields: readonly TagField[]
+    ) => {
+      currentHeading = heading;
+      currentSection = this.identifySection(heading);
+      currentHeadingLine = line;
+      currentHeadingColumn = columns.start + 1;
+      if (heading.type === 'gd_resource') headerResourceType = heading.attributes.type;
+      const editablePath = heading.type === 'editable' ? heading.attributes.path : undefined;
+      if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
+      addFieldValues(fields, heading.type, headings.previous());
+      // Godot judges a tag once it has read the `]`, so a refusal names the line it ends on.
+      const missing = missingField(
+        heading.type,
+        fields.map(({ key }) => key)
+      );
+      const stopBefore = headings.stop();
+      headings.read(heading.type, endLine, missing);
+      if (missing && headings.stop() !== stopBefore && !RULE_REPORTED.has(heading.type))
+        reportMissingField(heading.type, missing, line, columns);
+      observer?.onSectionStart?.(heading, currentSection, line, columns);
+    };
+
+    const reportMissingField = (type: string, field: string, line: number, columns: HeadingColumns) =>
+      observer?.onError?.({
+        message: `Godot stops the load at a [${type}] heading with no '${field}' field`,
+        line,
+        column: columns.start + 1,
+        code: 'MISSING_HEADING_FIELD',
+      });
+
+    // Godot reads the next token as the value, so a key or heading stops it (resource_format_text.cpp:291).
+    const refuseAwaitedValue = (
+      key: string,
+      line: string,
+      at: { line: number; column: number; godotLine: number }
+    ) => {
+      const indent = leadingSpace(line);
+      const read = readVariant(line.slice(indent));
+      if (!('error' in read)) return;
+      headings.refuse({ error: read.error, code: GodotError.ParseError, line: at.godotLine });
+      observer?.onError?.({
+        message: `Godot reads this line as the value of "${key} =" and stops: ${read.error}`,
+        line: at.line,
+        column: at.column + indent + 1,
+        code: 'INVALID_PROPERTY_FORMAT',
+      });
+    };
+
+    // A key with no value at the end: Godot reads the end as its value (variant_parser.cpp:1953, :1638).
+    const refuseValueAtEnd = (pending: { key: string; startLine: number; startColumn: number }) => {
+      headings.refuse({
+        error: VALUE_AT_END,
+        code: GodotError.ParseError,
+        line: lines.length - skippedLines,
+      });
+      observer?.onError?.({
+        message: `"${pending.key} =" has no value, and Godot stops at the end of the file: ${VALUE_AT_END}`,
+        line: pending.startLine,
+        column: pending.startColumn + 1,
+        code: 'INVALID_PROPERTY_FORMAT',
+      });
+    };
+
+    // After a heading with no body, plain `parse_tag` refuses text (resource_format_text.cpp:40, :1185).
+    const refuseBody = (line: string, lineNumber: number, godotLine: number, column: number) => {
+      headings.refuse({ error: "Expected '['", code: GodotError.ParseError, line: godotLine });
+      observer?.onError?.({
+        message: `Godot reads no body after [${headings.previous()}]: "${line.trim()}"`,
+        line: lineNumber,
+        column: column + 1,
+        code: 'INVALID_PROPERTY_FORMAT',
+      });
+    };
+
     for (let i = 0; i < lines.length; i++) {
       // A `;` comment ends the line for Godot's reader wherever it sits, so it
       // is gone before the line is read as heading, property or continuation.
-      const line = stripLineComment(lines[i]!, pendingMultiline?.scanState.inString ?? false);
+      const column = resumeColumn;
+      resumeColumn = 0;
+      const line = stripLineComment(lines[i]!.slice(column), pendingMultiline?.scanState.inString ?? false);
       const lineNumber = i + 1;
+      const godotLine = lineNumber - skippedLines;
 
       // Inside an open string, append raw lines, blank ones included. Only a real
       // section heading means the string never closed: salvage it and process the
       // heading. BBCode tags and bracketed content are string content, so
       // `isSectionHeading`, not `isHeading`, decides.
       if (pendingMultiline) {
-        if (isSectionHeading(line)) {
+        const awaitsValue = pendingMultiline.lines.length === 0;
+        if (isSectionHeading(line) || (awaitsValue && opensKey(line))) {
+          if (awaitsValue && !headings.isStopped())
+            refuseAwaitedValue(pendingMultiline.key, line, { line: lineNumber, column, godotLine });
+          // The lenient path keeps the next key, so an empty value stays empty.
           storePending();
+        } else if (awaitsValue && isGodotBlank(line)) {
+          continue;
         } else {
-          // Scan only this chunk: a `\n` separator affects neither `inString` nor
-          // `depth`, so scanning `line` alone yields the state the joined string
-          // would.
-          pendingMultiline.lines.push(line);
-          pendingMultiline.scanState = scanValueChunk(line, pendingMultiline.scanState);
-          if (!isIncompleteState(pendingMultiline.scanState)) storePending();
+          // Godot reads the value from the token after the `=`, so a value on a later line starts there.
+          const indent = awaitsValue ? leadingSpace(line) : 0;
+          const chunk = line.slice(indent);
+          if (awaitsValue) {
+            pendingMultiline.godotStartLine = godotLine;
+            pendingMultiline.valueStart = { line: lineNumber, column: column + indent };
+          }
+          // A `\n` separator moves neither `inString` nor `depth`, so this chunk gives the joined state.
+          pendingMultiline.joinedLength += (awaitsValue ? 0 : 1) + chunk.length;
+          pendingMultiline.lines.push(chunk);
+          pendingMultiline.endLine = lineNumber;
+          const stateBefore = pendingMultiline.scanState;
+          pendingMultiline.scanState = scanValueChunk(chunk, stateBefore);
+          if (pendingMultiline.scanState.inString && escapesItsNewline(content, lineStarts, i)) {
+            pendingMultiline.skippedNewlines.push(pendingMultiline.joinedLength);
+            skippedLines++;
+          }
+          const isComplete = !isIncompleteState(pendingMultiline.scanState);
+          // A heading's own `[` or quote leaves the scan open, so an unclosed heading is looked for too.
+          const mayHoldHeading = isComplete || closesBeforeBracket(chunk, stateBefore);
+          const headingAt = mayHoldHeading ? headingInLastChunk(pendingMultiline.lines) : null;
+          if (headingAt !== null) {
+            pendingMultiline.lines[pendingMultiline.lines.length - 1] = chunk.slice(0, headingAt);
+            resumeColumn = column + indent + headingAt;
+            i--;
+          }
+          if (isComplete || headingAt !== null) storePending();
           continue;
         }
       }
 
-      // A comment-only line is already whitespace: `stripLineComment` above is
-      // the single place a `;` is understood.
-      if (isEmpty(line)) {
+      // Godot reads the header from the first token, so any text before it, a BOM too, is a refused tag.
+      const readsHeader = headings.previous() === null && !headings.isStopped();
+      const indent = readsHeader ? headerIndent(line) : godotIndent(line);
+      // A comment-only line is already blank: `stripLineComment` above is the one place a `;` is read.
+      if (readsHeader ? indent === line.length : isGodotBlank(line)) continue;
+
+      const opensTag = readsHeader || line[indent] === '[';
+      if (!opensTag && !headings.isStopped() && readsNoBody(headings.previous())) {
+        refuseBody(line, lineNumber, godotLine, column + indent);
+        continue;
+      }
+      if (opensTag) {
+        const reading = headings.previous() === null ? HEADER_READING : SECTION_READING;
+        const tag = readTag(content, lineStarts[i]! + column + indent, godotLine, reading);
+        if (tag && !('error' in tag)) {
+          const end = lineAndColumnOf(lineStarts, tag.end, i);
+          finalizeSection();
+          skippedLines = end.line + 1 - tag.endLine;
+          const columns = { start: column + indent, end: end.line === i ? end.column : column + line.length };
+          openSection(
+            parseHeading(headingText(lines, i, column, end))!,
+            lineNumber,
+            columns,
+            tag.endLine,
+            tag.fields
+          );
+          // Text after the `]` is the section's body, so the next pass reads the rest of that line.
+          const hasRest = !isGodotBlank(lines[end.line]!.slice(end.column));
+          resumeColumn = hasRest ? end.column : 0;
+          i = hasRest ? end.line - 1 : end.line;
+          continue;
+        }
+        // The section before closes as the tag opens, so a field reads what it declared.
+        finalizeSection();
+        if (tag) {
+          addFieldValues(tag.fields, tag.name ?? '', headings.previous());
+          headings.refuse({ error: tag.error, code: tag.code, line: tag.line });
+        } else if (readsHeader) {
+          // `open` prints the empty message of a header that meets the end (resource_format_text.cpp:1131).
+          headings.refuse({ error: '', code: GodotError.FileEof, line: godotLine });
+        }
+        observer?.onError?.({
+          // Godot reads the header from the file's first token, so its error names the cause, not the line.
+          message: readsHeader
+            ? `Invalid file header: ${tag?.error || 'the file ends before it'}`
+            : `Invalid heading format: "${line.trim()}"`,
+          line: lineNumber,
+          column: column + indent + 1,
+          code: 'INVALID_HEADING_FORMAT',
+        });
+        // A header refused past its line still names its type, so the file reads as a resource.
+        if (tag?.name === 'gd_resource' && !isHeading(line))
+          headerResourceType = typeField(content, tag.fields);
+        const stop = tag && lineAndColumnOf(lineStarts, tag.stop, i);
+        // The lenient tree reads a heading the tag stopped at, from its `[`, wherever it opens.
+        if (tag && stop && content[tag.stop] === '[' && (stop.line > i || stop.column > column + indent)) {
+          resumeColumn = stop.column;
+          i = stop.line - 1;
+          continue;
+        }
+        // The lenient path draws what it can of a heading Godot refuses.
+        if (isHeading(line)) {
+          openSection(
+            parseHeading(line)!,
+            lineNumber,
+            { start: column + indent, end: column + line.length },
+            godotLine,
+            []
+          );
+          continue;
+        }
+        // An unclosed heading draws nothing, and the lines its tag read are no section's body.
+        if (stop) {
+          const opensNextLine = stop.line > i && isSectionHeading(stripLineComment(lines[stop.line]!));
+          i = Math.max(i, opensNextLine ? stop.line - 1 : stop.line);
+        }
+        continue;
+      }
+      const written = parseProperty(line);
+      if (!written) {
+        observer?.onError?.({
+          message: `Invalid property format: "${line.trim()}"`,
+          line: lineNumber,
+          column: column + leadingSpace(line) + 1,
+          code: 'INVALID_PROPERTY_FORMAT',
+        });
         continue;
       }
 
-      if (isHeading(line)) {
-        finalizeSection();
+      const headingAt = headingAfterValue(written.value);
+      const property =
+        headingAt === null ? written : { ...written, value: trimEndSpace(written.value.slice(0, headingAt)) };
+      if (headingAt !== null) {
+        resumeColumn = column + valueOffset(line) + headingAt;
+        i--;
+      }
 
-        currentHeading = parseHeading(line);
-        if (currentHeading) {
-          currentSection = this.identifySection(currentHeading);
-          currentHeadingLine = lineNumber;
-          if (currentHeading.type === 'gd_resource') {
-            headerResourceType = currentHeading.attributes.type;
+      if (currentHeading) {
+        const scanState = scanValueChunk(property.value, INITIAL_SCAN_STATE);
+        const awaitsValue = property.value === '';
+        if (awaitsValue || isIncompleteState(scanState)) {
+          pendingMultiline = {
+            key: property.key,
+            lines: awaitsValue ? [] : [property.value],
+            joinedLength: property.value.length,
+            skippedNewlines: [],
+            startLine: lineNumber,
+            startColumn: column + leadingSpace(line),
+            valueStart: { line: lineNumber, column: column + valueOffset(line) },
+            endLine: lineNumber,
+            godotStartLine: godotLine,
+            scanState,
+          };
+          if (scanState.inString && escapesItsNewline(content, lineStarts, i)) {
+            pendingMultiline.skippedNewlines.push(property.value.length);
+            skippedLines++;
           }
-          const editablePath =
-            currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
-          if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
-          const previous = headings.read(currentHeading.type, lineNumber);
-          const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
-          const { instance, binds } = currentHeading.attributes;
-          const place = previous === 'node' ? 'node' : 'section';
-          if (currentHeading.type === 'node' && instance !== undefined)
-            addFileValue({ text: instance, line: lineNumber, place, isOpeningTag });
-          if (currentHeading.type === 'connection' && binds !== undefined)
-            addFileValue({ text: binds, line: lineNumber, place: 'binds', isOpeningTag });
-          observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
-          observer?.onError?.({
-            message: `Invalid heading format: "${line.trim()}"`,
+          // Stored as the setter takes it, `frames` as `sprite_frames`. A diagnostic names the text.
+          const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
+          currentProperties[resolved.key] = resolved.value;
+          addBodyValue(property.value, godotLine);
+          observer?.onProperty?.({
+            section: currentSection,
+            ownerType: currentOwnerType(),
+            key: property.key,
+            value: property.value,
             line: lineNumber,
-            column: 1,
-            code: 'INVALID_HEADING_FORMAT',
+            column: column + leadingSpace(line),
+            valueStart: { line: lineNumber, column: column + valueOffset(line) },
+            endLine: lineNumber,
+            isMultiline: false,
+            stored: resolved,
           });
-          headings.stop();
-        }
-      } else {
-        // A line that opens a bracket but never parses as a heading is malformed,
-        // for example a missing ']'. The lenient path recovers below. Strict
-        // consumers get the error.
-        const malformedHeading = line.trim().startsWith('[');
-        if (malformedHeading) {
-          observer?.onError?.({
-            message: `Invalid heading format: "${line.trim()}"`,
-            line: lineNumber,
-            column: 1,
-            code: 'INVALID_HEADING_FORMAT',
-          });
-          headings.stop();
-        }
-
-        const property = parseProperty(line);
-        if (!property) {
-          if (!malformedHeading) {
-            observer?.onError?.({
-              message: `Invalid property format: "${line.trim()}"`,
-              line: lineNumber,
-              column: 1,
-              code: 'INVALID_PROPERTY_FORMAT',
-            });
-          }
-          continue;
-        }
-
-        if (currentHeading) {
-          const scanState = scanValueChunk(property.value, INITIAL_SCAN_STATE);
-          if (isIncompleteState(scanState)) {
-            pendingMultiline = {
-              key: property.key,
-              lines: [property.value],
-              startLine: lineNumber,
-              scanState,
-            };
-          } else {
-            // Stored under the name and literal the setter receives: a pre-4.0 alias like
-            // `frames` is `sprite_frames`, and `extents` is `size` doubled, so every
-            // reader sees one key and one value. The observer gets both as written,
-            // since a diagnostic names what is in the file, and the stored pair beside them.
-            const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
-            currentProperties[resolved.key] = resolved.value;
-            addBodyValue(property.value, lineNumber);
-            observer?.onProperty?.({
-              section: currentSection,
-              ownerType: currentOwnerType(),
-              key: property.key,
-              value: property.value,
-              line: lineNumber,
-              isMultiline: false,
-              stored: resolved,
-            });
-          }
         }
       }
     }
 
+    if (pendingMultiline?.lines.length === 0 && !headings.isStopped()) refuseValueAtEnd(pendingMultiline);
     storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
     // Each lookup by id indexes a table once (`utils/keyedLookup.ts`), so a table never changes after the scan.
     Object.freeze(origins);
-    const misplacedHeading = headings.misplaced();
+    const headingStop = headings.stop();
     Object.freeze(externalResources);
     Object.freeze(internalResources);
     const seating = seatScene(origins);
@@ -372,7 +604,7 @@ export class TscnParserCore {
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(editableInstances.length > 0 ? { editableInstances } : {}),
         ...(fileValues.length > 0 ? { fileValues } : {}),
-        ...(misplacedHeading ? { misplacedHeading } : {}),
+        ...(headingStop ? { headingStop } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
@@ -390,4 +622,53 @@ export class TscnParserCore {
 
     return 'none';
   }
+}
+
+/** `parse_value`'s message for the end of the file read as a value (variant_parser.cpp:1638). */
+const VALUE_AT_END = "Expected value, got 'EOF'";
+
+// The linter's `connection-missing-field` and `editable-missing-path` rules report these kinds.
+const RULE_REPORTED: ReadonlySet<string> = new Set(['connection', 'editable']);
+
+/** The `type=` string a tag read before it stopped, or undefined where it read none. */
+function typeField(content: string, fields: readonly TagField[]): string | undefined {
+  const field = fields.find(({ key }) => key === 'type');
+  const value = field && strToVar(content.slice(field.start, field.end));
+  return value?.type === VARIANT_TYPE.STRING ? value.value : undefined;
+}
+
+/** A `[` after a token that can end a value, not a typed `Array[` or `Dictionary[`. */
+const MAY_HOLD_HEADING = /[^\s,[(:{]\s*(?<!\b(?:Array|Dictionary))\[/;
+const MAY_HOLD_HEADING_ALL = new RegExp(MAY_HOLD_HEADING, 'g');
+
+/** Where a heading opens after a complete value on its line, as Godot reads it, or null. */
+function headingAfterValue(value: string): number | null {
+  if (!MAY_HOLD_HEADING.test(value)) return null;
+  const end = variantEnd(value, SECTION_READING);
+  if (end === null) return null;
+  const at = end + godotIndent(value.slice(end));
+  return value[at] === '[' ? at : null;
+}
+
+/** Whether the scan closes the value at the token before some `[` that may open a heading in `chunk`. */
+function closesBeforeBracket(chunk: string, state: ValueScanState): boolean {
+  for (const match of chunk.matchAll(MAY_HOLD_HEADING_ALL)) {
+    if (!isIncompleteState(scanValueChunk(chunk.slice(0, match.index + 1), state))) return true;
+  }
+  return false;
+}
+
+/** Where a heading opens in the last of the lines of a value, as Godot reads it, or null. */
+function headingInLastChunk(lines: readonly string[]): number | null {
+  const last = lines[lines.length - 1]!;
+  if (!last.includes('[')) return null;
+  const joined = lines.join('\n');
+  const at = headingAfterValue(joined);
+  const lastStart = joined.length - last.length;
+  return at !== null && at >= lastStart ? at - lastStart : null;
+}
+
+/** Whether Godot refuses a body after a heading of `type`. Null, before any heading, is not one. */
+function readsNoBody(type: string | null): boolean {
+  return type !== null && !hasBody(type);
 }

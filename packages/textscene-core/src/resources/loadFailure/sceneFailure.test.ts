@@ -4,7 +4,13 @@ import type { FailingFileRead } from './fileReads';
 import { sceneFailureOf } from './sceneFailure';
 
 const MAIN = 'res://main.tscn';
-const GONE: FailingFileRead = { path: 'res://gone.png', kind: 'section ExtResource', uid: '', line: 7 };
+const GONE: FailingFileRead = {
+  path: 'res://gone.png',
+  written: 'res://gone.png',
+  kind: 'section ExtResource',
+  uid: '',
+  line: 7,
+};
 
 function row(path: string, overrides: Partial<SceneFile> = {}): SceneFile {
   return {
@@ -33,12 +39,32 @@ describe('sceneFailureOf', () => {
     });
   });
 
+  it('prints a relative literal path as the file writes it, though it loads under res://', () => {
+    const relative: FailingFileRead = {
+      path: 'res://sub/gone.tres',
+      written: 'sub/gone.tres',
+      kind: 'section Resource',
+      uid: '',
+      line: 4,
+    };
+
+    expect(sceneFailureOf([missing('res://sub/gone.tres')], failing([relative]))?.line).toBe(
+      `${MAIN}:4 - Parse Error: Can't load resource at path: sub/gone.tres with uid: .`
+    );
+  });
+
   it('names none when no failing read reaches a failed file', () => {
     expect(sceneFailureOf([row('res://gone.png')], failing([GONE]))).toBeNull();
   });
 
   it('names none while an earlier read still loads', () => {
-    const first: FailingFileRead = { path: 'res://slow.png', kind: 'section ExtResource', uid: '', line: 5 };
+    const first: FailingFileRead = {
+      path: 'res://slow.png',
+      written: 'res://slow.png',
+      kind: 'section ExtResource',
+      uid: '',
+      line: 5,
+    };
     const files = [row('res://slow.png', { state: 'loading' }), missing('res://gone.png')];
 
     expect(sceneFailureOf(files, failing([first, GONE]))).toBeNull();

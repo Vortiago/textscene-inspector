@@ -181,7 +181,7 @@ export class Linter {
       `Header format=${header.format} predates the text format Godot writes today (3 or 4). ` +
         'Lint rules target the current format, so nothing else in this file is reported. ' +
         'Open and re-save the file in Godot to migrate it.',
-      { line: header.line, column: 1 }
+      { line: header.line, column: header.column }
     );
   }
 

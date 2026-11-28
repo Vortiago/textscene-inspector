@@ -10,17 +10,10 @@ import { ownsNilMessage } from '../propertyValidator.js';
 import { isNilLiteral } from '../../godot/variant/variantParser.js';
 
 /** The refusal for one property, or null where no validator claims it or the value passes. */
-export function propertyRefusal({
-  ownerType,
-  key,
-  value,
-  line,
-  isMultiline,
-  stored,
-}: ParsedProperty): ParseError | null {
-  // Multi-line values (shader code, label text) and properties without a typed owner (index=/instance= nodes,
-  // ext_resource/gd_scene sections) go unvalidated.
-  if (isMultiline || !ownerType) return null;
+export function propertyRefusal(property: ParsedProperty): ParseError | null {
+  const { ownerType, key, value, valueStart, stored } = property;
+  // A value over several lines (shader code, label text) or with no typed owner goes unvalidated.
+  if (value.includes('\n') || !ownerType) return null;
 
   // The key as written first. Where nothing claims that spelling, the pair the engine applies
   // (`godot/classdb/deprecated.ts` resolves the alias and transforms the value), and the diagnostic names both,
@@ -36,20 +29,29 @@ export function propertyRefusal({
     lookupValue = stored.value;
   }
 
-  const found = validator(lookupKey, lookupValue, line);
-  if (!found) return null;
+  const validated = validator(lookupKey, lookupValue, valueStart.line);
+  if (!validated) return null;
+  const found: ParseError = { ...validated, ...writtenPlace(validated.column, lookupKey, property) };
   const keyed: ParseError = { ...found, propertyKey: key };
   const error: ParseError =
     lookupKey === key
       ? keyed
       : {
           ...keyed,
-          // The validator's `propertyError` anchors the column on the key it was handed. The rebase
-          // lands it on the value after the key as written.
-          column: found.column - lookupKey.length + key.length,
           message: `Property '${key}' is applied as '${lookupKey} = ${lookupValue}': ${found.message}`,
         };
   return isNilLiteral(value) && !ownsNilMessage(error) ? nilConversion(error, key, value) : error;
+}
+
+// A validator anchors on a line `key = value`: below `key.length + 3` in the key, from it on in the value.
+function writtenPlace(
+  anchor: number,
+  lookupKey: string,
+  { line, column, valueStart }: ParsedProperty
+): { line: number; column: number } {
+  const valueAnchor = lookupKey.length + 3;
+  if (anchor < valueAnchor) return { line, column: column + anchor };
+  return { line: valueStart.line, column: valueStart.column + 1 + anchor - valueAnchor };
 }
 
 /**

@@ -77,6 +77,7 @@ describe('strictObserver', () => {
       connections: [
         {
           line: 5,
+          column: 1,
           signal: 'ready',
           from: '.',
           to: '.',
@@ -86,7 +87,7 @@ describe('strictObserver', () => {
           toIdTrail: undefined,
         },
       ],
-      pathlessEditableLines: [],
+      pathlessEditables: [],
     });
   });
 });

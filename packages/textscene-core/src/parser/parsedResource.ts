@@ -6,7 +6,7 @@
 
 import { stringLiteral } from '../godot/string/string.js';
 import { TscnParserCore } from './TscnParserCore.js';
-import type { MisplacedHeading } from './headingOrder.js';
+import type { HeadingStop } from './headingOrder.js';
 import type { FileValue, TscnExternalResource, TscnInternalResource } from './types.js';
 import { UnparsedTextError } from './unparsedTextError';
 
@@ -19,7 +19,7 @@ export interface ParsedResource {
   readonly subResources: readonly TscnInternalResource[];
   /** Each value the text loader parses, in file order. Absent in a file that has no text sections. */
   readonly fileValues?: readonly FileValue[];
-  readonly misplacedHeading?: MisplacedHeading;
+  readonly headingStop?: HeadingStop;
 }
 
 /** Throws when the content has no [gd_resource] header (not a .tres file). */
@@ -37,7 +37,7 @@ export function parseTresFile(content: string): ParsedResource {
     extResources: scene.externalResources,
     subResources: scene.internalResources,
     ...(scene.fileValues ? { fileValues: scene.fileValues } : {}),
-    ...(scene.misplacedHeading ? { misplacedHeading: scene.misplacedHeading } : {}),
+    ...(scene.headingStop ? { headingStop: scene.headingStop } : {}),
   };
 }
 

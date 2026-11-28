@@ -283,6 +283,13 @@ describe('completionsAt', () => {
       expect(item?.replaces).toEqual(rangeAt(2, 2, line.length));
     });
 
+    it('completes a key being typed after a heading on its line, replacing that key', async () => {
+      const line = '[node name="R" type="MeshInstance3D"] mes';
+      const items = await completionsAt(new LanguageDocument(line), { line: 0, character: line.length });
+      const mesh = items.find((item) => item.label === 'mesh');
+      expect(mesh?.replaces).toEqual(rangeAt(0, line.length - 3, line.length));
+    });
+
     it('leaves an enum value without a range, since its insert text is not its label', async () => {
       const document = new LanguageDocument(SCENE);
       const text = document.lines[LINE.rootProperty - 1]!;

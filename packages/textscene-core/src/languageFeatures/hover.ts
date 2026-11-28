@@ -127,27 +127,30 @@ export function hoverAt(document: LanguageDocument, position: Position): Hover |
   const line = document.lines[position.line];
   if (line === undefined) return undefined;
   const documentLine = position.line + 1;
-  const section = document.sectionAt(documentLine);
+  const section = document.sectionAt(documentLine, position.character);
   if (!section) return undefined;
 
-  if (section.headingLine === documentLine) {
-    const type = headingAttribute(line, 'type');
+  if (document.isInHeading(documentLine, position.character)) {
+    const type = headingAttribute(document.headingText(section), 'type');
     if (!type || !spanContains(type.span, position.character)) return undefined;
     return classHover(type.value, lineRange(position.line, type.span));
   }
 
-  const location = document.propertyAt(documentLine);
+  const location = document.propertyAt(documentLine, position.character);
   if (!location) return undefined;
 
   // A property's key sits on its first line, so a continuation line of a multiline value
   // must not read as a new property.
   const isOnFirstLine = location.property.startLine === documentLine;
-  const key = propertyKeySpan(line);
+  const key = propertyKeySpan(line, isOnFirstLine ? location.property.startColumn : 0);
   if (isOnFirstLine && key && spanContains(key.span, position.character)) {
     return propertyHover(location.section, location.property, lineRange(position.line, key.span));
   }
   if (location.property.isMultiline) return undefined;
-  const value = propertyValueSpan(line);
-  if (!value || !spanContains(value.span, position.character)) return undefined;
-  return valueHover(document, location, lineRange(position.line, value.span));
+  const value = propertyValueSpan(line, location.property.startColumn);
+  if (!value) return undefined;
+  // The stored value ends where Godot's reader ends it, before a heading that follows on the line.
+  const span = { start: value.span.start, end: value.span.start + location.property.value.length };
+  if (!spanContains(span, position.character)) return undefined;
+  return valueHover(document, location, lineRange(position.line, span));
 }

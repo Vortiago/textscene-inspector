@@ -7,32 +7,63 @@ import { isLegacyFormat, readHeaderFormat } from './headerFormat.js';
 
 describe('readHeaderFormat', () => {
   it('reads the version and the line off a plain header', () => {
-    expect(readHeaderFormat('[gd_scene format=3]\n')).toEqual({ format: 3, line: 1 });
+    expect(readHeaderFormat('[gd_scene format=3]\n')).toEqual({ format: 3, line: 1, column: 1 });
     expect(readHeaderFormat('[gd_resource type="Curve" format=2]\n')).toEqual({
       format: 2,
       line: 1,
+      column: 1,
     });
   });
 
   it('skips leading blank and comment lines to find the header', () => {
     // A scene may open with a `;` block and carry the header below it.
     const content = '; A comment\n;; another\n\n[gd_scene format=2]\n';
-    expect(readHeaderFormat(content)).toEqual({ format: 2, line: 4 });
+    expect(readHeaderFormat(content)).toEqual({ format: 2, line: 4, column: 1 });
+  });
+
+  it.each([
+    ['a comment', '[gd_scene format=2] ; note\n'],
+    ['several lines', '[gd_scene\nformat=2]\n'],
+    ['text after its `]`', '[gd_scene format=2] x = 1\n'],
+  ])('reads a header with %s, as the tag reader does', (_shape, content) => {
+    expect(readHeaderFormat(content)).toEqual({ format: 2, line: 1, column: 1 });
+  });
+
+  it('reads a quoted version as its number, as the `int` it fills reads a String', () => {
+    expect(readHeaderFormat('[gd_scene format="2"]\n')?.format).toBe(2);
+  });
+
+  it('skips a line of control codes before the header, as the core scan does', () => {
+    expect(readHeaderFormat('\x01\n[gd_scene format=2]\n')).toEqual({ format: 2, line: 2, column: 1 });
+  });
+
+  it('finds no header after a NUL, which ends the stream as in the core scan', () => {
+    expect(readHeaderFormat('\0\n[gd_scene format=2]\n')).toBeNull();
+  });
+
+  it('finds no header after a line of NBSP, which Godot reads as a refused tag', () => {
+    expect(readHeaderFormat(' \n[gd_scene format=2]\n')).toBeNull();
   });
 
   it('reports no version when the header declares none', () => {
     // Absent is current, not oldest: the engine defaults it to FORMAT_VERSION
     // (resource_format_text.cpp:1147-1148).
-    expect(readHeaderFormat('[gd_scene]\n')).toEqual({ format: null, line: 1 });
+    expect(readHeaderFormat('[gd_scene]\n')).toEqual({ format: null, line: 1, column: 1 });
     expect(readHeaderFormat('[gd_scene load_steps=2 uid="uid://abc"]\n')).toEqual({
       format: null,
       line: 1,
+      column: 1,
     });
   });
 
-  it('reports no version for text no number grammar reads', () => {
-    expect(readHeaderFormat('[gd_scene format=abc]\n')?.format).toBeNull();
-    expect(readHeaderFormat('[gd_scene format=]\n')?.format).toBeNull();
+  it('reads no header where Godot refuses the format value', () => {
+    expect([readHeaderFormat('[gd_scene format=abc]\n'), readHeaderFormat('[gd_scene format=]\n')]).toEqual([
+      null,
+      null,
+    ]);
+  });
+
+  it('reports no version for a number that overflows', () => {
     // Digits and an exponent, but it overflows: a grammar cannot catch this,
     // so the finite check is on the parsed result.
     expect(readHeaderFormat('[gd_scene format=1e999]\n')?.format).toBeNull();

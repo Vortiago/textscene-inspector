@@ -27,7 +27,7 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped budget (`scripts/check-bundle-size/webviewBudget.mjs`). The budget is
-2,003,597 B, a fixed limit the report still prints growth against the last measure, 1,798,797 B.
+2,003,597 B, a fixed limit the report still prints growth against the last measure, 1,801,797 B.
 It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint
 closure of the split build. A change that outgrows the last measure is still recorded here by its
 measured growth:
@@ -43,7 +43,8 @@ snapped Sprite2D edit rect and the remapped glTF materials added 487 B, their re
 added 278 B, and a 2D pan and zoom with no scene render, the scene-render count and a pan press
 the browser cannot turn into a text selection added 109 B, and the 2D light pass that keeps its
 buffers while its inputs hold (ADR-0095) added 668 B, and its review fixes added 374 B, and the
-AnimationTree dominant-clip playhead guard added 10 B.
+AnimationTree dominant-clip playhead guard added 10 B, and reading a heading as Godot's tag parser
+does added 3,000 B.
 
 > **Amendment (budget):** the budget is a fixed 2,003,597 B, 200 KB above the last measured size,
 > not the measured size itself. Before, every growth, a 10 B guard included, failed at the

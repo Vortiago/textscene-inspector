@@ -80,14 +80,14 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
   // why it reaches neither `rootWithParent` alone nor `orphanedNodes` alone.
   const emptyParents = scene.emptyParentHeadings;
   const emptyNodes = new Set(emptyParents.map(({ node }) => node));
-  const emptyRefusals = emptyParents.map(({ node, line }) =>
+  const emptyRefusals = emptyParents.map(({ node, line, column }) =>
     armDiagnostic(
       FILE_DIAGNOSTICS.emptyParentPath,
       node,
       `Node '${node.name}' declares parent="", which is not a path. Godot cannot load the ` +
         'file at all: the text loader faults on the empty NodePath while reading this ' +
         'heading, so nothing in the file is parsed.',
-      { line, column: 1 }
+      { line, column }
     )
   );
 
@@ -101,7 +101,7 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
             `Root node '${rootOrigin.node.name}' declares parent="${rootOrigin.declaredParent}", ` +
               'which only a non-root heading may do. The file loads, but Godot refuses to ' +
               'instantiate the scene from it at all.',
-            { line: rootOrigin.line, column: 1 }
+            { line: rootOrigin.line, column: rootOrigin.column }
           ),
         ]
       : [];
@@ -121,14 +121,14 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
     declaredParent === undefined;
   return emptyRefusals.concat(rootRefusal).concat(
     orphans.map((origin) => {
-      const { node, line, declaredParent } = origin;
+      const { node, line, column, declaredParent } = origin;
       if (missing(origin)) {
         return armDiagnostic(
           FILE_DIAGNOSTICS.nodeWithoutParent,
           node,
           `Node '${node.name}' declares no 'parent', which only the scene's root node may omit. ` +
             'The file loads, but Godot cannot instantiate the scene from it at all.',
-          { line, column: 1 }
+          { line, column }
         );
       }
       const outcome = orphanOutcome(scene, origin, emptyParents.length > 0);
@@ -141,7 +141,7 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
         node,
         `Node '${node.name}' declares parent="${declaredParent}", a path this file never defines. ` +
           `${outcome}${rulesSkipped}`,
-        { line, column: 1 }
+        { line, column }
       );
     })
   );

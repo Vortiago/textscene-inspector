@@ -24,7 +24,7 @@ describe('a transforming arm with no validator of its own', () => {
     expect(errors[0]!.code).toBe('INVALID_SIZE_VALUE');
     // Anchored on the line and the value column of the key as written.
     expect(errors[0]!.line).toBe(4);
-    expect(errors[0]!.column).toBe('extents'.length + 3);
+    expect(errors[0]!.column).toBe('extents'.length + 4);
   });
 
   it('a legal Decal extents draws nothing', () => {
@@ -40,7 +40,7 @@ describe('a pure rename with no validator of its own', () => {
     expect(errors[0]!.message).toContain("'cell_quadrant_size'");
     expect(errors[0]!.message).toContain('rendering_quadrant_size = 0');
     expect(errors[0]!.message).toContain('must be between 1 and 128');
-    expect(errors[0]!.column).toBe('cell_quadrant_size'.length + 3);
+    expect(errors[0]!.column).toBe('cell_quadrant_size'.length + 4);
   });
 
   it('carries the canonical validator’s tiering: the hinted ceiling warns', () => {
@@ -217,7 +217,7 @@ describe('a pure rename validated through the fallback', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toBeAtTier(severity);
       expect(errors[0]!.message).toContain(applied(key, canonical, refused));
-      expect(errors[0]!.column).toBe(key.length + 3);
+      expect(errors[0]!.column).toBe(key.length + 4);
       expect(lint(`[node name="N" type="${type}"]\n${key} = ${legal}`)).toEqual([]);
     }
   );

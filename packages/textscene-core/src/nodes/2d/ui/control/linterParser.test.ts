@@ -172,8 +172,9 @@ describe('Control Linter', () => {
     });
 
     it('rejects an empty value', () => {
+      // The file ends after the empty value, so the strict parser refuses it too: name the rule.
       expectDiagnostic(scene(node('Control', { theme_type_variation: '' })), {
-        prop: 'theme_type_variation',
+        ruleName: 'format:theme_type_variation',
       });
     });
   });
@@ -221,7 +222,7 @@ describe('Control Linter', () => {
   describe('every registered Control property is validated', () => {
     const MALFORMED: ReadonlyArray<readonly [string, string]> = [
       ['theme', 'res://theme.tres'],
-      ['theme_type_variation', ''],
+      ['theme_type_variation', '1'],
       ['self_modulate', 'Color(1, 1, 1)'],
       ['layout_mode', 'x'],
       ['anchor_left', 'x'],

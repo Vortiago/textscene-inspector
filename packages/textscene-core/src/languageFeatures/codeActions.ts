@@ -67,7 +67,7 @@ function propertyActions(document: LanguageDocument, section: DocumentSection, r
   for (const property of section.properties) {
     if (!coversLine(range, property.startLine)) continue;
     const line = document.lines[property.startLine - 1];
-    const key = line === undefined ? undefined : propertyKeySpan(line);
+    const key = line === undefined ? undefined : propertyKeySpan(line, property.startColumn);
     if (!key) continue;
     const keyRange = lineRange(property.startLine - 1, key.span);
     // A deprecated key is a spelling the engine reads, so it is never a typo.
@@ -91,9 +91,7 @@ function typeAction(
 ): CodeAction | undefined {
   const className = section.attributes.type;
   if (!className || isKnownClass(className) || !coversLine(range, section.headingLine)) return undefined;
-  const line = document.lines[section.headingLine - 1];
-  if (line === undefined) return undefined;
-  const attribute = headingAttribute(line, 'type');
+  const attribute = headingAttribute(document.headingText(section), 'type');
   if (!attribute) return undefined;
   const candidates = section.tag === 'node' ? nodeClassNames() : resourceClassNames();
   const nearest = nearestName(className, candidates, MAX_TYPO_DISTANCE);

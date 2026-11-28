@@ -1,7 +1,8 @@
 import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import type { FailingFileRead, ParseStop } from './fileReads.js';
-import type { MisplacedHeading } from '../../parser/headingOrder.js';
+import type { IncompleteHeading, MisplacedHeading, UnparsedHeading } from '../../parser/headingOrder.js';
+import { ERROR_NAMES } from '../../godot/variant/parseError.js';
 
 /** The root scene, its reads that fail the whole scene in file order, and the read that stops its parse. */
 export interface SceneFailingReads {
@@ -41,11 +42,12 @@ function failureThrough(
 }
 
 /** Godot's line for a read whose file fails, measured in 4.6.3 (resource_format_text.cpp:40, :152, :291). */
-function godotFailureLine(scenePath: string, { path, kind, uid, line }: FailingFileRead): string {
+function godotFailureLine(scenePath: string, { written, kind, uid, line }: FailingFileRead): string {
   if (kind === 'section ExtResource')
-    return `${scenePath}:${line} - Parse Error: [ext_resource] referenced non-existent resource at: ${path}.`;
+    return `${scenePath}:${line} - Parse Error: [ext_resource] referenced non-existent resource at: ${written}.`;
   if (kind === 'section Resource')
-    return `${scenePath}:${line} - Parse Error: Can't load resource at path: ${path} with uid: ${uid}.`;
+    return `${scenePath}:${line} - Parse Error: Can't load resource at path: ${written} with uid: ${uid}.`;
+  if (kind === 'opening Resource') return unexpectedEndOfFile(`${scenePath}:${line}`);
   return `Parse Error: Parse error. [Resource file ${scenePath}:${line}]`;
 }
 
@@ -53,9 +55,11 @@ function godotFailureLine(scenePath: string, { path, kind, uid, line }: FailingF
 function godotStopLine(scenePath: string, stop: ParseStop): string {
   const at = `${scenePath}:${stop.line}`;
   if ('reason' in stop) return `${at} - Parse Error: ${misplacedError(stop)}.`;
+  if ('readBy' in stop) return unparsedLine(at, stop);
+  if ('missing' in stop) return incompleteLine(scenePath, at, stop);
   const { read, place, isOpeningTag } = stop;
-  if (isOpeningTag) return `${at} - Parse Error: Unexpected end of file.`;
-  if (place !== 'section') {
+  if (isOpeningTag) return unexpectedEndOfFile(at);
+  if (place === 'node' || place === 'binds') {
     const error = read.kind === 'SubResource' ? 'Invalid parameter.' : 'Parse error.';
     return `Parse Error: ${error} [Resource file ${at}]`;
   }
@@ -66,6 +70,27 @@ function godotStopLine(scenePath: string, stop: ParseStop): string {
   if (read.kind === 'ExtResource')
     return `${at} - Parse Error: Can't load cached ext-resource id: ${read.id}.`;
   return `${at} - Parse Error: .`;
+}
+
+/** The line the opening tag's reader prints for any fault in it (resource_format_text.cpp:1185). */
+function unexpectedEndOfFile(at: string): string {
+  return `${at} - Parse Error: Unexpected end of file.`;
+}
+
+/** Each caller of `parse_tag` prints its own line (resource_format_text.cpp:40, :291, :1133, :1185). */
+function unparsedLine(at: string, { error, code, readBy }: UnparsedHeading): string {
+  if (readBy === 'opening tag') return unexpectedEndOfFile(at);
+  if (readBy === 'node body') return `Parse Error: ${ERROR_NAMES[code]}. [Resource file ${at}]`;
+  return `${at} - Parse Error: ${error}.`;
+}
+
+/** The line for a heading without a required field, measured in 4.6.3 (resource_format_text.cpp:311-331). */
+function incompleteLine(scenePath: string, at: string, { type, missing }: IncompleteHeading): string {
+  // A `[connection]` sets its error with no `_printerr`, so only the resource loader's own line prints.
+  if (type === 'connection') return `Failed loading resource: ${scenePath}.`;
+  if (type === 'editable') return `${at} - Parse Error: Missing '${missing}' field from editable tag.`;
+  if (type === 'gd_resource') return `${at} - Parse Error: Missing '${missing}' field in 'gd_resource' tag.`;
+  return `${at} - Parse Error: Missing '${missing}' in external resource tag.`;
 }
 
 /** The loader's error for a heading it refuses (resource_format_text.cpp:415, :724, :840, :871, :903). */

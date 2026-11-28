@@ -27,7 +27,7 @@ export function variantOf(value: VariantValue): Variant {
 
 /** `str_to_var`. It throws with Godot's parse error, so a typing mistake is not a write of null. */
 export function variant(text: string): Variant {
-  const read = readVariant(text);
+  const read = readVariant(text, { stream: 'string' });
   if ('error' in read)
     throw new Error(`expected a Variant as a .tscn file spells it, got "${text}": ${read.error}`);
   return variantOf(read.value);

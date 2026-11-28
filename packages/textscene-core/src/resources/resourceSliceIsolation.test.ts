@@ -60,6 +60,8 @@ describe('Godot-resource parsing stays in the loading layer', () => {
     'r3f/liveSceneTree.testkit.ts',
     // The second adapter of the reading seam: a fixed map of file text, parsed as the loader would.
     'resources/reading/staticSnapshot.testkit.ts',
+    // A heading sweep's `.tres` text, parsed as the load-failure walk reads it.
+    'resources/loadFailure/headingSweep.testkit.ts',
     // The class `scene.load` answers for a `.tres`, read from its header before any loader holds it.
     'scene/loadedResourceType.ts',
   ]);
