@@ -101,7 +101,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const controlsSize = useStableVector2(sizes.layout);
   const enclosingViewportSize = useEnclosingViewportSize(embedder);
 
-  const renderState = useViewportRenderState(gate.updateMode);
+  const renderState = useViewportRenderState(path, gate.updateMode);
   const renderPass = useCallback(() => {
     const clear = renderState.takeRender(clearMode, clearColor);
     drawWorld(canvasRender, () =>

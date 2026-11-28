@@ -26,7 +26,9 @@ const takesOnceClear = (state: TargetRenderState) =>
 describe('useViewportRenderState', () => {
   it('keeps the renders across a re-render of the same pass', () => {
     const wrapper = inScenes({ scene: parsedScene() });
-    const hook = renderHook(() => useViewportRenderState(SubViewportUpdateMode.ALWAYS), { wrapper });
+    const hook = renderHook(() => useViewportRenderState('Root/View', SubViewportUpdateMode.ALWAYS), {
+      wrapper,
+    });
     const state = hook.result.current;
 
     hook.rerender();
@@ -36,18 +38,22 @@ describe('useViewportRenderState', () => {
 
   it('clears the new target of a remounted pass under a ONCE clear', () => {
     const wrapper = inScenes({ scene: parsedScene() });
-    const first = renderHook(() => useViewportRenderState(SubViewportUpdateMode.ALWAYS), { wrapper });
+    const first = renderHook(() => useViewportRenderState('Root/View', SubViewportUpdateMode.ALWAYS), {
+      wrapper,
+    });
     takesOnceClear(first.result.current);
     first.unmount();
 
-    const second = renderHook(() => useViewportRenderState(SubViewportUpdateMode.ALWAYS), { wrapper });
+    const second = renderHook(() => useViewportRenderState('Root/View', SubViewportUpdateMode.ALWAYS), {
+      wrapper,
+    });
 
     expect(takesOnceClear(second.result.current)).toBe(true);
   });
 
   it('starts new renders when a new parse replaces the scene under a mounted pass', () => {
     const current = { scene: parsedScene() };
-    const hook = renderHook(() => useViewportRenderState(SubViewportUpdateMode.ALWAYS), {
+    const hook = renderHook(() => useViewportRenderState('Root/View', SubViewportUpdateMode.ALWAYS), {
       wrapper: inScenes(current),
     });
     takesOnceClear(hook.result.current);
@@ -59,7 +65,7 @@ describe('useViewportRenderState', () => {
   });
 
   it('arms a ONCE pass again when the update mode changes', () => {
-    const hook = renderHook(({ mode }) => useViewportRenderState(mode), {
+    const hook = renderHook(({ mode }) => useViewportRenderState('Root/View', mode), {
       wrapper: inScenes({ scene: parsedScene() }),
       initialProps: { mode: SubViewportUpdateMode.ONCE as number },
     });

@@ -3,14 +3,15 @@
  * `node_b` name (`joint_3d_gizmo_plugin.cpp:325-337`).
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { resolveRelativePath } from '../../../../godot/string/nodePath.js';
 import type { Transform3D } from '../../../../godot/math/transform3d.js';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext.js';
 import { useDrawnWorldTransforms } from '../../../../r3f/gizmo/useDrawnWorldTransforms.js';
 import { resolveLiveEntry } from '../../../../r3f/liveSceneTree.js';
-import { useSharedLiveTree } from '../../../../r3f/useLiveSceneTree.js';
+import { sameElements } from '../../../../utils/sameElements.js';
+import { useLiveTreeSelection, type SharedLiveTree } from '../../../../r3f/useLiveSceneTree.js';
 import { useUniqueNamePaths } from '../../../../r3f/useUniqueNames.js';
 import type { Joint3DProperties } from './types.js';
 
@@ -29,17 +30,25 @@ export interface JointBodies {
 export function useJointBodies({ node_a: nodeA, node_b: nodeB }: Joint3DProperties): JointBodies | null {
   const jointPath = useNodePath();
   const uniquePaths = useUniqueNamePaths(jointPath);
-  const liveTree = useSharedLiveTree();
-  const bodyPaths = useMemo(() => {
-    const bodyPath = (relative: string | undefined): string | null => {
-      if (jointPath === null || relative === undefined) return null;
-      const path = resolveRelativePath(jointPath, relative, uniquePaths);
-      if (path === null || liveTree === null) return path;
-      const type = resolveLiveEntry(path, liveTree.roots, liveTree.ctx)?.node.type;
-      return type !== undefined && descendsFromClass(type, 'Node3D') ? path : null;
-    };
-    return [jointPath, bodyPath(nodeA), bodyPath(nodeB)];
-  }, [jointPath, uniquePaths, liveTree, nodeA, nodeB]);
+  const named = useMemo(
+    () =>
+      [nodeA, nodeB].map((relative) =>
+        jointPath === null || relative === undefined
+          ? null
+          : resolveRelativePath(jointPath, relative, uniquePaths)
+      ),
+    [jointPath, nodeA, nodeB, uniquePaths]
+  );
+  const resolveBodies = useCallback(
+    ({ roots, ctx }: SharedLiveTree) =>
+      named.map((path) => {
+        const type = path && resolveLiveEntry(path, roots, ctx)?.node.type;
+        return type && descendsFromClass(type, 'Node3D') ? path : null;
+      }),
+    [named]
+  );
+  const bodies = useLiveTreeSelection(resolveBodies, sameElements) ?? named;
+  const bodyPaths = useMemo(() => [jointPath, ...bodies], [jointPath, bodies]);
 
   const [joint, bodyA, bodyB] = useDrawnWorldTransforms(bodyPaths);
   if (!joint || (!bodyA && !bodyB)) return null;
