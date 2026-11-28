@@ -1013,7 +1013,7 @@ describe('the render wait fits inside the render pass', () => {
     const history = script.split('func _has_frame_history')[1].split('\nfunc ')[0];
     expect(history).toContain('_environment_in_effect(source)');
     expect(history).toContain('environment.ssil_enabled');
-    expect(history).toContain('_has_fog_history(');
+    expect(history).toContain('_has_fog_history(source)');
   });
 
   it('holds the quiet window only while every global transform holds still', () => {
