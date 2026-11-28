@@ -44,22 +44,45 @@ export interface PackedAtlas {
  * this stable sort does at any count.
  */
 function packInto(blocks: readonly Block[], columns: number, positions: CellPosition[]): number {
-  const columnHeights = new Array<number>(columns).fill(0);
+  const skyline = [{ end: columns, height: 0 }];
   let usedHeight = 0;
   for (const { index, size } of blocks) {
     let bestColumn = 0;
     let bestHeight = Infinity;
-    for (let column = 0; column <= columns - size.width; column++) {
-      let height = 0;
-      for (let at = column; at < column + size.width; at++) height = Math.max(height, columnHeights[at]!);
+    let first = 0;
+    let last = 0;
+    // Inside a level span, moving left one column cannot raise the block. Only span starts can win.
+    for (let start = 0; start < skyline.length; start++) {
+      const column = start === 0 ? 0 : skyline[start - 1]!.end;
+      const right = column + size.width;
+      if (right > columns) break;
+      let end = start;
+      let height = skyline[start]!.height;
+      while (height < bestHeight && skyline[end]!.end < right) {
+        end++;
+        height = Math.max(height, skyline[end]!.height);
+      }
       if (height < bestHeight) {
-        bestHeight = height;
         bestColumn = column;
+        bestHeight = height;
+        first = start;
+        last = end;
+        if (height === 0) break;
       }
     }
-    columnHeights.fill(bestHeight + size.height, bestColumn, bestColumn + size.width);
+    const top = bestHeight + size.height;
+    // Keep the part of the last span beyond the block. Join neighbours at the new height.
+    let right = bestColumn + size.width;
+    if (skyline[last]!.end > right) last--;
+    if (skyline[last + 1]?.height === top) {
+      last++;
+      right = skyline[last]!.end;
+    }
+    if (skyline[first - 1]?.height === top) first--;
+    skyline.splice(first, last - first + 1, { end: right, height: top });
     positions[index] = { x: bestColumn, y: bestHeight };
-    usedHeight = Math.max(usedHeight, bestHeight + size.height);
+    usedHeight = Math.max(usedHeight, top);
+    if (usedHeight > columns * 2) return usedHeight;
   }
   return usedHeight;
 }
