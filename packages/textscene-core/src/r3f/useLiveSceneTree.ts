@@ -17,6 +17,7 @@ import type { SceneScope, TscnNode, TscnScene } from '../parser/types.js';
 import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { glbPathOf } from '../resources/glbSceneRoot.js';
 import { hasSceneTileCells } from './liveSceneTiles.js';
+import type { Scene } from '../scene/openScene.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
@@ -301,6 +302,7 @@ function sharedTreeAt(
 
 /** What a shared live tree is built from. */
 interface LiveTreeInputs {
+  scene?: Scene;
   sceneGraph: SceneGraph | null;
   loader: ResourceLoader | null;
   project: ProjectTreeSettings;
@@ -320,24 +322,18 @@ export function useProjectTreeSettings(): ProjectTreeSettings {
 function useLiveTreeInputs(): LiveTreeInputs {
   // Optional so viewport-level readers (the preview lighting) work in the
   // empty-canvas and test-renderer cases, where no scene is mounted at all.
-  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const hierarchy = useOptionalHierarchy();
+  const sceneGraph = hierarchy?.sceneGraph ?? null;
   const loader = useResourceLoader();
   const project = useProjectTreeSettings();
   const controlTransforms = useControlLocalTransforms();
-  return { sceneGraph, loader, project, controlTransforms };
+  return { sceneGraph, scene: hierarchy?.scene, loader, project, controlTransforms };
 }
 
-/**
- * The live tree of the scene graph in context, or null with no root scene. Every reader asks for
- * the one the graph, loader and load tick give, so a node collapses once however many ask.
- */
+const wholeTree = (tree: SharedLiveTree) => tree;
+
 export function useSharedLiveTree(): SharedLiveTree | null {
-  const { sceneGraph, loader, project, controlTransforms } = useLiveTreeInputs();
-  const version = useLiveTreeVersion(loader);
-  return useMemo(
-    () => (sceneGraph ? sharedTreeAt({ sceneGraph, loader, project, controlTransforms }, version) : null),
-    [sceneGraph, project, loader, controlTransforms, version]
-  );
+  return useLiveTreeSelection(wholeTree, Object.is) ?? null;
 }
 
 /**
@@ -354,35 +350,45 @@ export function sameSelection<T>(
   return a === undefined || b === undefined ? a === b : isSame(a, b);
 }
 
-/**
- * A value read at each change of `watched` a reader may see: a new tree, or a new snapshot of the
- * live files, which a load of a file the tree or a pass read starts. `readAt` gets the tree's version
- * and that snapshot, and the reader re-renders only where `isSame` says the value changed. A reader
- * that watches no loader reads once. `readAt` and `isSame` must be stable.
- */
+/** Reads that keep their answer across a load or a host write need no React render. */
 function useReadAtLoadTick<T>(
   watched: ResourceLoader | null | undefined,
-  readAt: (version: number, snapshot: ResourceSnapshot) => T,
-  isSame: (a: T, b: T) => boolean
+  readAt: (version: number, snapshot: ResourceSnapshot, written?: SceneGraph | null) => T,
+  isSame: (a: T, b: T) => boolean,
+  scene?: Scene
 ): T {
   const ticks = loadTicksOf(watched);
+  const subscribe = useMemo(() => {
+    if (!scene) return ticks.subscribe;
+    return (changed: () => void) => {
+      const stopLoads = ticks.subscribe(changed);
+      const stopWrites = scene.subscribe(changed);
+      return () => {
+        stopLoads();
+        stopWrites();
+      };
+    };
+  }, [ticks, scene]);
   /** Written only by `getSnapshot`: the reads of this reader's last read, by whichever `readAt`. */
   const lastReads = useRef<readonly RecordedRead[]>(NO_READS);
   const getSnapshot = useMemo(() => {
     /** Written only by this reader: what it read last, at which tree and snapshot. */
-    let last: { version: number; snapshot: ResourceSnapshot; value: T } | undefined;
+    let last:
+      { version: number; snapshot: ResourceSnapshot; written?: SceneGraph | null; value: T } | undefined;
     return () => {
       const version = ticks.getVersion();
       const snapshot = ticks.files.current();
-      if (last?.version === version && last.snapshot === snapshot) return last.value;
+      const written = scene?.written();
+      if (last?.version === version && last.snapshot === snapshot && last.written === written)
+        return last.value;
       const reads: RecordedRead[] = [];
-      const next = readAt(version, recording(snapshot, reads));
+      const next = readAt(version, recording(snapshot, reads), written);
       lastReads.current = reads;
       const value = last && isSame(last.value, next) ? last.value : next;
-      last = { version, snapshot, value };
+      last = { version, snapshot, written, value };
       return value;
     };
-  }, [ticks, readAt, isSame]);
+  }, [ticks, readAt, isSame, scene]);
   useEffect(() => {
     const committedReads = lastReads.current;
     // A file only this reader read stays in the shared snapshot until it restarts. A new `readAt`
@@ -393,7 +399,7 @@ function useReadAtLoadTick<T>(
         ticks.files.releaseReads();
     };
   }, [ticks, readAt]);
-  return useSyncExternalStore(ticks.subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot);
 }
 
 /**
@@ -406,20 +412,20 @@ export function useLiveTreeSelection<T>(
   select: ((tree: SharedLiveTree, snapshot: ResourceSnapshot) => T | undefined) | null,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
-  const { sceneGraph, loader, project, controlTransforms } = useLiveTreeInputs();
+  const { sceneGraph: parsed, scene, loader, project, controlTransforms } = useLiveTreeInputs();
   const readAt = useCallback(
-    (version: number, snapshot: ResourceSnapshot) => {
+    (version: number, snapshot: ResourceSnapshot, sceneGraph = parsed) => {
       if (!sceneGraph || !select) return undefined;
       const tree = sharedTreeAt({ sceneGraph, loader, project, controlTransforms }, version);
       return tree ? select(tree, snapshot) : undefined;
     },
-    [sceneGraph, project, loader, controlTransforms, select]
+    [parsed, project, loader, controlTransforms, select]
   );
   const isSameSelection = useCallback(
     (a: T | undefined, b: T | undefined) => sameSelection(a, b, isSame),
     [isSame]
   );
-  return useReadAtLoadTick(select ? loader : null, readAt, isSameSelection);
+  return useReadAtLoadTick(select ? loader : null, readAt, isSameSelection, select ? scene : undefined);
 }
 
 /**
@@ -436,7 +442,7 @@ export function useLiveFilesRead<T>(
   return useReadAtLoadTick(loader, readAt, isSame);
 }
 
-function seatedRootsOf({ roots, ctx }: SharedLiveTree): readonly TscnNode[] {
+export function seatedRootsOf({ roots, ctx }: SharedLiveTree): readonly TscnNode[] {
   return liveTreeOf(roots, ctx).seatedRoots;
 }
 

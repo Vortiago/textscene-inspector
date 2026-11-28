@@ -48,7 +48,8 @@ The timer queries add a little GPU work per segment while the profile runs.
 A React render of the scene tree runs between frames, so no step and no frame time holds it. The
 profile counts it as a scene render instead, at each commit of `NodeDispatcher`, and the overlay
 shows the count per frame. The 2D stage's camera follows a view store outside React state, so a
-pan or zoom makes no scene render.
+pan or zoom makes no scene render. A host write below a root also makes none while the root names,
+canvas tint, layer ranks and root paint frames stay the same.
 
 The work budget check (`pnpm test:perf`, `scripts/perf/`) holds the counts in CI, not the times.
 It opens each budget scene in headless Chromium with the overlay on, waits until the scene has

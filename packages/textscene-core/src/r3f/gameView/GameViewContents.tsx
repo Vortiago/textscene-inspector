@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
+import { useOptionalHierarchy, useWrittenGraph } from '../contexts/HierarchyContext.js';
 import { useSeatedRoots } from '../useLiveSceneTree.js';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { SceneResourcesProvider } from '../SceneResourcesContext.js';
@@ -28,9 +28,10 @@ export function GameViewContents() {
 }
 
 function RootViewport() {
-  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const sceneGraph = useWrittenGraph();
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   const nodes = useSeatedRoots();
+  const dispatchNodes = useOptionalHierarchy()?.scene ? undefined : nodes;
   const { settings } = useProjectSettings();
   const projectWindow = useProjectRootWindow();
   const drawnWindow = useDrawnRootWindow(projectWindow);
@@ -51,7 +52,7 @@ function RootViewport() {
         >
           <EditedRootProvider editableInstances={rootScene.editableInstances}>
             <ViewportMount node={root} description={description}>
-              <NodeDispatcher nodes={nodes} />
+              <NodeDispatcher nodes={dispatchNodes ?? undefined} />
             </ViewportMount>
             <ControlRasterLayer
               nodes={rasterRoots}

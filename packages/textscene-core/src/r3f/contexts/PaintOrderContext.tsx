@@ -3,6 +3,8 @@
  * from the paint pass (`canvasItemPass/nodePaint.tsx`) and accumulates `z_final` itself.
  */
 import { createContext, useContext, type ReactNode } from 'react';
+import { sameElements } from '../../utils/sameElements';
+import { useByValue } from '../hooks/useByValue';
 import { layerRankOf, layerRanks } from '../canvasPaintOrder';
 
 const LayerRankContext = createContext<readonly number[]>(layerRanks([]));
@@ -14,5 +16,7 @@ export function useLayerRank(layer: number): number {
 }
 
 export function LayerRanksProvider({ value, children }: { value: readonly number[]; children: ReactNode }) {
-  return <LayerRankContext.Provider value={value}>{children}</LayerRankContext.Provider>;
+  return (
+    <LayerRankContext.Provider value={useByValue(value, sameElements)}>{children}</LayerRankContext.Provider>
+  );
 }

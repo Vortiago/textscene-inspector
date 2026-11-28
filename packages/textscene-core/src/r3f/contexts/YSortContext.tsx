@@ -4,7 +4,9 @@
  * and a sort root the ys a mixer pose gives its entries. The provider sorts the shared live tree with
  * them, and every drawn item reads its run by live path. Without a provider nothing sorts here.
  */
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createExternalStore } from '../../utils/externalStore.js';
+import { useExternalStoreSelection, useExternalStoreValue } from '../hooks/createExternalStore.js';
 import { equalTransform2D, type Transform2DColumns } from '../../godot/math/transform2d.js';
 import type { PaintRange } from '../canvasPaintOrder.js';
 import { canvasItemPass } from '../canvasItemPass/canvasItemPass.js';
@@ -57,11 +59,13 @@ export interface SortedRunsValue {
   readonly mergedSorters: ReadonlySet<string>;
 }
 const NO_PATHS: ReadonlySet<string> = new Set();
-const SortedRunsContext = createContext<SortedRunsValue>({
-  runs: NO_RUNS,
-  paints: NO_PAINTS,
-  mergedSorters: NO_PATHS,
-});
+const SortedRunsContext = createContext(
+  createExternalStore<SortedRunsValue>({
+    runs: NO_RUNS,
+    paints: NO_PAINTS,
+    mergedSorters: NO_PATHS,
+  })
+);
 const PublishersContext = createContext<Publishers | null>(null);
 TransformsContext.displayName = 'ControlTransformsContext';
 LocalTransformsContext.displayName = 'ControlLocalTransformsContext';
@@ -137,7 +141,9 @@ function SortedRuns({ origins, extras, liveYs, children }: SortInputs & { childr
     held.current = { runs, paints, mergedSorters: merged };
     return held.current;
   }, [results, paints, merged, origins, extras, liveYs]);
-  return <SortedRunsContext.Provider value={sorted}>{children}</SortedRunsContext.Provider>;
+  const [store] = useState(() => createExternalStore(sorted));
+  useLayoutEffect(() => store.set(sorted), [store, sorted]);
+  return <SortedRunsContext.Provider value={store}>{children}</SortedRunsContext.Provider>;
 }
 
 function wholeResults<Result>(results: ReadonlyMap<string, Result>): ReadonlyMap<string, Result> {
@@ -146,16 +152,20 @@ function wholeResults<Result>(results: ReadonlyMap<string, Result>): ReadonlyMap
 
 /** The paint of the item at `path` after the sorts, from the paint the pass gives it in tree order. */
 export function useSortedPaint(path: string | null, paint: CanvasItemPaint): CanvasItemPaint {
-  const { runs, paints } = useContext(SortedRunsContext);
-  return useMemo(
-    () => (path === null ? paint : sortedPaintOf(path, paint, runs, paints)),
-    [path, paint, runs, paints]
-  );
+  const select = useMemo(() => {
+    let previous = paint;
+    return ({ runs, paints }: SortedRunsValue) => {
+      const next = path === null ? paint : sortedPaintOf(path, paint, runs, paints);
+      if (!sameData(previous, next)) previous = next;
+      return previous;
+    };
+  }, [path, paint]);
+  return useExternalStoreSelection(useContext(SortedRunsContext), select);
 }
 
 /** The sorted runs with the tree-order paint they move, for a walk that places its own nodes. */
 export function useSortedRunsAndPaints(): SortedRunsValue {
-  return useContext(SortedRunsContext);
+  return useExternalStoreValue(useContext(SortedRunsContext));
 }
 
 /**

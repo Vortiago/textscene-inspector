@@ -7,6 +7,9 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 
+import { useByValue } from '../hooks/useByValue.js';
+import { sameElements } from '../../utils/sameElements.js';
+
 const NO_SCENE_PATHS: readonly string[] = [];
 
 const InstancedScenePathsContext = createContext<readonly string[]>(NO_SCENE_PATHS);
@@ -18,7 +21,11 @@ interface InstancedScenePathsProviderProps {
 }
 
 export function InstancedScenePathsProvider({ paths, children }: InstancedScenePathsProviderProps) {
-  return <InstancedScenePathsContext.Provider value={paths}>{children}</InstancedScenePathsContext.Provider>;
+  return (
+    <InstancedScenePathsContext.Provider value={useByValue(paths, sameElements)}>
+      {children}
+    </InstancedScenePathsContext.Provider>
+  );
 }
 
 /** The enclosing scenes' paths, or an empty list outside every instance. */

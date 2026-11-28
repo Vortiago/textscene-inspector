@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
+import { useOptionalHierarchy, useWrittenGraph } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
@@ -15,6 +15,7 @@ import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
 export function TscnSceneContents({ children }: { children?: ReactNode }) {
   const { rootScene, nodes } = useRootScene();
 
+  const dispatchNodes = useOptionalHierarchy()?.scene ? undefined : nodes;
   return (
     <CanvasRendererScope>
       {/* Godot's editor preview sun and environment, while the scene has none of its own (ADR-0025). */}
@@ -26,7 +27,7 @@ export function TscnSceneContents({ children }: { children?: ReactNode }) {
             externalResources={rootScene.externalResources}
           >
             <EditedRootProvider editableInstances={rootScene.editableInstances}>
-              <NodeDispatcher nodes={nodes} />
+              <NodeDispatcher nodes={dispatchNodes ?? undefined} />
             </EditedRootProvider>
           </SceneResourcesProvider>
         )}
@@ -45,7 +46,7 @@ export function TscnSceneContents({ children }: { children?: ReactNode }) {
 
 /** The root scene of the scene the view reads, and its seated roots: null before the scene loads. */
 export function useRootScene() {
-  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const sceneGraph = useWrittenGraph();
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   return { rootScene, nodes: useSeatedRoots() ?? null };
 }

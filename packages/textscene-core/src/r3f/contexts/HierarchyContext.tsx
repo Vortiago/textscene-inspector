@@ -3,8 +3,9 @@
  * successful parse, and a consumer then renders a passive loading state,
  * never a throw or a partial render (R3F-contracts.md §4).
  */
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useSyncExternalStore, type ReactNode } from 'react';
 import type { SceneGraph } from '../../core/SceneGraph.js';
+import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
 import type { Scene } from '../../scene/openScene.js';
 
 export interface HierarchyContextValue {
@@ -43,4 +44,12 @@ export function useHierarchy(): HierarchyContextValue {
  */
 export function useOptionalHierarchy(): HierarchyContextValue | null {
   return useContext(HierarchyContext);
+}
+
+export function useWrittenGraph(): SceneGraph | null {
+  const hierarchy = useOptionalHierarchy();
+  return useSyncExternalStore(
+    hierarchy?.scene?.subscribe ?? subscribeToNothing,
+    hierarchy?.scene?.written ?? (() => hierarchy?.sceneGraph ?? null)
+  );
 }

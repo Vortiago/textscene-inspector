@@ -5,6 +5,8 @@
  * its children's runs where it draws them.
  */
 
+import { perObject } from '../../utils/perObject';
+import { sameData } from '../../utils/sameData';
 import type { TscnNode } from '../../parser/types';
 import { isInjected, type LiveChildGroup, type LiveTree } from '../liveSceneTree';
 import { liveScenePassResults, type LiveScenePass } from '../liveScenePass';
@@ -91,6 +93,16 @@ export function canvasPaintPassFrom(start: PaintRange): LiveScenePass<CanvasItem
 /** The paint pass of a canvas whose roots start at the beginning of the sequence. */
 export const canvasPaintPass: LiveScenePass<CanvasItemPaint> = canvasPaintPassFrom(WHOLE_CANVAS_RANGE);
 
+const paintByNode = perObject((_node: TscnNode) => new Map<string, CanvasItemPaint>());
+
+function keptPaint(node: TscnNode, path: string, paint: CanvasItemPaint): CanvasItemPaint {
+  const paints = paintByNode(node);
+  const previous = paints.get(path);
+  if (previous && sameData(previous, paint)) return previous;
+  paints.set(path, paint);
+  return paint;
+}
+
 function paintOf(
   tree: LiveTree,
   snapshot: ResourceSnapshot,
@@ -121,15 +133,18 @@ function paintOf(
     // Injected content draws after the authored children, in the room `reservesRoom` holds back.
     const injected = step.groups.filter(isInjected).flatMap((group) => group.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injected).children;
-    results.set(path, {
-      range,
-      own: allocated.self,
-      front: allocated.front,
-      layer: allocated.layer,
-      back: allocated.back,
-      tail: allocated.tail,
-      behind: behindRangesOf(inline, allocated.children),
-    });
+    results.set(
+      path,
+      keptPaint(raw, path, {
+        range,
+        own: allocated.self,
+        front: allocated.front,
+        layer: allocated.layer,
+        back: allocated.back,
+        tail: allocated.tail,
+        behind: behindRangesOf(inline, allocated.children),
+      })
+    );
     descend({
       ranges: new Map([
         ...rangesOf(front, frontRanges),

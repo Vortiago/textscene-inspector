@@ -57,7 +57,8 @@ the resource loader, and the host's writes. It imports no React and no three.js.
   does and answers whether the cast is strict (`class_db.cpp:1683`).
 - **Loading.** The class table and the defaults load on the first `get` or `set`, outside the first
   chunk of the webview (ADR-0055).
-- **Redraw.** The writes of one task make one notice, so every view draws one frame for them.
+- **Redraw.** The writes of one task give each view one notice. A reader renders when its selection
+  changes. The walk reads the written node and its ancestors, whose children contain that node.
 
 ## What it changes in ADR-0060
 

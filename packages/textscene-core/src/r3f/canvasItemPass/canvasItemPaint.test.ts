@@ -3,10 +3,13 @@
  * `_cull_canvas_item` visits them (`renderer_canvas_cull.cpp:477-490`).
  */
 import { describe, expect, it } from 'vitest';
+import '../sceneLiveTree';
+import { openScene } from '../../scene/openScene';
+import { variant } from '../../scene/variant';
 import { TscnParser } from '../../parser/TscnParser';
 import type { TscnScene } from '../../parser/types';
 import { liveTreeOf } from '../liveSceneTree';
-import { contextOver, runPass } from '../liveSceneTree.testkit';
+import { contextOver, runPass, sourcesOver } from '../liveSceneTree.testkit';
 import { canvasPaintPass, canvasPaintPassFrom, type CanvasItemPaint } from './canvasItemPaint';
 import '../nodes/index';
 import '../controls/index';
@@ -35,6 +38,26 @@ function paintAt(paint: ReadonlyMap<string, CanvasItemPaint>, path: string): Can
 }
 
 describe('canvasPaintPass: tree order', () => {
+  it('keeps the paint of an unchanged sibling after a host write', async () => {
+    const scene = openScene({
+      source:
+        '[gd_scene format=3]\n[node name="Root" type="Node2D"]\n' +
+        '[node name="A" type="Node2D" parent="."]\n[node name="B" type="Node2D" parent="."]',
+      provider: { loadResource: async () => null },
+    });
+    const paint = () => {
+      const graph = scene.written()!;
+      const main = graph.scenes.get(graph.rootScene)!;
+      return paintAt(
+        runPass(canvasPaintPass, liveTreeOf(main.nodes, { ...sourcesOver(), ...main })),
+        'Root/B'
+      );
+    };
+    const before = paint();
+    await scene.getNode('A').set('position', variant('Vector2(3, 4)'));
+    expect(paint()).toBe(before);
+  });
+
   it('draws a show_behind_parent child before its parent and the others after it', () => {
     const paint = paintOver(
       parsed(`[node name="Root" type="Node2D"]
