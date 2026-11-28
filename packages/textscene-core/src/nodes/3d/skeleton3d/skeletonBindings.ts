@@ -24,7 +24,7 @@ import type { SkinBind } from '../../../resources/skin/types.js';
 import { sameElements } from '../../../utils/sameElements.js';
 import { perObject } from '../../../utils/perObject.js';
 import { warnOnce } from '../../../utils/warnOnce.js';
-import type { LoadedPose } from '../skeleton/boneattachment3d/loadedSkeletonPose.js';
+import { sameLoadedPose, type LoadedPose } from '../skeleton/boneattachment3d/loadedSkeletonPose.js';
 import { scenePose } from '../skeleton/boneattachment3d/attachmentBindings.js';
 import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
 import {
@@ -209,7 +209,7 @@ const automaticSkinOf = perObject((skeleton: TscnNode): readonly Transform3D[] =
 
 /** What a kept posed skeleton was made of, which a load compares to tell whether it still holds. */
 interface KeptPosed {
-  loaded: LoadedPose;
+  loaded: LoadedPose | undefined;
   modifiers: Modifiers;
   posed: PosedSkeleton;
 }
@@ -234,10 +234,11 @@ export function posedSkeletonOf(skeleton: LiveLink, tree: LiveTree, placed: Node
   const previous = kept.get(skeleton.path);
   if (
     previous &&
-    previous.loaded === loaded &&
+    sameLoadedPose(previous.loaded, loaded) &&
     sameElements(previous.modifiers.nodes, modifiers.nodes) &&
     readsHold(previous.modifiers, modifiers, tree, placed)
   ) {
+    previous.loaded = loaded;
     return previous.posed;
   }
   const posed = makePosed(skeleton, modifiers, loaded);
@@ -245,10 +246,10 @@ export function posedSkeletonOf(skeleton: LiveLink, tree: LiveTree, placed: Node
   return posed;
 }
 
-function makePosed(skeleton: LiveLink, modifiers: Modifiers, loaded: LoadedPose): PosedSkeleton {
-  const { showRestOnly, motionScale } = skeleton.step.node.properties as Skeleton3DProperties;
+function makePosed(skeleton: LiveLink, modifiers: Modifiers, loaded: LoadedPose | undefined): PosedSkeleton {
+  const { bones, showRestOnly, motionScale } = skeleton.step.node.properties as Skeleton3DProperties;
   // One pose editor for the skeleton: each frame starts it again from the file pose.
-  const poses = new BonePoses(loaded.bones, showRestOnly, undefined, loaded.globals);
+  const poses = new BonePoses(loaded?.bones ?? bones, showRestOnly, undefined, loaded?.globals);
   const warnUnknownBone = (name: string) =>
     warnOnce(
       poses,
@@ -279,7 +280,7 @@ function makePosed(skeleton: LiveLink, modifiers: Modifiers, loaded: LoadedPose)
 /** The automatic skin over `poses`, from the file pose and under each pose a clip writes. */
 function makeSkin(
   skeleton: LiveLink,
-  loaded: LoadedPose,
+  loaded: LoadedPose | undefined,
   poses: BonePoses,
   prepare: (pose: AnimatedPose | null) => BonePoses,
   edits: readonly PoseModifier[]
@@ -315,9 +316,7 @@ function makeSkin(
   return {
     skeletonPath: skeleton.path,
     matrices:
-      edits.length === 0 && !loaded.globals
-        ? automaticSkinOf(skeleton.step.node)
-        : prepare(null).skinMatrices(),
+      edits.length === 0 && !loaded ? automaticSkinOf(skeleton.step.node) : prepare(null).skinMatrices(),
     matricesUnder: matricesUnderOf(),
     withSkin: skinOfBinds,
   };

@@ -278,7 +278,7 @@ export class BonePoses {
     this.retainGlobals(this.loadedGlobals);
   }
 
-  retainGlobals(globals?: ReadonlyMap<number, Transform3D>): void {
+  private retainGlobals(globals?: ReadonlyMap<number, Transform3D>): void {
     this.cache = undefined;
     this.retained = globals?.size ? new Map(globals) : undefined;
   }

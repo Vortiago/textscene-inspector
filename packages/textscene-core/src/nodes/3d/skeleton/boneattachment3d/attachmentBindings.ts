@@ -5,7 +5,7 @@ import type { Transform3D } from '../../../../godot/math/transform3d.js';
 import type { LiveLink, LiveTree } from '../../../../r3f/liveSceneTree.js';
 import { resolveLiteralOnLiveTree } from '../../../../r3f/nodePathUniqueNames.js';
 import { attachmentLoad, compareLoadOrder } from './attachmentLoadOrder.js';
-import { LoadedSkeletonPose, originalPose, type LoadedPose } from './loadedSkeletonPose.js';
+import { LoadedSkeletonPose, type LoadedPose } from './loadedSkeletonPose.js';
 import type { AttachmentSettings, AttachmentWrite, BoneAttachment3DProperties } from './types.js';
 import type { Skeleton3DProperties } from '../../skeleton3d/types.js';
 
@@ -18,8 +18,8 @@ interface AttachmentBinding {
 
 type Load = ReturnType<typeof attachmentLoad>;
 
-export function scenePose(skeleton: LiveLink, tree: LiveTree): LoadedPose {
-  return attachmentBindings(tree).poses.get(skeleton.path) ?? originalPose(skeleton);
+export function scenePose(skeleton: LiveLink, tree: LiveTree): LoadedPose | undefined {
+  return attachmentBindings(tree).poses.get(skeleton.path);
 }
 
 class Attachment {
@@ -184,7 +184,10 @@ export const attachmentBindings = perObject((tree: LiveTree) => {
   const bindings = new Map<string, AttachmentBinding>();
   for (const [path, target] of attachments) bindings.set(path, target.result());
   const poses = new Map<string, LoadedPose>();
-  for (const [path, rig] of loading) poses.set(path, rig.result());
+  for (const [path, rig] of loading) {
+    const pose = rig.result();
+    if (pose) poses.set(path, pose);
+  }
   return { bindings, poses };
 });
 
