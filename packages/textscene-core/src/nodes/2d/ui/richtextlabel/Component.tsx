@@ -25,7 +25,10 @@ import { sameData } from '../../../../utils/sameData';
 import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
-import { OutlinedTextRun } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import {
+  aboveOutlinedRunRenderOrder,
+  OutlinedTextRun,
+} from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
 import {
   richTextLabelUnderlineAlpha,
@@ -311,6 +314,7 @@ function RichTextBody({
   const toItemLinear = useItemLinearColorOf();
   const textTheme = useMemo(() => richTextLabelTextTheme(solveNode, props), [solveNode, props]);
   const underlineAlpha = richTextLabelUnderlineAlpha(solveNode);
+  const underlineOrder = aboveOutlinedRunRenderOrder(renderOrder); // rich_text_label.cpp:1244,1258,1571
 
   const {
     runs,
@@ -409,7 +413,7 @@ function RichTextBody({
                     height={underline.heightPx}
                     color={toItemLinear(runTint)}
                     opacity={runTint.a * underlineAlpha}
-                    renderOrder={renderOrder}
+                    renderOrder={underlineOrder}
                   />
                 </CanvasItemGroup>
               )}
