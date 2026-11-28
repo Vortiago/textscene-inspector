@@ -27,6 +27,12 @@ black (`volumetric_fog_process.glsl:683`, `fog.cpp:482`). It jitters each frame 
 (`fog.cpp:1113`). The picture must repeat the one a jitter cycle earlier, so the wait compares each
 picture with the one `FOG_JITTER_CYCLE_FRAMES` frames back.
 
+**Screen-space indirect lighting (SSIL).** Godot samples mip level 5 of the previous frame
+(`ssil.glsl:211`). The frame history starts black (`ss_effects.cpp:394`). Each lit surface adds
+the sampled light to its ambient light (`scene_forward_clustered.glsl:2165-2175`). Godot copies
+the finished frame into history for the next draw (`render_forward_clustered.cpp:2414-2417`).
+The wait compares consecutive pictures unless temporal volumetric fog sets the comparison period.
+
 **Moving transforms.** The tree is paused and the time scale is 0, so game logic stops. A
 transform notification still runs (`scene_tree.cpp:193-204`), so a RemoteTransform relay cycle
 moves its nodes on every frame (`remote_transform_3d.cpp:118-126`). The picture misses that motion
@@ -47,8 +53,8 @@ step the main loop hands the renderer (`main.cpp:4841,4990-4994`). A sprite that
 30 ms would then decide the picture, so the wait sets `Engine.time_scale` to 0. The process quits
 after it saves the picture, so nothing restores the scale.
 
-With `--no-previews` the harness does not freeze the scene, so the wait stays out of its way: only
-a fog history draws on there.
+With `--no-previews`, the harness runs the wait only when the viewport's effective Environment
+uses SSIL or temporal volumetric fog. Other scenes keep their runtime time scale.
 
 ## The quiet window
 
