@@ -14,18 +14,20 @@ import { TscnCompletionItemProvider } from './TscnCompletionItemProvider';
 import { TscnCodeActionProvider } from './TscnCodeActionProvider';
 import { TscnFoldingRangeProvider } from './TscnFoldingRangeProvider';
 import { TscnDocumentHighlightProvider } from './TscnDocumentHighlightProvider';
-import { TscnResPathListing } from './TscnResPathListing';
+import { createWorkspaceResRoots, type WorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { registerTscnTools } from './tools/registerTscnTools';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { copyNodePathAtCursor } from './copyNodePath';
 import { isUri } from './uriArgument';
-import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 import { forgetProjectFiles } from './resRoot';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
 
+  const roots = createWorkspaceResRoots();
+  context.subscriptions.push(roots);
   const panels = new Map<string, TscnPreviewPanel>();
 
   const getOrCreatePanel = (resource: vscode.Uri): TscnPreviewPanel => {
@@ -80,16 +82,15 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.languages.registerDefinitionProvider({ language: 'tscn' }, new TscnDefinitionProvider())
+    vscode.languages.registerDefinitionProvider({ language: 'tscn' }, new TscnDefinitionProvider(roots))
   );
 
   // Turn `res://` references into clickable links that open the target file.
   context.subscriptions.push(
-    vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider())
+    vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider(roots))
   );
 
-  const resPathListing = new TscnResPathListing();
-  context.subscriptions.push(...registerLanguageFeatureProviders(resPathListing));
+  context.subscriptions.push(...registerLanguageFeatureProviders(roots));
 
   // External changes to every file a scene can load, and to the project file. Each watcher
   // serves the previews and the linter diagnostics in the Problems panel.
@@ -142,35 +143,23 @@ export function activate(context: vscode.ExtensionContext) {
   for (const watcher of [resourceWatcher, projectFileWatcher]) {
     context.subscriptions.push(
       watcher.onDidChange(handleResourceChange),
-      // A created or deleted file changes what `res://` completion may offer. An edit does not.
-      watcher.onDidCreate((uri) => {
-        resPathListing.clear();
-        return handleResourceChange(uri, 'created');
-      }),
-      watcher.onDidDelete((uri) => {
-        resPathListing.clear();
-        return handleResourceChange(uri, 'deleted');
-      })
+      watcher.onDidCreate((uri) => handleResourceChange(uri, 'created')),
+      watcher.onDidDelete((uri) => handleResourceChange(uri, 'deleted'))
     );
   }
-
-  context.subscriptions.push(...watchScanStopFiles(resPathListing));
 }
 
 /**
  * The providers over `@textscene/core/languageFeatures`, the engine the standalone
  * `tscn-lsp` server uses too, so both hosts give the same answers.
  */
-function registerLanguageFeatureProviders(resPathListing: TscnResPathListing): vscode.Disposable[] {
+function registerLanguageFeatureProviders(roots: WorkspaceResRoots): vscode.Disposable[] {
   return [
     vscode.languages.registerHoverProvider({ language: 'tscn' }, new TscnHoverProvider()),
-    vscode.languages.registerReferenceProvider(
-      { language: 'tscn' },
-      new TscnReferenceProvider(resPathListing)
-    ),
+    vscode.languages.registerReferenceProvider({ language: 'tscn' }, new TscnReferenceProvider(roots)),
     vscode.languages.registerCompletionItemProvider(
       { language: 'tscn' },
-      new TscnCompletionItemProvider(resPathListing),
+      new TscnCompletionItemProvider(roots),
       ...COMPLETION_TRIGGER_CHARACTERS
     ),
     vscode.languages.registerCodeActionsProvider({ language: 'tscn' }, new TscnCodeActionProvider(), {
@@ -196,16 +185,6 @@ function forgetProjectFilesOnChange(projectFileWatcher: vscode.FileSystemWatcher
     vscode.window.onDidChangeWindowState((state) => {
       if (state.focused) forgetProjectFiles();
     }),
-  ];
-}
-
-/** A `.gdignore` created or deleted moves a directory into or out of the scan the listing follows. */
-function watchScanStopFiles(resPathListing: TscnResPathListing): vscode.Disposable[] {
-  const watcher = vscode.workspace.createFileSystemWatcher(SCAN_STOP_FILES_PATTERN, false, true);
-  return [
-    watcher,
-    watcher.onDidCreate(() => resPathListing.clear()),
-    watcher.onDidDelete(() => resPathListing.clear()),
   ];
 }
 

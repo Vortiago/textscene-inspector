@@ -13,7 +13,7 @@ import { resPathUri } from './existingResFile';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { readWorkspaceFile } from './readWorkspaceFile';
-import { scannedResPaths } from './scannedResPaths';
+import { scannedResPaths } from './resRoots/scannedResPaths';
 
 export class LintResourceProvider implements ResourceProvider {
   /** The `res://` paths the last listing that answered found. Written only by `listFiles`. */
