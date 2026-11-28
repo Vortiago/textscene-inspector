@@ -62,16 +62,16 @@ function maxMipmapOf(texture: AtlasRect): number {
 }
 
 // texture_storage.cpp:3345-3468
-export function buildAreaLightAtlas(sizes: readonly ImageSize[]): AtlasLayout {
+export function buildAreaLightAtlas(sizes: readonly ImageSize[], limit = Infinity): AtlasLayout {
   const cells = sizes.map(cellOf);
-  const { width, height, positions } = packCells(cells, 1, BORDER);
-  const rects = cells.map((cell, index) => ({
-    x: positions[index]!.x * BORDER,
-    y: positions[index]!.y * BORDER,
-    width: cell.pixelWidth,
-    height: cell.pixelHeight,
+  const { width, height, positions, wanted } = packCells(cells, 1, BORDER, limit);
+  const rects = positions.map((position, index) => ({
+    x: position.x * BORDER,
+    y: position.y * BORDER,
+    width: cells[index]!.pixelWidth,
+    height: cells[index]!.pixelHeight,
   }));
-  return { width, height, rects };
+  return { width, height, rects, wanted };
 }
 
 export function areaPlacement(rect: AtlasRect, layout: AtlasLayout): AreaTexturePlacement {

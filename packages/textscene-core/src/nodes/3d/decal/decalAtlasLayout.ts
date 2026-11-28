@@ -31,11 +31,12 @@ function cellOf({ width, height }: ImageSize): CellSize {
  * The atlas of `sizes`, in the order Godot's map holds them. With no texture it is one border
  * square, which still holds every mip (`:3144-3153`).
  */
-export function packDecalAtlas(sizes: readonly ImageSize[]): AtlasLayout {
-  const { width, height, positions } = packCells(
+export function packDecalAtlas(sizes: readonly ImageSize[], limit = Infinity): AtlasLayout {
+  const { width, height, positions, wanted } = packCells(
     sizes.map(cellOf),
     DECAL_ATLAS_MIN_COLUMNS,
-    DECAL_ATLAS_BORDER
+    DECAL_ATLAS_BORDER,
+    limit
   );
   const rects = positions.map((position, index): AtlasRect => ({
     x: position.x * DECAL_ATLAS_BORDER + DECAL_ATLAS_BORDER / 2,
@@ -43,5 +44,5 @@ export function packDecalAtlas(sizes: readonly ImageSize[]): AtlasLayout {
     width: sizes[index]!.width,
     height: sizes[index]!.height,
   }));
-  return { width, height, rects };
+  return { width, height, rects, wanted };
 }

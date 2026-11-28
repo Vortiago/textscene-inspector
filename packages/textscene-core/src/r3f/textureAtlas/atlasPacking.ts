@@ -14,6 +14,7 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
+import { fitAtlas } from './fitAtlas.js';
 import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
 
 /** A block of whole cells to place. */
@@ -33,6 +34,7 @@ export interface PackedAtlas {
   width: number;
   height: number;
   positions: CellPosition[];
+  wanted?: CellSize;
 }
 
 /**
@@ -66,23 +68,44 @@ interface Block {
   size: CellSize;
 }
 
+function cellCapacity(cells: readonly CellSize[], side: number): number {
+  let area = 0;
+  for (const [index, cell] of cells.entries()) {
+    area += cell.width * cell.height;
+    if (cell.width > side || cell.height > side || area > side * side) return index;
+  }
+  return cells.length;
+}
+
 /**
  * Packs `cells` into an atlas of `border`-texel cells, with no cell fewer than `minColumns` columns
  * wide. The columns start at the power of two that holds the widest cell, and double until the rows
  * are at most twice the columns. With no cell the atlas is one cell.
  */
-export function packCells(cells: readonly CellSize[], minColumns: number, border: number): PackedAtlas {
-  if (cells.length === 0) return { width: border, height: border, positions: [] };
+export function packCells(
+  cells: readonly CellSize[],
+  minColumns: number,
+  border: number,
+  limit = Infinity
+): PackedAtlas {
   const blocks = cells
     .map((size, index): Block => ({ index, size }))
     .sort((a, b) => b.size.height - a.size.height || b.size.width - a.size.width);
-  let columns = nextPowerOfTwo(Math.max(minColumns, ...cells.map((cell) => cell.width)));
-  const positions: CellPosition[] = [];
-  for (;;) {
-    const rows = packInto(blocks, columns, positions);
-    if (rows <= columns * 2) {
-      return { width: columns * border, height: nextPowerOfTwo(rows * border), positions };
+  function pack(count: number): PackedAtlas {
+    if (count === 0) return { width: border, height: border, positions: [] };
+    const prefix = count === cells.length ? blocks : blocks.filter(({ index }) => index < count);
+    const widest = prefix.reduce((width, { size }) => Math.max(width, size.width), minColumns);
+    let columns = nextPowerOfTwo(widest);
+    const positions: CellPosition[] = [];
+    for (;;) {
+      const rows = packInto(prefix, columns, positions);
+      if (rows <= columns * 2) {
+        return { width: columns * border, height: nextPowerOfTwo(rows * border), positions };
+      }
+      columns *= 2;
     }
-    columns *= 2;
   }
+  return fitAtlas(cells.length, pack, limit, () =>
+    minColumns * border > limit ? 0 : cellCapacity(cells, Math.floor(limit / border))
+  );
 }

@@ -6,13 +6,13 @@ import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { AtlasHolders } from './atlasHolders.js';
 import { AtlasTexture, holdAtlasLevels } from './atlasTexture.js';
-import { fitAtlas, type AtlasLayout } from './fitAtlas.js';
+import type { AtlasLayout } from './fitAtlas.js';
 import { readableTextures, type GodotImage } from './godotImage.js';
 
 interface AtlasFormat<Placement> {
   name: string;
   colorSpace: THREE.ColorSpace;
-  pack(sizes: readonly ImageSize[]): AtlasLayout;
+  pack(sizes: readonly ImageSize[], limit: number): AtlasLayout;
   place(rect: AtlasRect, layout: AtlasLayout): Placement;
   levels(layout: AtlasLayout, images: readonly GodotImage[], reusable: readonly MipLevel[]): MipLevel[];
 }
@@ -41,6 +41,7 @@ export function createTextureAtlas<Placement>(
     leftTexturesOut: false,
   });
   const { holders, placements } = state;
+  holders.markChanged();
 
   function update(maxTextureSize: number): void {
     if (maxTextureSize !== state.previousLimit) holders.markChanged();
@@ -48,7 +49,8 @@ export function createTextureAtlas<Placement>(
     if (!changed) return;
     const readable = readableTextures(changed);
     const images = readable.map(({ image }) => image);
-    const { layout, wanted } = fitAtlas(format.pack, images, maxTextureSize);
+    const layout = format.pack(images, maxTextureSize);
+    const { wanted } = layout;
     const count = layout.rects.length;
     if (wanted) {
       logger.warn(
@@ -56,7 +58,8 @@ export function createTextureAtlas<Placement>(
           `${images.length - count} textures stay out.`
       );
     }
-    holdAtlasLevels(texture, format.levels(layout, images.slice(0, count), texture.mipmaps as MipLevel[]));
+    images.length = count;
+    holdAtlasLevels(texture, format.levels(layout, images, texture.mipmaps as MipLevel[]));
     placements.clear();
     layout.rects.forEach((rect, index) =>
       placements.set(readable[index]!.texture, format.place(rect, layout))
@@ -67,7 +70,8 @@ export function createTextureAtlas<Placement>(
 
   return {
     texture(): THREE.DataTexture {
-      if (texture.mipmaps.length === 0) holdAtlasLevels(texture, format.levels(format.pack([]), [], []));
+      if (texture.mipmaps.length === 0)
+        holdAtlasLevels(texture, format.levels(format.pack([], Infinity), [], []));
       return texture;
     },
     hold(source: THREE.Texture): void {

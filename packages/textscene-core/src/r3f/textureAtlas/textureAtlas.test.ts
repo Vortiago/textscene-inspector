@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { ImageSize } from '../../resources/formats/image/imagePixels';
 import type { AtlasRect } from '../../resources/textures/atlastexture/types';
+import { fitAtlas } from './fitAtlas';
 import { createTextureAtlas } from './textureAtlas';
 
 function texture(width: number) {
   return new THREE.DataTexture(new Uint8Array(width * 4), width, 1);
 }
 
-function rowAtlas(slot: { atlasTexture?: THREE.DataTexture } = {}) {
+function rowAtlas(slot: { atlasTexture?: THREE.DataTexture } = {}, offset = 0) {
   const levels = vi.fn(({ width, height }: ImageSize) =>
     [1, 2].map((factor) => ({
       width: width / factor,
@@ -20,16 +21,19 @@ function rowAtlas(slot: { atlasTexture?: THREE.DataTexture } = {}) {
     {
       name: 'RowAtlas',
       colorSpace: THREE.NoColorSpace,
-      pack(sizes) {
-        let width = 0;
-        const rects = sizes.map((size) => {
-          const x = width;
-          width += size.width;
-          return { x, y: 0, ...size };
-        });
-        return { width: Math.max(2, width), height: 2, rects };
+      pack(sizes, limit) {
+        const row = (count: number) => {
+          let width = 0;
+          const rects = sizes.slice(0, count).map((size) => {
+            const x = width;
+            width += size.width;
+            return { x, y: 0, ...size };
+          });
+          return { width: Math.max(2, width), height: 2, rects };
+        };
+        return fitAtlas(sizes.length, row, limit, () => sizes.length);
       },
-      place: (rect: AtlasRect) => rect.x,
+      place: (rect: AtlasRect) => rect.x + offset,
       levels,
     },
     slot
@@ -118,6 +122,18 @@ describe('the shared atlas lifecycle', () => {
     expect(second.placement(source)).toBe(0);
     first.release(source);
     expect(second.placement(source)).toBeUndefined();
+  });
+
+  it('applies the new layout to unchanged sources after a reload', () => {
+    const slot = {};
+    const first = rowAtlas(slot).atlas;
+    const source = texture(4);
+    first.hold(source);
+    first.update(8);
+
+    const second = rowAtlas(slot, 2).atlas;
+    second.update(8);
+    expect(second.placement(source)).toBe(2);
   });
 
   it('fills the empty texture on first use and reuses it after a reload', () => {

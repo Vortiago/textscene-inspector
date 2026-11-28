@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { areaAtlasLevels, areaPlacement, buildAreaLightAtlas } from './atlasLayout';
 import type { GodotImage } from '../textureAtlas/godotImage';
+import type { ImageSize } from '../../resources/formats/image/imagePixels';
 import { mipSize } from '../../resources/processing/mipChain';
 
 /** A `width × height` image whose texel at `x`, `y` is `rgbaAt(x, y)`, in sRGB bytes. */
@@ -18,13 +19,17 @@ function image(
 
 const solid = (width: number, height: number, rgba: readonly number[]) => image(width, height, () => rgba);
 
-function filledAtlas(images: readonly GodotImage[]) {
-  const layout = buildAreaLightAtlas(images);
+function placedAtlas(sizes: readonly ImageSize[]) {
+  const layout = buildAreaLightAtlas(sizes);
   return {
     ...layout,
     placements: layout.rects.map((rect) => areaPlacement(rect, layout)),
-    mipmaps: areaAtlasLevels(layout, images).map(({ data }) => data),
   };
+}
+
+function filledAtlas(images: readonly GodotImage[]) {
+  const layout = buildAreaLightAtlas(images);
+  return { ...layout, mipmaps: areaAtlasLevels(layout, images).map(({ data }) => data) };
 }
 
 /** The RGBA bytes of mip `level` at texel `x`, `y`. */
@@ -36,21 +41,24 @@ function texel(level: number, x: number, y: number, atlas: ReturnType<typeof fil
 
 describe('buildAreaLightAtlas', () => {
   it('places one 64×64 texture in the corner of a 256×256 atlas, with five mips to sample', () => {
-    const atlas = filledAtlas([solid(64, 64, [255, 255, 255, 255])]);
+    const atlas = placedAtlas([{ width: 64, height: 64 }]);
 
     expect([atlas.width, atlas.height]).toEqual([256, 256]);
     expect(atlas.placements[0]).toEqual({ rect: { x: 0, y: 0, width: 0.25, height: 0.25 }, maxMipmap: 5 });
   });
 
   it('stretches a 200×100 texture to whole cells, 256×128, with six mips to sample', () => {
-    const atlas = filledAtlas([solid(200, 100, [255, 255, 255, 255])]);
+    const atlas = placedAtlas([{ width: 200, height: 100 }]);
 
     expect([atlas.width, atlas.height]).toEqual([512, 256]);
     expect(atlas.placements[0]).toEqual({ rect: { x: 0, y: 0, width: 0.5, height: 0.5 }, maxMipmap: 6 });
   });
 
   it('packs the wider texture first and stacks the other beneath it', () => {
-    const atlas = filledAtlas([solid(64, 64, [0, 0, 0, 255]), solid(200, 100, [0, 0, 0, 255])]);
+    const atlas = placedAtlas([
+      { width: 64, height: 64 },
+      { width: 200, height: 100 },
+    ]);
 
     expect([atlas.width, atlas.height]).toEqual([512, 512]);
     expect(atlas.placements.map((placement) => placement.rect)).toEqual([
