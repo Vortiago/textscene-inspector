@@ -9,6 +9,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+export const INTEGRATION_WORKSPACE_FILE = 'integration.code-workspace';
+
 /** The variable that names the suite's start marker inside the extension host. */
 export const SUITE_STARTED_MARKER_ENV = 'TEXTSCENE_SUITE_STARTED_MARKER';
 
@@ -128,7 +130,7 @@ export function integrationLaunchOptions(
     extensionDevelopmentPath: paths.extensionDevelopmentPath,
     extensionTestsPath: paths.extensionTestsPath,
     launchArgs: [
-      paths.workspaceRoot,
+      path.join(paths.workspaceRoot, INTEGRATION_WORKSPACE_FILE),
       // Keep other installed extensions out of the run.
       '--disable-extensions',
       `--user-data-dir=${paths.userDataDir}`,
@@ -147,7 +149,7 @@ export function integrationLaunchOptions(
 
 export interface IntegrationLaunchDeps {
   paths: IntegrationLaunchPaths;
-  prepareWorkspace: (workspaceRoot: string) => void;
+  prepareWorkspace: (workspaceRoot: string) => void | (() => void);
   /**
    * `@vscode/test-electron`'s `runTests` resolves with the exit code and rejects on
    * a failing run, so the value is not the signal and stays unnarrowed.
@@ -162,12 +164,16 @@ export interface IntegrationLaunchDeps {
  * Preparing here also keeps the suite from recreating a directory the window holds.
  */
 export async function launchIntegrationTests(deps: IntegrationLaunchDeps): Promise<void> {
-  deps.prepareWorkspace(deps.paths.workspaceRoot);
-  // A result left by an earlier run must not pass a run that records none.
-  fs.rmSync(deps.paths.suiteResultFile, { force: true });
-  await relaunchIfHostExitsEarly(deps.paths.suiteStartedMarker, () =>
-    deps.launch(integrationLaunchOptions(deps.paths))
-  );
+  const cleanup = deps.prepareWorkspace(deps.paths.workspaceRoot);
+  try {
+    // A result left by an earlier run must not pass a run that records none.
+    fs.rmSync(deps.paths.suiteResultFile, { force: true });
+    await relaunchIfHostExitsEarly(deps.paths.suiteStartedMarker, () =>
+      deps.launch(integrationLaunchOptions(deps.paths))
+    );
+  } finally {
+    cleanup?.();
+  }
 }
 
 /**

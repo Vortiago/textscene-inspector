@@ -12,6 +12,7 @@ import { join, sep } from 'node:path';
 import {
   DISABLE_GPU_ENV,
   gpuLaunch,
+  INTEGRATION_WORKSPACE_FILE,
   integrationLaunchOptions,
   integrationLaunchPaths,
   assertNoFailedTests,
@@ -47,7 +48,9 @@ describe('integrationLaunchPaths', () => {
   });
 
   it('opens the host on the test workspace, so files under it have a folder', () => {
-    expect(integrationLaunchOptions(paths).launchArgs[0]).toBe(paths.workspaceRoot);
+    expect(integrationLaunchOptions(paths).launchArgs[0]).toBe(
+      join(paths.workspaceRoot, INTEGRATION_WORKSPACE_FILE)
+    );
   });
 
   it("prints every page's console to stderr, so a webview's script error reaches the job log", () => {
@@ -193,11 +196,14 @@ describe('launchIntegrationTests', () => {
     const calls: string[] = [];
     await launchIntegrationTests({
       paths: fakePaths('/repo/apps/textscene-vscode/.test-workspace'),
-      prepareWorkspace: () => void calls.push('prepare'),
+      prepareWorkspace: () => {
+        calls.push('prepare');
+        return () => void calls.push('cleanup');
+      },
       launch: async () => void calls.push('launch'),
     });
 
-    expect(calls).toEqual(['prepare', 'launch']);
+    expect(calls).toEqual(['prepare', 'launch', 'cleanup']);
   });
 
   it('hands the launcher a workspace that already exists on disk', async () => {
@@ -208,7 +214,10 @@ describe('launchIntegrationTests', () => {
     try {
       await launchIntegrationTests({
         paths: fakePaths(workspaceRoot),
-        prepareWorkspace: (root) => mkdirSync(root, { recursive: true }),
+        prepareWorkspace: (root) => {
+          mkdirSync(root, { recursive: true });
+          writeFileSync(join(root, INTEGRATION_WORKSPACE_FILE), JSON.stringify({ folders: [{ path: '.' }] }));
+        },
         launch: async (options: IntegrationLaunchOptions) => {
           existedAtLaunch = existsSync(options.launchArgs[0]!);
         },

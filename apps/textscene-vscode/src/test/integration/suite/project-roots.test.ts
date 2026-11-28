@@ -13,6 +13,11 @@ import { getFixturePath } from '../helpers/fixtureHelpers';
 import { createTestPanel, getExtensionUri, waitForMessage } from '../helpers/panelHelpers';
 import { waitFor } from '../../waitFor';
 import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
+import {
+  ABOVE_WORKSPACE_FOLDER_NAME,
+  ABOVE_WORKSPACE_SCENE,
+  ABOVE_WORKSPACE_TEXTURE,
+} from '../../smokeProject/aboveWorkspace';
 
 const FOLDER = 'project-roots';
 
@@ -228,6 +233,49 @@ suite('Project roots', () => {
     } finally {
       fs.rmSync(looseGrid, { force: true });
       fs.rmSync(scenePath, { force: true });
+    }
+  });
+
+  test('previews a texture above the opened workspace folder', async function () {
+    this.timeout(20000);
+    const folder = vscode.workspace.workspaceFolders?.find(
+      (candidate) => candidate.name === ABOVE_WORKSPACE_FOLDER_NAME
+    );
+    assert.ok(folder, 'The test host opens the scene subfolder');
+    const scenePath = path.join(folder.uri.fsPath, ABOVE_WORKSPACE_SCENE);
+    const texturePath = path.join(path.dirname(folder.uri.fsPath), ABOVE_WORKSPACE_TEXTURE);
+    const scene = await shown(scenePath);
+    assert.strictEqual(vscode.workspace.getWorkspaceFolder(scene.uri)?.uri.toString(), folder.uri.toString());
+    assert.strictEqual(vscode.workspace.getWorkspaceFolder(vscode.Uri.file(texturePath)), undefined);
+
+    const resPath = `res://${ABOVE_WORKSPACE_TEXTURE}`;
+    const { panel, triggerMessage, sentMessages } = createTestPanel(getExtensionUri(), scene.uri);
+    try {
+      triggerMessage({ type: 'webviewReady' });
+      await waitForMessage(sentMessages, 'loadTscn', 8000);
+      triggerMessage({ type: 'loadResource', path: resPath, resourceType: 'Texture2D', requestId: 'icon' });
+
+      const reply = () =>
+        sentMessages.find(
+          (message) =>
+            (message.type === 'resourceLoaded' || message.type === 'resourceLoadError') &&
+            message.requestId === 'icon'
+        );
+      await waitFor(
+        () => reply() !== undefined,
+        8000,
+        () => 'The preview did not answer for the icon'
+      );
+      const texture = reply();
+      assert.ok(texture?.type === 'resourceLoaded' && texture.isBinary, JSON.stringify(texture));
+      assert.deepStrictEqual(Buffer.from(texture.content, 'base64'), fs.readFileSync(texturePath));
+      assert.deepStrictEqual(await definitionTargets(scene, resPath), [texturePath]);
+      assert.deepStrictEqual(
+        vscode.languages.getDiagnostics(scene.uri).filter((d) => d.source === 'tscn-lint'),
+        []
+      );
+    } finally {
+      panel.dispose();
     }
   });
 

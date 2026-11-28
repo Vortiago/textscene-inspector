@@ -6,6 +6,7 @@ import { createWorkspaceResRoots } from '../resRoots/workspaceResRoots';
 import { fireWorkspacePathEvent } from '../resRoots/workspaceResRoots.testkit';
 import { MAX_READ_BYTES } from '../readWorkspaceFile';
 import { HOST_PATH_CASE } from '../hostPathCase';
+import { createMockUriForScheme } from '../vscodeMocks.testkit';
 import { createMockUri, createMockFileData, vscode } from '../test-setup';
 
 const FILE = 1;
@@ -154,15 +155,72 @@ describe('VSCodeResourceProvider', () => {
       expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
     });
 
-    it('refuses a res:// resource above the workspace folder', async () => {
-      const folder = createMockUri('/workspace/scenes');
-      vscode.workspace.getWorkspaceFolder.mockReturnValue({ uri: folder });
-      const nestedProvider = new VSCodeResourceProvider(roots, folder, documentUri);
+    describe('when the workspace is a subfolder of a project', () => {
+      let nestedProvider: VSCodeResourceProvider;
 
-      await expect(nestedProvider.loadResource('res://icon.png')).rejects.toThrow(
-        'Path traversal detected: res://icon.png resolves outside workspace bounds'
+      beforeEach(() => {
+        const folder = createMockUri('/workspace/scenes');
+        vscode.workspace.getWorkspaceFolder.mockReturnValue({ uri: folder });
+        nestedProvider = new VSCodeResourceProvider(roots, folder, documentUri);
+      });
+
+      it('loads a res:// texture from the project outside the opened folder', async () => {
+        const bytes = new Uint8Array([7, 8, 9]);
+        vscode.workspace.fs.readFile.mockResolvedValueOnce(bytes);
+
+        const resource = await nestedProvider.loadResource('res://textures/icon.png', 'Texture2D');
+
+        expect(new Uint8Array(resource as ArrayBuffer)).toEqual(bytes);
+        expect(readPaths()).toEqual(['/workspace/textures/icon.png']);
+        expect(nestedProvider.getServedResPath(createMockUri('/workspace/textures/icon.png'))).toBe(
+          'res://textures/icon.png'
+        );
+      });
+
+      it('rejects a res:// path that climbs out of the project', async () => {
+        await expect(nestedProvider.loadResource('res://../other.png')).rejects.toThrow(
+          'Path traversal detected: res://../other.png climbs out of the res:// root'
+        );
+        expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+      });
+
+      it('loads a relative path that climbs from the scene into the project', async () => {
+        vscode.workspace.fs.readFile.mockResolvedValueOnce(new Uint8Array([1]));
+
+        await nestedProvider.loadResource('../textures/icon.png', 'Texture2D');
+
+        expect(readPaths()).toEqual(['/workspace/textures/icon.png']);
+      });
+
+      it('uses the project as the bound on a climbing relative path', async () => {
+        await expect(nestedProvider.loadResource('../../other.png')).rejects.toThrow(
+          'Path traversal detected: ../../other.png resolves outside workspace bounds (/workspace)'
+        );
+        expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+      });
+    });
+
+    it('uses URI paths and retains the filesystem identity in a virtual workspace', async () => {
+      const remoteUri = (path: string, authority = 'repo') =>
+        createMockUriForScheme(path, 'vscode-vfs', authority);
+      const folder = remoteUri('/workspace/scenes');
+      vscode.workspace.getWorkspaceFolder.mockReturnValue({ uri: folder });
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(new Uint8Array([2]));
+      const remoteProvider = new VSCodeResourceProvider(
+        roots,
+        folder,
+        remoteUri('/workspace/scenes/test.tscn')
       );
-      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+
+      await remoteProvider.loadResource('../textures/icon.png', 'Texture2D');
+
+      const [readUri] = vscode.workspace.fs.readFile.mock.calls[0];
+      expect(readUri.toString()).toBe('vscode-vfs://repo/workspace/textures/icon.png');
+      expect(remoteProvider.getServedResPath(remoteUri('/workspace/textures/icon.png'))).toBe(
+        '../textures/icon.png'
+      );
+      expect(remoteProvider.getServedResPath(remoteUri('/workspace/textures/icon.png', 'other'))).toBeNull();
+      expect(await remoteProvider.resPathOf(remoteUri('/workspace/textures/icon.png', 'other'))).toBeNull();
     });
 
     it('gives the workspace error when the document has no root', async () => {
@@ -219,9 +277,24 @@ describe('VSCodeResourceProvider', () => {
       }
     );
 
-    it('refuses a relative path that climbs out of the workspace', async () => {
-      await expect(provider.loadResource('../../secrets/key.pem', 'TextFile')).rejects.toThrow(
-        /Failed to load resource/
+    it('uses the workspace as the relative path bound for a loose scene', async () => {
+      vscode.workspace.fs.stat.mockImplementation(statWithProjectAt(null));
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(new Uint8Array([1]));
+
+      await provider.loadResource('../textures/icon.png', 'Texture2D');
+
+      expect(readPaths()).toEqual(['/workspace/textures/icon.png']);
+      await expect(provider.loadResource('../../other.png', 'Texture2D')).rejects.toThrow(
+        'Path traversal detected: ../../other.png resolves outside workspace bounds (/workspace)'
+      );
+      expect(vscode.workspace.fs.readFile).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a relative path outside the workspace when there is no root', async () => {
+      vscode.workspace.getWorkspaceFolder.mockReturnValue(undefined);
+
+      await expect(provider.loadResource('../../other.png', 'Texture2D')).rejects.toThrow(
+        'Path traversal detected: ../../other.png resolves outside workspace bounds (/workspace)'
       );
       expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
     });

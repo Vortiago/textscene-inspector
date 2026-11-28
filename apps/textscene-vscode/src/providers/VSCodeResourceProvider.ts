@@ -1,9 +1,16 @@
 import * as vscode from 'vscode';
+import { PROJECT_FILE_PATH } from '@textscene/core/godot';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
 import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
-import { forwardSlashes, isWithinRoot, pathKey, RES_SCHEME } from '@textscene/core/resources/resPath';
+import {
+  forwardSlashes,
+  isSamePath,
+  isWithinRoot,
+  pathKey,
+  RES_SCHEME,
+} from '@textscene/core/resources/resPath';
 import type { WorkspaceResRoot, WorkspaceResRoots } from '../resRoots/workspaceResRoots';
 import { HOST_PATH_CASE } from '../hostPathCase';
 import { readWorkspaceFile } from '../readWorkspaceFile';
@@ -11,11 +18,7 @@ import { readWorkspaceFile } from '../readWorkspaceFile';
 export class VSCodeResourceProvider implements ResourceProvider {
   private servedRoot: WorkspaceResRoot | null = null;
 
-  /**
-   * The exact `res://` string a `loadResource` call resolved to, by the key of its fsPath in the host's path case.
-   * Recorded on resolution, before the read, so a resource not on disk yet is still recorded and a later
-   * `onDidCreate` recovers it through `getServedResPath`.
-   */
+  // Record the URI before reading, so a file created later can refresh its missing placeholder.
   private servedResources = new Map<string, string>();
 
   constructor(
@@ -29,7 +32,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
     try {
       const fsPath = await this.resolve(resourcePath);
       info(`[VSCodeResourceProvider] Resolved to: ${fsPath.fsPath}`);
-      this.servedResources.set(pathKey(fsPath.fsPath, HOST_PATH_CASE), resourcePath);
+      this.servedResources.set(resourceKey(fsPath), resourcePath);
       const fileData = await readWorkspaceFile(fsPath);
       // The host reads the whole file, as `vscode.workspace.fs` has no ranged read and the web host build
       // takes no Node builtin. Cutting here keeps the rest out of the base64 string and the webview.
@@ -55,17 +58,13 @@ export class VSCodeResourceProvider implements ResourceProvider {
       const entries = await vscode.workspace.fs.readDirectory(directory);
       return entries.map(([name, type]) => ({ name, isDirectory: (type & vscode.FileType.Directory) !== 0 }));
     } catch {
-      // A folder the host lacks or refuses, or one outside the workspace, is a folder Godot would refuse.
+      // A folder the host cannot read has no usable listing.
       return null;
     }
   }
 
-  /**
-   * The exact `res://` string `loadResource` served for this fsPath, or `null` when never served, so there is nothing
-   * to invalidate. A lookup with no IO, not a re-derivation, so on a case-insensitive host it ignores a watcher's case.
-   */
   getServedResPath(fileUri: vscode.Uri): string | null {
-    return this.servedResources.get(pathKey(fileUri.fsPath, HOST_PATH_CASE)) ?? null;
+    return this.servedResources.get(resourceKey(fileUri)) ?? null;
   }
 
   /**
@@ -74,10 +73,10 @@ export class VSCodeResourceProvider implements ResourceProvider {
    */
   async resPathOf(fileUri: vscode.Uri): Promise<string | null> {
     const root = await this.roots.rootOf(this.documentUri).catch(() => null);
-    if (root === null) return null;
-    const rootPath = forwardSlashes(root.uri.fsPath);
-    const filePath = forwardSlashes(fileUri.fsPath);
-    if (filePath === rootPath || !isWithinRoot(rootPath, filePath, HOST_PATH_CASE)) return null;
+    if (root === null || !isWithinDirectory(root.uri, fileUri)) return null;
+    const rootPath = forwardSlashes(root.uri.path);
+    const filePath = forwardSlashes(fileUri.path);
+    if (isSamePath(rootPath, filePath, HOST_PATH_CASE)) return null;
     return `${RES_SCHEME}${filePath.slice(rootPath.length).replace(/^\//, '')}`;
   }
 
@@ -91,33 +90,42 @@ export class VSCodeResourceProvider implements ResourceProvider {
     return servedRoot !== null && (await this.roots.rootOf(this.documentUri)) !== servedRoot;
   }
 
-  private async resolveResPath(resourcePath: string): Promise<vscode.Uri> {
+  private async resolve(resourcePath: string): Promise<vscode.Uri> {
     const root = await this.roots.rootOf(this.documentUri);
-    if (!root) {
+    if (resourcePath.startsWith(RES_SCHEME)) {
+      if (!root) {
+        throw new Error(
+          `expected ${this.documentUri.fsPath} inside the workspace ${this.workspaceRoot.fsPath}`
+        );
+      }
+      const uri = root.uriOf(resourcePath);
+      if (!uri) throw new Error(`Path traversal detected: ${resourcePath} climbs out of the res:// root`);
+      this.servedRoot = root;
+      return uri;
+    }
+
+    const bound = root && (await root.existingFile(PROJECT_FILE_PATH)) ? root.uri : this.workspaceRoot;
+    const uri = vscode.Uri.joinPath(directoryOf(this.documentUri), resourcePath);
+    if (!isWithinDirectory(bound, uri)) {
       throw new Error(
-        `expected ${this.documentUri.fsPath} inside the workspace ${this.workspaceRoot.fsPath}`
+        `Path traversal detected: ${resourcePath} resolves outside workspace bounds (${bound.path})`
       );
     }
-    const uri = root.uriOf(resourcePath);
-    if (!uri) throw new Error(`Path traversal detected: ${resourcePath} climbs out of the res:// root`);
     this.servedRoot = root;
     return uri;
   }
+}
 
-  /**
-   * `resourcePath` as a Uri inside the workspace: a `res://` path under the `res://` root, any other path under the
-   * scene's own directory, where a relative path may climb. It refuses a `res://` path that climbs out of its root, and
-   * any path that lands outside the workspace, which blocks path traversal.
-   */
-  private async resolve(resourcePath: string): Promise<vscode.Uri> {
-    const resolvedUri = resourcePath.startsWith(RES_SCHEME)
-      ? await this.resolveResPath(resourcePath)
-      : vscode.Uri.joinPath(directoryOf(this.documentUri), resourcePath);
-    if (!isWithinRoot(this.workspaceRoot.fsPath, resolvedUri.fsPath, HOST_PATH_CASE)) {
-      throw new Error(`Path traversal detected: ${resourcePath} resolves outside workspace bounds`);
-    }
-    return resolvedUri;
-  }
+function isWithinDirectory(directory: vscode.Uri, file: vscode.Uri): boolean {
+  return (
+    file.scheme === directory.scheme &&
+    file.authority === directory.authority &&
+    isWithinRoot(directory.path, file.path, HOST_PATH_CASE)
+  );
+}
+
+function resourceKey(uri: vscode.Uri): string {
+  return JSON.stringify([uri.scheme, uri.authority, pathKey(uri.path, HOST_PATH_CASE)]);
 }
 
 function directoryOf(documentUri: vscode.Uri): vscode.Uri {

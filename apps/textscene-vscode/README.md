@@ -4,11 +4,11 @@ Shows a live 3D or 2D preview of a Godot `.tscn` file beside its text, without G
 
 ## Open the preview
 
-1. Open the folder that holds `project.godot`. The extension resolves `res://` paths from there. For a scene with no `project.godot` above it, the extension resolves them from the scene's own folder.
+1. Open your Godot project folder or a subfolder of it.
 2. Open a `.tscn` file.
 3. Run **TextScene: Open Preview to the Side**, or press <kbd>Ctrl+K V</kbd> (<kbd>Cmd+K V</kbd> on macOS).
 
-Each `.tscn` file can have its own preview.
+Each `.tscn` file can have its own preview. The preview resolves `res://` paths and bounds resource reads by the nearest `project.godot` directory, even when it is above the opened folder. For a loose scene, `res://` starts in the scene's own folder.
 
 ## Use the preview
 
@@ -18,7 +18,7 @@ Each `.tscn` file can have its own preview.
 - Click **Copy node path** beside the Inspector's **Path** to copy the node's path from the scene root, as Godot's **Copy Node Path** writes it. The root copies as `.`.
 - Use the **3D/2D** switch for Control and Node2D scenes.
 - A mesh whose texture is missing renders magenta. The **Resources** tab lists the missing path.
-- Save the file, or a file it uses, and the preview updates. The camera stays where it is.
+- Save the scene or a dependency inside the workspace to hot-reload the preview in place. For a dependency outside the workspace, refocus VS Code and reopen the preview to load the current bytes.
 
 ## Editor features
 
