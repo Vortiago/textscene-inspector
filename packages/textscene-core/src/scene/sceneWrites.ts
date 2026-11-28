@@ -9,6 +9,14 @@ export type PropertyTexts = Readonly<Record<string, string>>;
 /** By live path, each layer's texts in order. A write gives a new map that keeps the other entries. */
 export type SceneWrites = ReadonlyMap<string, PropertyTexts>;
 
+/** Written by WriteStore.write. Old revisions leave with the immutable texts of their snapshot. */
+// eslint-disable-next-line no-restricted-syntax -- a write supplies the revisions, which cannot be derived from equal texts
+const revisions = new WeakMap<PropertyTexts, ReadonlyMap<string, number>>();
+
+export function writeRevision(texts: PropertyTexts | undefined, property: string): number {
+  return (texts && revisions.get(texts)?.get(property)) ?? 0;
+}
+
 const NO_WRITES: SceneWrites = new Map();
 
 /** The writes of every layer, kept as Variant text by live path. */
@@ -33,7 +41,12 @@ export class WriteStore {
       texts.set(property, text);
     }
     const next = new Map(this.laid);
-    next.set(path, this.layEach(path));
+    const previous = this.laid.get(path);
+    const latest = new Map(previous && revisions.get(previous));
+    for (const [property] of written) latest.set(property, (latest.get(property) ?? 0) + 1);
+    const laid = this.layEach(path);
+    revisions.set(laid, latest);
+    next.set(path, laid);
     this.laid = next;
   }
 

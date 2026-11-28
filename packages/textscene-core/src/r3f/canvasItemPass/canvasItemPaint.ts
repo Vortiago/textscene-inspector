@@ -5,6 +5,7 @@
  * its children's runs where it draws them.
  */
 
+import { sceneHeadings } from '../../parser/sceneTreeBuilder';
 import { perObject } from '../../utils/perObject';
 import { sameData } from '../../utils/sameData';
 import type { TscnNode } from '../../parser/types';
@@ -84,7 +85,15 @@ export function canvasPaintPassFrom(start: PaintRange): LiveScenePass<CanvasItem
   const key = `${start.base}:${start.size}`;
   let pass = passesByStart.get(key);
   if (!pass) {
-    pass = (tree, snapshot) => paintOf(tree, snapshot, start);
+    // Each parse owns its last completed pass. An external scene shared by several views
+    // therefore retains neither an enclosing view's paths nor its paint ranges.
+    const previousOf = perObject((_file: object) => ({ paints: new Map<string, CanvasItemPaint>() }));
+    pass = (tree, snapshot) => {
+      const headings = sceneHeadings(tree.roots);
+      const previous = previousOf(headings.length ? headings : tree.roots);
+      previous.paints = paintOf(tree, snapshot, start, previous.paints);
+      return previous.paints;
+    };
     passesByStart.set(key, pass);
   }
   return pass;
@@ -93,21 +102,12 @@ export function canvasPaintPassFrom(start: PaintRange): LiveScenePass<CanvasItem
 /** The paint pass of a canvas whose roots start at the beginning of the sequence. */
 export const canvasPaintPass: LiveScenePass<CanvasItemPaint> = canvasPaintPassFrom(WHOLE_CANVAS_RANGE);
 
-const paintByNode = perObject((_node: TscnNode) => new Map<string, CanvasItemPaint>());
-
-function keptPaint(node: TscnNode, path: string, paint: CanvasItemPaint): CanvasItemPaint {
-  const paints = paintByNode(node);
-  const previous = paints.get(path);
-  if (previous && sameData(previous, paint)) return previous;
-  paints.set(path, paint);
-  return paint;
-}
-
 function paintOf(
   tree: LiveTree,
   snapshot: ResourceSnapshot,
-  start: PaintRange
-): ReadonlyMap<string, CanvasItemPaint> {
+  start: PaintRange,
+  previous: ReadonlyMap<string, CanvasItemPaint>
+): Map<string, CanvasItemPaint> {
   const results = new Map<string, CanvasItemPaint>();
   const patches = liveScenePassResults(liveNodePatches, tree, snapshot);
   const roots = tree.rootGroups.flatMap((group) => group.children);
@@ -133,18 +133,17 @@ function paintOf(
     // Injected content draws after the authored children, in the room `reservesRoom` holds back.
     const injected = step.groups.filter(isInjected).flatMap((group) => group.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injected).children;
-    results.set(
-      path,
-      keptPaint(raw, path, {
-        range,
-        own: allocated.self,
-        front: allocated.front,
-        layer: allocated.layer,
-        back: allocated.back,
-        tail: allocated.tail,
-        behind: behindRangesOf(inline, allocated.children),
-      })
-    );
+    const paint: CanvasItemPaint = {
+      range,
+      own: allocated.self,
+      front: allocated.front,
+      layer: allocated.layer,
+      back: allocated.back,
+      tail: allocated.tail,
+      behind: behindRangesOf(inline, allocated.children),
+    };
+    const held = previous.get(path);
+    results.set(path, held && sameData(held, paint) ? held : paint);
     descend({
       ranges: new Map([
         ...rangesOf(front, frontRanges),

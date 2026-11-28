@@ -3,7 +3,7 @@
  * loader's scene, GLB and `.tres` cache snapshots, and re-render when the tree grows because an
  * instance sub-scene or GLB finishes loading after the parsed SceneGraph was built.
  */
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/ResourceLoaderContext.js';
 import {
@@ -17,6 +17,7 @@ import type { SceneScope, TscnNode, TscnScene } from '../parser/types.js';
 import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { glbPathOf } from '../resources/glbSceneRoot.js';
 import { hasSceneTileCells } from './liveSceneTiles.js';
+import type { ExternalStore } from '../utils/externalStore.js';
 import type { Scene } from '../scene/openScene.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
@@ -32,7 +33,7 @@ import type { ResourceSnapshot } from '../resources/reading';
 import { readsCover, recording, type RecordedRead } from './recordedReads.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
 import { projectTreeSettings, type ProjectTreeSettings } from '../parser/projectSettingsParser.js';
-import { useControlLocalTransforms, type ControlLocalTransforms } from './contexts/YSortContext.js';
+import { useControlLocalTransformStore, type ControlLocalTransforms } from './contexts/YSortContext.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
@@ -302,7 +303,6 @@ function sharedTreeAt(
 
 /** What a shared live tree is built from. */
 interface LiveTreeInputs {
-  scene?: Scene;
   sceneGraph: SceneGraph | null;
   loader: ResourceLoader | null;
   project: ProjectTreeSettings;
@@ -319,15 +319,15 @@ export function useProjectTreeSettings(): ProjectTreeSettings {
 }
 
 /** The scene graph in context, or null with none, the loader and the project's tree settings. */
-function useLiveTreeInputs(): LiveTreeInputs {
+function useLiveTreeInputs() {
   // Optional so viewport-level readers (the preview lighting) work in the
   // empty-canvas and test-renderer cases, where no scene is mounted at all.
   const hierarchy = useOptionalHierarchy();
   const sceneGraph = hierarchy?.sceneGraph ?? null;
   const loader = useResourceLoader();
   const project = useProjectTreeSettings();
-  const controlTransforms = useControlLocalTransforms();
-  return { sceneGraph, scene: hierarchy?.scene, loader, project, controlTransforms };
+  const transforms = useControlLocalTransformStore();
+  return { sceneGraph, scene: hierarchy?.scene, loader, project, transforms };
 }
 
 const wholeTree = (tree: SharedLiveTree) => tree;
@@ -355,50 +355,64 @@ function useReadAtLoadTick<T>(
   watched: ResourceLoader | null | undefined,
   readAt: (version: number, snapshot: ResourceSnapshot, written?: SceneGraph | null) => T,
   isSame: (a: T, b: T) => boolean,
-  scene?: Scene
+  scene?: Scene,
+  transforms?: ExternalStore<ControlLocalTransforms>
 ): T {
   const ticks = loadTicksOf(watched);
   const subscribe = useMemo(() => {
-    if (!scene) return ticks.subscribe;
+    if (!scene && !transforms) return ticks.subscribe;
     return (changed: () => void) => {
       const stopLoads = ticks.subscribe(changed);
-      const stopWrites = scene.subscribe(changed);
+      const stopWrites = scene?.subscribe(changed);
+      const stopTransforms = transforms?.subscribe(changed);
       return () => {
         stopLoads();
-        stopWrites();
+        stopWrites?.();
+        stopTransforms?.();
       };
     };
-  }, [ticks, scene]);
-  /** Written only by `getSnapshot`: the reads of this reader's last read, by whichever `readAt`. */
-  const lastReads = useRef<readonly RecordedRead[]>(NO_READS);
+  }, [ticks, scene, transforms]);
+  /** Updated by every read, even when the selected value needs no React commit. */
+  const reader = useMemo(() => ({ files: ticks.files, reads: NO_READS }), [ticks]);
   const getSnapshot = useMemo(() => {
     /** Written only by this reader: what it read last, at which tree and snapshot. */
     let last:
-      { version: number; snapshot: ResourceSnapshot; written?: SceneGraph | null; value: T } | undefined;
+      | {
+          version: number;
+          snapshot: ResourceSnapshot;
+          written?: SceneGraph | null;
+          solved?: ControlLocalTransforms;
+          value: T;
+        }
+      | undefined;
     return () => {
       const version = ticks.getVersion();
       const snapshot = ticks.files.current();
       const written = scene?.written();
-      if (last?.version === version && last.snapshot === snapshot && last.written === written)
+      const solved = transforms?.get();
+      if (
+        last?.version === version &&
+        last.snapshot === snapshot &&
+        last.written === written &&
+        last.solved === solved
+      )
         return last.value;
       const reads: RecordedRead[] = [];
       const next = readAt(version, recording(snapshot, reads), written);
-      lastReads.current = reads;
+      // A write can stop reading a pending file while the selected value stays the same.
+      if (!readsCover(reads, reader.reads)) reader.files.releaseReads();
+      reader.reads = reads;
       const value = last && isSame(last.value, next) ? last.value : next;
-      last = { version, snapshot, written, value };
+      last = { version, snapshot, written, solved, value };
       return value;
     };
-  }, [ticks, readAt, isSame, scene]);
-  useEffect(() => {
-    const committedReads = lastReads.current;
-    // A file only this reader read stays in the shared snapshot until it restarts. A new `readAt`
-    // that reads the same files keeps it, so a new closure over equal inputs restarts nothing.
-    return () => {
-      const isUnmounted = lastReads.current === committedReads;
-      if (isUnmounted ? committedReads.length > 0 : !readsCover(lastReads.current, committedReads))
-        ticks.files.releaseReads();
-    };
-  }, [ticks, readAt]);
+  }, [ticks, readAt, isSame, scene, transforms, reader]);
+  useEffect(
+    () => () => {
+      if (reader.reads.length) reader.files.releaseReads();
+    },
+    [reader]
+  );
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
@@ -412,20 +426,29 @@ export function useLiveTreeSelection<T>(
   select: ((tree: SharedLiveTree, snapshot: ResourceSnapshot) => T | undefined) | null,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
-  const { sceneGraph: parsed, scene, loader, project, controlTransforms } = useLiveTreeInputs();
+  const { sceneGraph: parsed, scene, loader, project, transforms } = useLiveTreeInputs();
   const readAt = useCallback(
     (version: number, snapshot: ResourceSnapshot, sceneGraph = parsed) => {
       if (!sceneGraph || !select) return undefined;
-      const tree = sharedTreeAt({ sceneGraph, loader, project, controlTransforms }, version);
+      const tree = sharedTreeAt(
+        { sceneGraph, loader, project, controlTransforms: transforms.get() },
+        version
+      );
       return tree ? select(tree, snapshot) : undefined;
     },
-    [parsed, project, loader, controlTransforms, select]
+    [parsed, project, loader, transforms, select]
   );
   const isSameSelection = useCallback(
     (a: T | undefined, b: T | undefined) => sameSelection(a, b, isSame),
     [isSame]
   );
-  return useReadAtLoadTick(select ? loader : null, readAt, isSameSelection, select ? scene : undefined);
+  return useReadAtLoadTick(
+    select ? loader : null,
+    readAt,
+    isSameSelection,
+    select ? scene : undefined,
+    select ? transforms : undefined
+  );
 }
 
 /**

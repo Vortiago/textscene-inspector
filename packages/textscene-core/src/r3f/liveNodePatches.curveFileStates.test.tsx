@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { act, render } from '@testing-library/react';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit.js';
-import { TscnParser } from '../parser/TscnParser.js';
+import { act, render, waitFor } from '@testing-library/react';
+import { openScene } from '../scene/openScene.js';
+import { TscnSceneProvider } from './TscnSceneProvider.js';
+import { adoptLoader } from './sceneResourcePipeline.js';
+import { liveFilesOf } from './liveFiles.js';
+import { hasUnsettledFile } from '../resources/useLoadedFiles.js';
 import { ResourceLoader } from '../resources/ResourceLoader.js';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { busServing } from '../resources/testing/servingFileBus.js';
-import { HierarchyProvider } from './contexts/HierarchyContext.js';
 import { LiveFilesHost } from './LiveFilesHost.js';
 import { useLiveScenePass } from './liveScenePass.js';
 import { liveNodePatches } from './liveNodePatches.js';
@@ -51,32 +52,59 @@ async function settle() {
 }
 
 /** The preview over `files`, with what the reader of the polygon's patch saw. */
-function preview(files: Record<string, string>) {
-  const { bus, provider } = busServing(files);
+function preview(files: Record<string, string>, heldPaths: readonly string[] = []) {
+  const { bus, provider } = busServing(files, heldPaths);
   const loader = new ResourceLoader(bus);
   loader.setProvider(provider);
-  const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(MAIN));
+  const scene = openScene({ source: MAIN, provider });
+  adoptLoader(scene, loader);
   const seen: { patch: NodePatch | undefined } = { patch: undefined };
   function Reader() {
     seen.patch = useLiveScenePass(liveNodePatches, 'Root/Sweep');
     return null;
   }
   render(
-    <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-      <ResourceLoaderProvider loader={loader}>
-        <LiveFilesHost />
-        <Reader />
-      </ResourceLoaderProvider>
-    </HierarchyProvider>
+    <TscnSceneProvider scene={scene}>
+      <LiveFilesHost />
+      <Reader />
+    </TscnSceneProvider>
   );
   const endOfSweep = () => {
     const resolved = seen.patch?.resolvedPath as CSGPolygon3DResolvedPath | undefined;
     return resolved?.curvePoints.at(-1)?.position.z;
   };
-  return { loader, files, seen, endOfSweep };
+  return { scene, loader, files, seen, endOfSweep };
 }
 
 describe('a CSGPolygon3D over a Curve3D file', () => {
+  it('releases the curve after a host write removes the last path sweep', async () => {
+    const shown = preview({ [CURVE_PATH]: curveFile(-4) });
+    const files = liveFilesOf(shown.loader);
+    await waitFor(() => expect(shown.endOfSweep()).toBe(-4));
+    expect([...files.files().keys()]).toEqual([CURVE_PATH]);
+
+    await act(async () => {
+      await shown.scene.getNode('Sweep').set('mode', 0);
+    });
+
+    await waitFor(() => expect(shown.seen.patch).toBeUndefined());
+    await waitFor(() => expect([...files.files().keys()]).toEqual([]));
+  });
+
+  it('ends the wait for a pending curve when the write leaves the selected patch undefined', async () => {
+    const shown = preview({ [CURVE_PATH]: curveFile(-4) }, [CURVE_PATH]);
+    const files = liveFilesOf(shown.loader);
+    await waitFor(() => expect(hasUnsettledFile(files.files())).toBe(true));
+    expect(shown.seen.patch).toBeUndefined();
+
+    await act(async () => {
+      await shown.scene.getNode('Sweep').set('mode', 0);
+    });
+
+    await waitFor(() => expect(hasUnsettledFile(files.files())).toBe(false));
+    expect(shown.seen.patch).toBeUndefined();
+  });
+
   it('sweeps the edited curve once the file reloads', async () => {
     const shown = preview({ [CURVE_PATH]: curveFile(-4) });
     await settle();

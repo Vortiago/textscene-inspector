@@ -38,7 +38,7 @@ function paintAt(paint: ReadonlyMap<string, CanvasItemPaint>, path: string): Can
 }
 
 describe('canvasPaintPass: tree order', () => {
-  it('keeps the paint of an unchanged sibling after a host write', async () => {
+  it('keeps every unchanged paint after a host write', async () => {
     const scene = openScene({
       source:
         '[gd_scene format=3]\n[node name="Root" type="Node2D"]\n' +
@@ -48,14 +48,12 @@ describe('canvasPaintPass: tree order', () => {
     const paint = () => {
       const graph = scene.written()!;
       const main = graph.scenes.get(graph.rootScene)!;
-      return paintAt(
-        runPass(canvasPaintPass, liveTreeOf(main.nodes, { ...sourcesOver(), ...main })),
-        'Root/B'
-      );
+      return runPass(canvasPaintPass, liveTreeOf(main.nodes, { ...sourcesOver(), ...main }));
     };
     const before = paint();
     await scene.getNode('A').set('position', variant('Vector2(3, 4)'));
-    expect(paint()).toBe(before);
+    const after = paint();
+    for (const [path, item] of before) expect(paintAt(after, path)).toBe(item);
   });
 
   it('draws a show_behind_parent child before its parent and the others after it', () => {
@@ -243,6 +241,20 @@ describe('canvasPaintPass: instances', () => {
       'Root/Second/Extra',
       'Root/Over',
     ]);
+  });
+
+  it('keeps the paint of each view and each starting range when both draw the same external scene', () => {
+    const other = parsed(`[ext_resource type="PackedScene" path="res://part.tscn" id="1"]
+[node name="Root" type="Node2D"]
+[node name="Before" type="Polygon2D" parent="."]
+[node name="First" parent="." instance=ExtResource("1")]`);
+    const scenes = { 'res://part.tscn': part };
+    const path = 'Root/First/Shape';
+    const before = paintAt(paintOver(host, scenes), path);
+    expect(paintAt(paintOver(other, scenes), path).own).not.toBe(before.own);
+    const pass = canvasPaintPassFrom({ base: 100, size: 1000 });
+    runPass(pass, liveTreeOf(host.nodes, contextOver(host, scenes)));
+    expect(paintAt(paintOver(host, scenes), path)).toBe(before);
   });
 
   it('starts the roots at the run it is given', () => {

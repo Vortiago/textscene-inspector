@@ -82,7 +82,7 @@ export interface RenderClear {
  * The renders of one viewport, which a ONCE update mode and a ONCE clear mode spend. Godot keeps
  * both on the viewport, not on its target: a resize makes a new target and leaves them spent
  * (`renderer_viewport.cpp:920`, `:375`), and setting a mode again arms it. Written only by
- * `takeRender` and `rearm`. A new parse of the scene makes a new viewport, and so a new state,
+ * `takeRender`, `rearm` and `rearmClear`. A new parse of the scene makes a new viewport, and so a new state,
  * which starts at (0, 0, 0, 0) with both pending.
  */
 export class TargetRenderState {
@@ -109,6 +109,11 @@ export class TargetRenderState {
     this.hasRenderedOnce = true;
     if (clears) (this.lastClearColor ??= new THREE.Color()).copy(projectClearColor);
     return { clears, color: this.lastClearColor ?? BLACK };
+  }
+
+  /** Arms a ONCE clear again, as setting the clear mode does (`renderer_viewport.cpp:1170-1175`). */
+  rearmClear(): void {
+    this.isOnceClearPending = true;
   }
 
   /** Arms a ONCE update mode again, as setting the update mode does (`viewport.cpp:5475-5478`). */

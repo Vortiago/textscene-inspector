@@ -12,6 +12,8 @@ import { nodeComponentRegistry, type NodeComponent, type NodeComponentProps } fr
 import { useNodePath } from './contexts/NodePathContext';
 import { settleLoads } from './testing/settleLoads';
 import './nodes/index';
+import './controls/index';
+import { settleLazyImports } from '../testing/lazyImports';
 
 const { sceneRender, walk } = vi.hoisted(() => ({ sceneRender: vi.fn(), walk: vi.fn() }));
 vi.mock('./frameProfile/FrameProfiler', async (original) => ({
@@ -45,6 +47,40 @@ function countedComponents() {
 afterEach(() => vi.restoreAllMocks());
 
 describe('a host write below a root', () => {
+  it('keeps both sprite branches still when the Control walk publishes a new transform', async () => {
+    const source = [
+      '[gd_scene format=3]',
+      '[node name="Root" type="Node2D"]',
+      '[node name="Hud" type="ColorRect" parent="."]',
+      'offset_right = 50.0',
+      'offset_bottom = 50.0',
+      ...['Branch', 'Other'].flatMap((parent) => [
+        `[node name="${parent}" type="Node2D" parent="."]`,
+        ...siblings(parent, 'Sprite2D'),
+      ]),
+    ].join('\n');
+    const scene = openScene({ source, provider: { loadResource: async () => null } });
+    const registered = countedComponents();
+    const renderer = await ReactThreeTestRenderer.create(
+      <TscnSceneProvider scene={scene}>
+        <WrittenWorld2D />
+      </TscnSceneProvider>
+    );
+    await ReactThreeTestRenderer.act(settleLazyImports);
+    await vi.waitFor(() => expect(renderer.scene.instance.getObjectByName('ColorRect:Hud')).toBeDefined());
+    registered.length = 0;
+    walk.mockClear();
+    sceneRender.mockClear();
+    await ReactThreeTestRenderer.act(async () => {
+      await scene.getNode('Hud').set('offset_left', 7);
+      await settleLoads();
+    });
+    expect.soft(walk.mock.calls.map(([path]) => path)).toEqual(['Root', 'Root/Hud']);
+    expect.soft(registered).toEqual(['Root']);
+    expect(sceneRender).not.toHaveBeenCalled();
+    await renderer.unmount();
+  });
+
   it.each([
     ['Node3D', 'Node3D', 'Vector3(2, 3, 4)', TscnSceneContents],
     ['Node2D', 'Sprite2D', 'Vector2(2, 3)', WrittenWorld2D],

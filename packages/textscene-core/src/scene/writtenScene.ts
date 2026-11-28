@@ -5,7 +5,7 @@ import { shareSeating } from '../parser/sceneTreeBuilder.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { joinPath } from '../utils/nodePath.js';
 import { perObject } from '../utils/perObject.js';
-import type { PropertyTexts, SceneWrites } from './sceneWrites.js';
+import { writeRevision, type PropertyTexts, type SceneWrites } from './sceneWrites.js';
 
 /** Where a write lands in the root file: on a node of it, or as an override heading below an instance. */
 type Landing =
@@ -206,6 +206,15 @@ const withResources = perObject((file: readonly TscnExternalResource[]) =>
   perObject((extra: readonly TscnExternalResource[]) => [...file, ...extra])
 );
 
+/** The exact writes a published graph draws. A new parse starts with no writes. */
+// eslint-disable-next-line no-restricted-syntax -- writtenSceneGraph publishes its input beside the graph for readers of repeated setters
+const writesByGraph = new WeakMap<SceneGraph, SceneWrites>();
+
+/** How many times the setter at this path has run in the snapshot, including equal writes. */
+export function propertyWriteRevision(graph: SceneGraph | null, path: string, property: string): number {
+  return writeRevision(graph ? writesByGraph.get(graph)?.get(path) : undefined, property);
+}
+
 /** Each node off a written path keeps its identity. */
 export function writtenSceneGraph(
   graph: SceneGraph,
@@ -220,5 +229,7 @@ export function writtenSceneGraph(
     externalResources:
       resources.length === 0 ? root.externalResources : withResources(root.externalResources)(resources),
   };
-  return buildSceneGraph(scene);
+  const written = buildSceneGraph(scene);
+  writesByGraph.set(written, writes);
+  return written;
 }

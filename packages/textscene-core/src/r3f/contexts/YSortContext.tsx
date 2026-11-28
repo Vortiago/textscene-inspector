@@ -50,7 +50,7 @@ interface Publishers {
 }
 
 const TransformsContext = createContext<ControlTransforms>(NO_TRANSFORMS);
-const LocalTransformsContext = createContext<ControlLocalTransforms>(NO_TRANSFORMS);
+const LocalTransformsContext = createContext(createExternalStore(NO_TRANSFORMS));
 /** The sorted runs and the tree-order paint they move, for {@link sortedPaintOf}. */
 export interface SortedRunsValue {
   readonly runs: ReadonlyMap<string, PaintRange>;
@@ -99,6 +99,8 @@ function useOwnedEntries<T>(none: ReadonlyMap<string, T>, equal: (x: T, y: T) =>
 export function YSortProvider({ children }: { children: ReactNode }) {
   const [transforms, publishTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
   const [localTransforms, publishLocalTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
+  const [localStore] = useState(() => createExternalStore(localTransforms));
+  useLayoutEffect(() => localStore.set(localTransforms), [localStore, localTransforms]);
   const [extras, publishExtras] = useOwnedEntries(NO_EXTRAS, sameData);
   const [liveYs, publishLiveYs] = useOwnedEntries(NO_YS, sameData);
   const publishers = useMemo(
@@ -109,7 +111,7 @@ export function YSortProvider({ children }: { children: ReactNode }) {
   return (
     <PublishersContext.Provider value={publishers}>
       <TransformsContext.Provider value={transforms}>
-        <LocalTransformsContext.Provider value={localTransforms}>
+        <LocalTransformsContext.Provider value={localStore}>
           <SortedRuns origins={transforms} extras={extras} liveYs={liveYs}>
             {children}
           </SortedRuns>
@@ -192,7 +194,7 @@ export function useControlTransform(path: string): Transform2DColumns | null {
 }
 
 /** The local transforms the Control walks published, empty where there is no provider or no solve yet. */
-export function useControlLocalTransforms(): ControlLocalTransforms {
+export function useControlLocalTransformStore() {
   return useContext(LocalTransformsContext);
 }
 
