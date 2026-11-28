@@ -26,7 +26,7 @@ the resource loader, and the host's writes. It imports no React and no three.js.
   the nearest instance. Every reader of the Live scene tree reads it as a file value, so no reader
   lays a second overlay. Each written graph also records the latest setter revision for each property
   at its live path. A SubViewport reads its own revisions because setting either ONCE mode again
-  arms that mode, even when its value stays the same (`renderer_viewport.cpp:920-922,1170-1175`).
+  arms that mode, even when its value stays the same (`renderer_viewport.cpp:373-377,920-922,1113-1118,1170-1175`).
 - **Layers**, lowest first: the file with its instance overrides, the host writes, the animated
   values, the Live scene passes. A pass result lies over a host write. The animated layer stays empty
   until #1500 writes its animated patch there.

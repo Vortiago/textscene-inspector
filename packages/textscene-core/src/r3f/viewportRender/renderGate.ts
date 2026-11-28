@@ -111,7 +111,7 @@ export class TargetRenderState {
     return { clears, color: this.lastClearColor ?? BLACK };
   }
 
-  /** Arms a ONCE clear again, as setting the clear mode does (`renderer_viewport.cpp:1170-1175`). */
+  /** Arms a ONCE clear again, as setting the clear mode does (`renderer_viewport.cpp:1113-1118`). */
   rearmClear(): void {
     this.isOnceClearPending = true;
   }
