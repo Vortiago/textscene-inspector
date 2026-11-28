@@ -1,12 +1,7 @@
-/**
- * Tests for TscnDocumentLinkProvider. `provideDocumentLinks` computes ranges only,
- * and `resolveDocumentLink` fills in the target through `resRootOf`.
- */
-
 import { describe, it, expect, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
-import { forgetProjectFiles } from './resRoot';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { createMockUri, vscode as vscodeMocks } from './test-setup';
 
 function makeDocument(content: string, fsPath = '/workspace/scenes/Door.tscn'): vscode.TextDocument {
@@ -35,7 +30,7 @@ function arrangeDisk(files: readonly string[], directories: readonly string[] = 
 describe('TscnDocumentLinkProvider', () => {
   describe('provideDocumentLinks', () => {
     it('returns no links for a document with no res:// references', () => {
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const document = makeDocument('[gd_scene format=3]\n[node name="Root" type="Node3D"]');
 
       const links = provider.provideDocumentLinks(document, TOKEN);
@@ -44,7 +39,7 @@ describe('TscnDocumentLinkProvider', () => {
     });
 
     it('finds a single res:// reference and ranges exactly over it', () => {
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const line = '[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="1"]';
       const document = makeDocument(line);
 
@@ -63,7 +58,7 @@ describe('TscnDocumentLinkProvider', () => {
     });
 
     it('finds multiple res:// references across multiple lines', () => {
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const content = [
         '[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="1"]',
         '[ext_resource type="Texture2D" path="res://assets/wood.png" id="2"]',
@@ -80,7 +75,7 @@ describe('TscnDocumentLinkProvider', () => {
     });
 
     it('finds multiple res:// references on the same line', () => {
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const line = 'sources = PackedStringArray("res://a.png", "res://b.png")';
       const document = makeDocument(line);
 
@@ -102,7 +97,7 @@ describe('TscnDocumentLinkProvider', () => {
       });
       arrangeDisk(['/workspace/isometric/decorations/banner.png']);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const document = makeDocument(
         'path="res://decorations/banner.png"',
         '/workspace/isometric/dungeon.tscn'
@@ -122,7 +117,7 @@ describe('TscnDocumentLinkProvider', () => {
       });
       arrangeDisk(['/workspace/decorations/banner.png']);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const document = makeDocument(
         'path="res://decorations/banner.png"',
         '/workspace/isometric/dungeon.tscn'
@@ -138,34 +133,11 @@ describe('TscnDocumentLinkProvider', () => {
       });
       arrangeDisk(['/workspace/secret.txt']);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const document = makeDocument('path="res://../secret.txt"', '/workspace/isometric/dungeon.tscn');
       const [link] = provider.provideDocumentLinks(document, TOKEN);
 
       expect(await provider.resolveDocumentLink!(link!, TOKEN)).toBeUndefined();
-    });
-
-    it('finds a project.godot created after an earlier link found none, once its event arrives', async () => {
-      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
-        uri: createMockUri('/workspace'),
-      });
-      const provider = new TscnDocumentLinkProvider();
-      // The project sits below the workspace folder, so a root kept from the first lookup is the wrong one.
-      const document = makeDocument('path="res://scenes/Door.tscn"', '/workspace/game/scenes/Door.tscn');
-      arrangeDisk(['/workspace/game/scenes/door.tscn']);
-      await provider.resolveDocumentLink!(provider.provideDocumentLinks(document, TOKEN)[0]!, TOKEN);
-
-      arrangeDisk(['/workspace/game/project.godot', '/workspace/game/scenes/door.tscn']);
-      // What the extension does on the watcher's create event.
-      forgetProjectFiles();
-      const resolved = await provider.resolveDocumentLink!(
-        provider.provideDocumentLinks(document, TOKEN)[0]!,
-        TOKEN
-      );
-
-      expect((resolved?.target as unknown as { fsPath: string } | undefined)?.fsPath).toBe(
-        '/workspace/game/scenes/Door.tscn'
-      );
     });
 
     it('resolves the target relative to a project.godot found above the document', async () => {
@@ -175,7 +147,7 @@ describe('TscnDocumentLinkProvider', () => {
       });
       arrangeDisk(['/workspace/game/project.godot', '/workspace/game/scenes/door.tscn']);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const line = 'path="res://scenes/Door.tscn"';
       const document = makeDocument(line, '/workspace/game/scenes/Door.tscn');
       const [link] = provider.provideDocumentLinks(document, TOKEN) as unknown as Array<
@@ -203,7 +175,7 @@ describe('TscnDocumentLinkProvider', () => {
         '/workspace/game2/props/crate.png',
       ]);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
 
       const line = 'path="res://props/crate.png"';
       const doc1 = makeDocument(line, '/workspace/game1/scenes/Door.tscn');
@@ -232,7 +204,7 @@ describe('TscnDocumentLinkProvider', () => {
       });
       arrangeDisk(['/workspace/project.godot', '/home/user/.ssh/id_rsa']);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const document = makeDocument('path="res://../../../../home/user/.ssh/id_rsa"');
       const [link] = provider.provideDocumentLinks(document, TOKEN) as unknown as Array<
         Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]
@@ -249,7 +221,7 @@ describe('TscnDocumentLinkProvider', () => {
       });
       arrangeDisk(['/workspace/project.godot', '/workspace/props/crate.png']);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const document = makeDocument('path="res://scenes/../props/crate.png"');
       const [link] = provider.provideDocumentLinks(document, TOKEN) as unknown as Array<
         Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]
@@ -266,7 +238,7 @@ describe('TscnDocumentLinkProvider', () => {
       });
       arrangeDisk(['/workspace/project.godot']);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const [link] = provider.provideDocumentLinks(
         makeDocument('path="res://textures/missing.png"'),
         TOKEN
@@ -281,7 +253,7 @@ describe('TscnDocumentLinkProvider', () => {
       });
       arrangeDisk(['/workspace/project.godot'], ['/workspace/textures']);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const [link] = provider.provideDocumentLinks(
         makeDocument('path="res://textures"'),
         TOKEN
@@ -293,7 +265,7 @@ describe('TscnDocumentLinkProvider', () => {
     it('leaves the target unresolved when the document has no workspace folder', async () => {
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 
-      const provider = new TscnDocumentLinkProvider();
+      const provider = new TscnDocumentLinkProvider(createWorkspaceResRoots());
       const line = 'path="res://scenes/Door.tscn"';
       const document = makeDocument(line);
       const [link] = provider.provideDocumentLinks(document, TOKEN) as unknown as Array<

@@ -43,6 +43,8 @@ export interface ResRootsPort {
   list(directory: string): Promise<readonly DirectoryEntry[]>;
   /** The bytes of the file at `path`, or null for a file it cannot read. */
   read(path: string): Promise<Uint8Array | null>;
+  /** The editor-scanned `res://` paths under `root`, optionally by extension, or null for a failed search. */
+  scan?(root: string, extension?: string): Promise<readonly string[] | null>;
 }
 
 /**
@@ -58,8 +60,8 @@ export interface ResRoot extends ResourceProvider {
   pathOf(resPath: string): string | null;
   /** The `res://` path of every file the editor's scan reaches under the root, in walk order, for path completion. */
   listPaths(): Promise<readonly string[]>;
-  /** Overrides the provider's optional listing: a root always lists. */
-  listFiles(extension: string): Promise<readonly string[]>;
+  /** The editor-scanned files with `extension`, or null when the host's search fails. */
+  listFiles(extension: string): Promise<readonly string[] | null>;
   /** Overrides the provider's optional listing: a root always lists a folder. */
   listDirectory(folder: string): Promise<readonly DirectoryEntry[] | null>;
 }
@@ -131,11 +133,18 @@ const EVERY_FILE = '';
 /** A root over `path`, read through `port`. */
 function createRoot(port: ResRootsPort, path: string): RootEntry {
   /** Each listing under its key: written by `listing` and cleared by `forgetListings`. */
-  const listings = new Map<string, Promise<readonly string[]>>();
+  const listings = new Map<string, Promise<readonly string[] | null>>();
   /** Written by the walks of `listings`, and cleared with them. */
   const linkedDirectories = new Set<string>();
   const listing = (key: string, extension?: string) =>
-    memo(listings, key, () => listScannedFiles(directoryReader(port, path, linkedDirectories), extension));
+    memo(listings, key, () => {
+      if (!port.scan) return listScannedFiles(directoryReader(port, path, linkedDirectories), extension);
+      const pending = port.scan(path, extension).then((files) => {
+        if (files === null && listings.get(key) === pending) listings.delete(key);
+        return files;
+      });
+      return pending;
+    });
   const root: ResRoot = {
     async loadResource(resPath, type = '') {
       const file = resolveResPath(path, resPath);
@@ -157,7 +166,7 @@ function createRoot(port: ResRootsPort, path: string): RootEntry {
       // A dot in the key keeps an extension apart from EVERY_FILE.
       return listing(`.${lowered}`, lowered);
     },
-    listPaths: () => listing(EVERY_FILE),
+    listPaths: async () => (await listing(EVERY_FILE)) ?? [],
     async listDirectory(folder) {
       const resolved = resolveResPath(path, folder);
       if (resolved === null) return null;

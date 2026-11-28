@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { createMockDocument } from './TscnDefinitionProvider.testkit';
 
 describe('TscnDefinitionProvider', () => {
@@ -11,7 +12,7 @@ describe('TscnDefinitionProvider', () => {
   let mockCancellationToken: vscode.CancellationToken;
 
   beforeEach(() => {
-    provider = new TscnDefinitionProvider();
+    provider = new TscnDefinitionProvider(createWorkspaceResRoots());
     mockCancellationToken = {
       isCancellationRequested: false,
       onCancellationRequested: vi.fn(),

@@ -1,9 +1,3 @@
-/**
- * The files a workspace search found under a `res://` root, as the `res://` paths the editor's
- * scan reaches. The linter's listing and `res://` completion both filter through it, so both
- * offer the files Godot's scan finds.
- */
-
 import type * as vscode from 'vscode';
 import { isScannedPath } from '@textscene/core/godot';
 import { forwardSlashes, RES_SCHEME } from '@textscene/core/resources/resPath';
@@ -25,10 +19,7 @@ function parentResPath(path: string): string {
   return slash < RES_SCHEME.length ? RES_SCHEME : path.slice(0, slash);
 }
 
-/**
- * The `res://` paths of `files` the scan reaches. The scan skips the whole of a directory
- * below the root that holds one of `stopFiles`: a nested `project.godot` or a `.gdignore`.
- */
+// A nested project.godot or .gdignore stops the scan below the root.
 export function scannedResPaths(
   root: vscode.Uri,
   files: readonly vscode.Uri[],
