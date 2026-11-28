@@ -102,6 +102,28 @@ it('stops cleanup retries after the filesystem allows the release', async () => 
   successor();
 });
 
+it('cleans the earlier checkout when a process exits after a failed release', async () => {
+  const { root, lock } = checkout();
+  const { exited } = await childWithLock(
+    root,
+    `import assert from 'node:assert/strict';
+     import fs from 'node:fs';
+     import { syncBuiltinESMExports } from 'node:module';
+     await acquireBuildLock({ root });
+     const release = await acquireBuildLock({ root: root + '/other' });
+     const remove = fs.rmSync;
+     fs.rmSync = (path, options) => {
+       if (path === release.ownerPath) throw Object.assign(new Error('denied'), { code: 'EACCES' });
+       return remove(path, options);
+     };
+     syncBuiltinESMExports();
+     assert.throws(release, { code: 'EACCES' });
+     process.send('release failed');`
+  );
+  expect(await exited).toEqual([0, null]);
+  expect(existsSync(lock)).toBe(false);
+});
+
 it('keeps the live record when a waiter removes a record it read during the write', async () => {
   const { root } = checkout();
   let partial;

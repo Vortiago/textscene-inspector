@@ -146,8 +146,8 @@ function pruneStaleOwners(lock) {
 }
 
 function releaseOnExit(lock, file) {
-  let unregister = onHarnessExit(release);
   let retryTimer;
+  let unregister = onHarnessExit(() => (retryTimer ? retry() : release()));
   function retry() {
     try {
       release();
