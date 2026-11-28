@@ -5,6 +5,7 @@
 import { type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
+import { createWorkspaceResRoots } from './resRoots/workspaceResRoots';
 import { setupMockPanel } from './mockPanel.testkit';
 import { createMockFileData, createMockUri } from './vscodeMocks.testkit';
 
@@ -18,7 +19,9 @@ export const settle = (): Promise<void> => new Promise<void>((resolve) => setTim
 export async function openPreviewPanel(tscn: string, scenePath = '/workspace/scene.tscn') {
   const mock = setupMockPanel();
   (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(tscn));
-  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri(scenePath));
+  const roots = createWorkspaceResRoots();
+  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri(scenePath), roots);
+  panel.onDidDispose(() => roots.dispose());
   await settle();
   return { ...mock, hostPanel: mock.panel, panel };
 }

@@ -2,7 +2,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { VSCodeResourceProvider } from './VSCodeResourceProvider';
-import { forgetProjectFiles } from '../resRoot';
+import { createWorkspaceResRoots } from '../resRoots/workspaceResRoots';
+import { fireWorkspacePathEvent } from '../resRoots/workspaceResRoots.testkit';
 import { MAX_READ_BYTES } from '../readWorkspaceFile';
 import { HOST_PATH_CASE } from '../hostPathCase';
 import { createMockUri, createMockFileData, vscode } from '../test-setup';
@@ -32,13 +33,16 @@ function readPaths(): string[] {
 
 describe('VSCodeResourceProvider', () => {
   let provider: VSCodeResourceProvider;
+  let roots: ReturnType<typeof createWorkspaceResRoots>;
   let workspaceRoot: ReturnType<typeof createMockUri>;
   let documentUri: ReturnType<typeof createMockUri>;
 
   beforeEach(() => {
     workspaceRoot = createMockUri('/workspace');
     documentUri = createMockUri('/workspace/scenes/test.tscn');
-    provider = new VSCodeResourceProvider(workspaceRoot, documentUri);
+    vscode.workspace.getWorkspaceFolder.mockReturnValue({ uri: workspaceRoot });
+    roots = createWorkspaceResRoots();
+    provider = new VSCodeResourceProvider(roots, workspaceRoot, documentUri);
 
     vscode.workspace.fs.stat.mockImplementation(statWithProjectAt('/workspace/project.godot'));
   });
@@ -79,6 +83,7 @@ describe('VSCodeResourceProvider', () => {
     it("resolves res:// under a loose scene's own directory, as the editor features do", async () => {
       vscode.workspace.fs.stat.mockImplementation(statWithProjectAt(null));
       const looseProvider = new VSCodeResourceProvider(
+        roots,
         workspaceRoot,
         createMockUri('/workspace/Scenes/Level1/Level1.tscn')
       );
@@ -92,6 +97,7 @@ describe('VSCodeResourceProvider', () => {
     it("never reads a loose scene's res:// path under the workspace root", async () => {
       vscode.workspace.fs.stat.mockImplementation(statWithProjectAt(null));
       const looseProvider = new VSCodeResourceProvider(
+        roots,
         workspaceRoot,
         createMockUri('/workspace/Scenes/Level1/Level1.tscn')
       );
@@ -137,12 +143,33 @@ describe('VSCodeResourceProvider', () => {
       // /workspace/other.png lies inside the workspace.
       vscode.workspace.fs.stat.mockImplementation(statWithProjectAt('/workspace/game/project.godot'));
       const gameProvider = new VSCodeResourceProvider(
+        roots,
         workspaceRoot,
         createMockUri('/workspace/game/scenes/level.tscn')
       );
 
       await expect(gameProvider.loadResource('res://../other.png', 'Texture2D')).rejects.toThrow(
         /climbs out of the res:\/\/ root/
+      );
+      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+    });
+
+    it('refuses a res:// resource above the workspace folder', async () => {
+      const folder = createMockUri('/workspace/scenes');
+      vscode.workspace.getWorkspaceFolder.mockReturnValue({ uri: folder });
+      const nestedProvider = new VSCodeResourceProvider(roots, folder, documentUri);
+
+      await expect(nestedProvider.loadResource('res://icon.png')).rejects.toThrow(
+        'Path traversal detected: res://icon.png resolves outside workspace bounds'
+      );
+      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+    });
+
+    it('gives the workspace error when the document has no root', async () => {
+      vscode.workspace.getWorkspaceFolder.mockReturnValue(undefined);
+
+      await expect(provider.loadResource('res://icon.png')).rejects.toThrow(
+        'expected /workspace/scenes/test.tscn inside the workspace /workspace'
       );
       expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
     });
@@ -180,6 +207,7 @@ describe('VSCodeResourceProvider', () => {
       'refuses a sibling of the workspace whose name differs only in case, on a case-sensitive host',
       async () => {
         const gameProvider = new VSCodeResourceProvider(
+          roots,
           createMockUri('/w/Game'),
           createMockUri('/w/Game/scenes/level.tscn')
         );
@@ -402,12 +430,7 @@ describe('VSCodeResourceProvider', () => {
   });
 
   describe('hasResRootMoved', () => {
-    /**
-     * Finds `project.godot` in exactly these directories. Every other file exists. The shared answers are forgotten,
-     * as the extension forgets them on the watcher's event.
-     */
     function projectFilesIn(...dirs: string[]): void {
-      forgetProjectFiles();
       vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
         const isProjectFile = uri.fsPath.endsWith('/project.godot');
         return !isProjectFile || dirs.some((dir) => uri.fsPath === `${dir}/project.godot`)
@@ -424,16 +447,18 @@ describe('VSCodeResourceProvider', () => {
     it('is true once a project.godot appears nearer the document than the cached root', async () => {
       await serveOneResource();
       projectFilesIn('/workspace', '/workspace/scenes');
+      fireWorkspacePathEvent('onDidCreate', '/workspace/scenes/project.godot');
 
       expect(await provider.hasResRootMoved()).toBe(true);
     });
 
     it('is true once the cached root loses its project.godot', async () => {
       const nestedDocument = createMockUri('/workspace/game/scenes/test.tscn');
-      provider = new VSCodeResourceProvider(workspaceRoot, nestedDocument);
+      provider = new VSCodeResourceProvider(roots, workspaceRoot, nestedDocument);
       projectFilesIn('/workspace/game');
       await serveOneResource();
       projectFilesIn();
+      fireWorkspacePathEvent('onDidDelete', '/workspace/game/project.godot');
 
       expect(await provider.hasResRootMoved()).toBe(true);
     });
@@ -442,6 +467,7 @@ describe('VSCodeResourceProvider', () => {
       projectFilesIn();
       await serveOneResource();
       projectFilesIn('/workspace');
+      fireWorkspacePathEvent('onDidCreate', '/workspace/project.godot');
 
       expect(await provider.hasResRootMoved()).toBe(true);
     });
@@ -449,6 +475,7 @@ describe('VSCodeResourceProvider', () => {
     it('is false while the cached root still holds the nearest project.godot', async () => {
       await serveOneResource();
       projectFilesIn('/workspace', '/workspace/other');
+      fireWorkspacePathEvent('onDidCreate', '/workspace/other/project.godot');
 
       expect(await provider.hasResRootMoved()).toBe(false);
     });

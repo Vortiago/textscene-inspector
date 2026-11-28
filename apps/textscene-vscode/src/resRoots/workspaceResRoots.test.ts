@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createMockDocument } from '../TscnDefinitionProvider.testkit';
 import type * as vscode from 'vscode';
 import { createWorkspaceResRoots, type WorkspaceResRoots } from './workspaceResRoots';
+import { fireWorkspacePathEvent } from './workspaceResRoots.testkit';
 import { createMockUriForScheme } from '../vscodeMocks.testkit';
 import { createMockUri, vscode as vscodeMocks } from '../test-setup';
 
@@ -50,11 +51,6 @@ async function pathsFor(roots: WorkspaceResRoots, document: vscode.TextDocument)
   return (await roots.rootOf(document.uri))?.root.listPaths() ?? [];
 }
 
-function fireWatcher(kind: 'onDidCreate' | 'onDidDelete', path: string): void {
-  const watcher = vscodeMocks.workspace.createFileSystemWatcher.mock.results.at(-1).value;
-  watcher[kind].mock.calls.at(-1)[0](createMockUri(path));
-}
-
 describe('WorkspaceResRoots', () => {
   it('moves between the outer project and the nearest project as the project file comes and goes', async () => {
     arrangeProject();
@@ -74,11 +70,11 @@ describe('WorkspaceResRoots', () => {
     roots.onDidInvalidate(() => observed.push(roots.rootOf(uri).then((root) => root?.uri.path)));
 
     hasInnerProject = true;
-    fireWatcher('onDidCreate', projectFile);
+    fireWorkspacePathEvent('onDidCreate', projectFile);
     expect((await roots.rootOf(uri))?.uri.path).toBe('/game/scenes');
 
     hasInnerProject = false;
-    fireWatcher('onDidDelete', projectFile);
+    fireWorkspacePathEvent('onDidDelete', projectFile);
     expect(await roots.rootOf(uri)).toBe(outer);
     expect(await Promise.all(observed)).toEqual(['/game/scenes', '/game']);
   });
@@ -124,6 +120,44 @@ describe('WorkspaceResRoots', () => {
     expect((await roots.rootOf(uri))?.uri.path).toBe('/game');
   });
 
+  it('walks to the filesystem root and reuses project checks for the same scene', async () => {
+    arrangeProject();
+    vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+    const roots = createWorkspaceResRoots();
+    const scene = createMockUri('/game/one/two/main.tscn');
+
+    await roots.rootOf(scene);
+    await roots.rootOf(scene);
+
+    const markers = vscodeMocks.workspace.fs.stat.mock.calls
+      .map(([uri]: [vscode.Uri]) => uri.path)
+      .filter((path: string) => path.endsWith('/project.godot'));
+    expect(markers).toEqual([
+      '/game/one/two/project.godot',
+      '/game/one/project.godot',
+      '/game/project.godot',
+      '/project.godot',
+    ]);
+  });
+
+  it('converts res:// paths and only returns existing files for links', async () => {
+    arrangeProject();
+    vscodeMocks.workspace.fs.stat.mockImplementation(async (uri: vscode.Uri) => {
+      if (['/game/project.godot', '/game/icon.png'].includes(uri.path))
+        return { type: 1, size: 1, ctime: 0, mtime: 0 };
+      if (uri.path === '/game/art') return { type: 2, size: 0, ctime: 0, mtime: 0 };
+      throw new Error('Not found');
+    });
+    const root = (await createWorkspaceResRoots().rootOf(sceneInProject().uri))!;
+
+    expect(root.uriOf('res://art/next.png')?.path).toBe('/game/art/next.png');
+    expect(root.uriOf('/game/icon.png')).toBeNull();
+    expect((await root.existingFile('res://icon.png'))?.path).toBe('/game/icon.png');
+    expect(await root.existingFile('res://gone.png')).toBeNull();
+    expect(await root.existingFile('res://art')).toBeNull();
+    expect(await root.existingFile('uid://abc')).toBeNull();
+  });
+
   it('keeps the scheme and authority of a virtual workspace', async () => {
     const uriAt = (path: string) => createMockUriForScheme(path, 'vscode-vfs', 'repo');
     vscodeMocks.workspace.getWorkspaceFolder.mockReturnValue({ uri: uriAt('/game') });
@@ -166,11 +200,11 @@ describe('WorkspaceResRoots', () => {
     const initial = await pathsFor(roots, document);
 
     arrangeFiles(['/game/scenes/Door.tscn', '/game/icon.svg', '/game/late.png'], []);
-    fireWatcher('onDidCreate', '/game/late.png');
+    fireWorkspacePathEvent('onDidCreate', '/game/late.png');
     expect(await pathsFor(roots, document)).toEqual([...initial, 'res://late.png']);
 
     arrangeFiles(['/game/scenes/Door.tscn', '/game/icon.svg'], []);
-    fireWatcher('onDidDelete', '/game/late.png');
+    fireWorkspacePathEvent('onDidDelete', '/game/late.png');
     expect(await pathsFor(roots, document)).toEqual(initial);
     expect(listingSearches()).toBe(3);
   });
@@ -187,7 +221,7 @@ describe('WorkspaceResRoots', () => {
     expect(await pathsFor(roots, second)).toEqual(initial);
 
     arrangeFiles(['/game/scenes/Door.tscn', '/game/icon.svg', '/game/art/late.png'], []);
-    fireWatcher('onDidCreate', '/game/art/late.png');
+    fireWorkspacePathEvent('onDidCreate', '/game/art/late.png');
 
     expect(await pathsFor(roots, first)).toEqual([...initial, 'res://art/late.png']);
     expect(await pathsFor(roots, second)).toEqual([...initial, 'res://art/late.png']);
@@ -202,11 +236,11 @@ describe('WorkspaceResRoots', () => {
     expect(await pathsFor(roots, document)).toEqual(['res://a.tscn', 'res://raw/c.png']);
 
     arrangeFiles(files, ['/game/raw/.gdignore']);
-    fireWatcher('onDidCreate', '/game/raw/.gdignore');
+    fireWorkspacePathEvent('onDidCreate', '/game/raw/.gdignore');
     expect(await pathsFor(roots, document)).toEqual(['res://a.tscn']);
 
     arrangeFiles(files, []);
-    fireWatcher('onDidDelete', '/game/raw/.gdignore');
+    fireWorkspacePathEvent('onDidDelete', '/game/raw/.gdignore');
     expect(await pathsFor(roots, document)).toEqual(['res://a.tscn', 'res://raw/c.png']);
   });
 

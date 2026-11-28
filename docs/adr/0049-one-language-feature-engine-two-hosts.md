@@ -35,32 +35,23 @@ property tables, hints and deprecated aliases, and the copies would drift.
 - The `tscn-lsp` server (`apps/textscene-lsp`, package `@textscene/lsp`) serves the same
   language-feature engine to any LSP client over stdio. It reads the project from the nearest
   `project.godot`, and it imports no VS Code API.
-- Both hosts, the VS Code preview and the `tscn-lint` CLI all take a document's **res root** by one
-  rule: the nearest `project.godot` directory, or the scene's own directory outside every
-  project. Godot has no `res://` there, but a loose scene, such as one from a vendored demo,
-  names its files from its own directory. So links, definitions, path completion, the preview
-  and cross-file lints work for it. The walk for `project.godot` does not stop at the workspace:
-  in every host it goes up to the filesystem root, so a workspace opened on a folder inside a
-  project takes that project's root. The fallback holds only inside the workspace, so no listing
-  walks `/tmp` or a home directory. The CLI's workspace is the directory it runs from. The VS Code
-  watchers see only the workspace, so the extension learns of no change to a `project.godot`
-  above it. A root found there stays until a cache clears for another reason or the window
-  reloads.
-  The server and the CLI ask one `ResRoots` (`resources/resRoots.ts`), which owns every answer it
-  reads from the disk and drops what a change affects (`invalidate`). The adapter for `node:fs` is
-  `createDiskResRoots` in `@textscene/core/resources/diskProject`. An ESLint rule keeps that
-  Node-only module out of every browser bundle. The VS Code extension applies the same rule to
-  `Uri` handles through core's `findResRoot`.
+- `ResRoots` (`resources/resRoots.ts`) owns each document's **res root** and its cached filesystem
+  answers across the VS Code extension, the `tscn-lsp` server and the `tscn-lint` CLI. The server and
+  CLI use `createDiskResRoots` in `resources/diskProject.ts` over `node:fs`. VS Code, including its
+  preview, uses `workspace.fs` through its adapter in `apps/textscene-vscode/src/resRoots/`.
+  For either adapter the walk goes up to the filesystem root in search of the nearest
+  `project.godot`. A loose scene can use its own directory as the fallback when it sits inside the
+  workspace. The CLI uses its working directory as the workspace. VS Code invalidates cached roots
+  on workspace file creation and deletion. Window focus refreshes cached answers for directories
+  above the workspace.
 - The extension's **agent tools** (`vscode.lm`) are extension-only: lint a scene, read its node
   tree, open its preview, list its missing resources, and capture the preview as a PNG. They
   call the same linter, parsers and viewport capture. The capture tool needs the image part of a
   tool result, stable from VS Code 1.106, so the extension registers it only where VS Code has
   that part.
 
-A path-completion seam takes an async `listPaths` callback, so the extension lists the workspace
-and the server lists the filesystem. The language-feature engine knows neither. It calls the
-seam only for a cursor inside a `res://` value, so a host lists the project only then. Both
-listings follow the Godot editor's scan rules: no dot-named directory, no nested project and no
+Path completion asks its host for `listPaths` only when the cursor is inside a `res://` value.
+Both adapters' listings follow the Godot editor's scan rules: no dot-named directory, no nested project and no
 `.gdignore` directory.
 
 The reference search (`resPathReferencesAt`) takes the same `listPaths`, an `openText` and a
