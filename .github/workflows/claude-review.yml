@@ -77,15 +77,16 @@ jobs:
         id: review
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_BASE: ${{ github.event.pull_request.base.sha }}
           EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           range=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.base.sha + "..." + .head.sha')
-          head=${range#*...}
-          if [[ -n "$EVENT_HEAD" && "$head" != "$EVENT_HEAD" ]]; then
-            echo "::error::The pull request head changed since this request. Request another review."
+          if [[ "$GITHUB_EVENT_NAME" == pull_request && "$range" != "$EVENT_BASE...$EVENT_HEAD" ]]; then
+            echo "::error::The pull request moved from $EVENT_BASE...$EVENT_HEAD to $range. Request another review."
             exit 1
           fi
           base=${range%...*}
+          head=${range#*...}
           if ! git cat-file -e "$base^{commit}" 2>/dev/null || ! git cat-file -e "$head^{commit}" 2>/dev/null; then
             git fetch --no-tags origin "$base" "$head"
           fi

@@ -188,3 +188,37 @@ describe('the hosted Claude review', () => {
     expect(checked.summary).toBe('');
   });
 });
+
+describe('the requested commits', () => {
+  const resolve = workflow.jobs.review.steps.find((step) => step.id === 'review');
+  const base = 'a'.repeat(40);
+  const head = 'b'.repeat(40);
+  const range = `${base}...${head}`;
+
+  it.each([
+    ['matching pull request', base, head, 0],
+    ['owner comment', '', '', 0],
+    ['changed base with the same head', 'c'.repeat(40), head, 1],
+    ['changed head with the same base', base, 'c'.repeat(40), 1],
+  ])('binds a %s to its requested patch', (_name, eventBase, eventHead, status) => {
+    const output = join(temp, 'target.txt');
+    writeFileSync(output, '');
+    const run = `gh() { echo "$API_RANGE"; }\ngit() { return 0; }\n${resolve.run}`;
+    const checked = spawnSync('bash', ['-e', '-c', run], {
+      env: {
+        PATH: process.env.PATH,
+        GITHUB_OUTPUT: output,
+        GITHUB_REPOSITORY: 'owner/repo',
+        PR_NUMBER: '12',
+        GITHUB_EVENT_NAME: eventBase ? 'pull_request' : 'issue_comment',
+        EVENT_BASE: eventBase,
+        EVENT_HEAD: eventHead,
+        API_RANGE: range,
+      },
+      encoding: 'utf8',
+    });
+    expect(checked.status).toBe(status);
+    expect(readFileSync(output, 'utf8')).toBe(status === 0 ? `diff=${diff}\ntarget=${target}\n` : '');
+    if (status !== 0) expect(checked.stdout).toContain('Request another review.');
+  });
+});
