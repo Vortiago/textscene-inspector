@@ -18,7 +18,88 @@ import { acquireBuildLock, buildLockState, joinBuildLock } from './buildLock.mjs
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal();
-  return { ...actual, writeFileSync: vi.fn(actual.writeFileSync), readFileSync: vi.fn(actual.readFileSync) };
+  return {
+    ...actual,
+    writeFileSync: vi.fn(actual.writeFileSync),
+    readFileSync: vi.fn(actual.readFileSync),
+    rmSync: vi.fn(actual.rmSync),
+  };
+});
+
+it.each(['release', 'next acquisition'])('retries a failed owner cleanup on %s', async (retry) => {
+  const { root, lock } = checkout();
+  const release = await acquireBuildLock({ root });
+  const denied = Object.assign(new Error('permission denied'), { code: 'EACCES' });
+  rmSync.mockImplementationOnce(() => {
+    throw denied;
+  });
+  expect(release).toThrow(denied);
+  expect(existsSync(release.ownerPath)).toBe(true);
+  vi.stubEnv('HARNESS_LOCK_WAIT_MS', '0');
+  onTestFinished(() => vi.unstubAllEnvs());
+  const finish = retry === 'release' ? release : await acquireBuildLock({ root });
+  finish();
+  expect(existsSync(lock)).toBe(false);
+});
+
+it('recovers a failed release while the next acquisition is already waiting', async () => {
+  const { root, lock } = checkout();
+  const release = await acquireBuildLock({ root });
+  const waiting = acquireBuildLock({ root, log: vi.fn() });
+  const denied = Object.assign(new Error('permission denied'), { code: 'EACCES' });
+  let failures = 0;
+  rmSync.mockImplementation((path, options) => {
+    if (path === release.ownerPath && failures++ < 3) throw denied;
+    return fs.rmSync(path, options);
+  });
+  onTestFinished(() => rmSync.mockReset());
+  expect(release).toThrow(denied);
+  const finish = await waiting;
+  finish();
+  expect(existsSync(lock)).toBe(false);
+});
+
+it('releases a waiting process after temporary owner cleanup failure', async () => {
+  const { root, lock } = checkout();
+  const release = await acquireBuildLock({ root });
+  const { exited } = await childWithLock(
+    root,
+    `const release = await acquireBuildLock({ root, log: () => process.send('waiting') });
+     release();`,
+    { ...process.env, HARNESS_LOCK_WAIT_MS: '2500' }
+  );
+  const denied = Object.assign(new Error('permission denied'), { code: 'EACCES' });
+  rmSync.mockImplementationOnce(() => {
+    throw denied;
+  });
+  expect(release).toThrow(denied);
+  expect(await exited).toEqual([0, null]);
+  expect(existsSync(lock)).toBe(false);
+});
+
+it('stops cleanup retries after the filesystem allows the release', async () => {
+  const { root } = checkout();
+  const release = await acquireBuildLock({ root });
+  vi.useFakeTimers();
+  onTestFinished(() => vi.useRealTimers());
+  const denied = Object.assign(new Error('permission denied'), { code: 'EACCES' });
+  rmSync.mockImplementation((path, options) => {
+    if (path === release.ownerPath) throw denied;
+    return fs.rmSync(path, options);
+  });
+  onTestFinished(() => rmSync.mockReset());
+  expect(release).toThrow(denied);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(release).toThrow(denied);
+  expect(existsSync(release.ownerPath)).toBe(true);
+  rmSync.mockReset();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(existsSync(release.ownerPath)).toBe(false);
+  expect(vi.getTimerCount()).toBe(0);
+  const successor = await acquireBuildLock({ root });
+  release();
+  expect(existsSync(successor.ownerPath)).toBe(true);
+  successor();
 });
 
 it('keeps the live record when a waiter removes a record it read during the write', async () => {
@@ -93,13 +174,16 @@ it('names the live holder and both ways to continue at a zero wait limit', async
   expect(JSON.parse(readFileSync(join(lock, file), 'utf8'))).toMatchObject({ pid: process.pid });
 });
 
-it('recovers a partial record only after one minute', async () => {
+it.each([
+  ['partial.json', '{'],
+  ['harness-attempt.json.tmp', JSON.stringify(owner)],
+])('recovers %s only after one minute', async (name, contents) => {
   const { root, lock } = checkout();
   vi.stubEnv('HARNESS_LOCK_WAIT_MS', '0');
   onTestFinished(() => vi.unstubAllEnvs());
   mkdirSync(lock, { recursive: true });
-  const file = join(lock, 'partial.json');
-  writeFileSync(file, '{');
+  const file = join(lock, name);
+  writeFileSync(file, contents);
   await expect(acquireBuildLock({ root })).rejects.toThrow(/unreadable/);
   const old = new Date(Date.now() - 61_000);
   utimesSync(file, old, old);
@@ -109,15 +193,15 @@ it('recovers a partial record only after one minute', async () => {
   expect(existsSync(lock)).toBe(false);
 });
 
-async function childHolder(root) {
+async function childWithLock(root, body, env = process.env) {
   const module = new URL('./buildLock.mjs', import.meta.url).href;
   const program = `
     import { acquireBuildLock } from ${JSON.stringify(module)};
-    await acquireBuildLock({ root: process.argv[1] });
-    process.send('holding');
-    process.on('message', () => process.exit(0));
+    const root = process.argv[1];
+    ${body}
   `;
   const child = spawn(process.execPath, ['--input-type=module', '-e', program, root], {
+    env,
     stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
   });
   const exited = once(child, 'exit');
@@ -128,10 +212,19 @@ async function childHolder(root) {
   await Promise.race([
     once(child, 'message'),
     exited.then(() => {
-      throw new Error('holder exited before it acquired the lock');
+      throw new Error('child exited before its first lock message');
     }),
   ]);
   return { child, exited };
+}
+
+function childHolder(root) {
+  return childWithLock(
+    root,
+    `await acquireBuildLock({ root });
+     process.send('holding');
+     process.on('message', () => process.exit(0));`
+  );
 }
 
 it.each(['SIGINT', 'SIGTERM'])('releases the working copy on %s', async (signal) => {
