@@ -25,7 +25,7 @@ import type { ResourceType } from '../resources/ResourceEventBus.js';
 import { perObject } from '../utils/perObject.js';
 import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
-import { NOTHING_CACHED, type CacheSource } from './cacheSources.js';
+import { cacheOwner, NOTHING_CACHED, type CacheSource } from './cacheSources.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import { liveFilesOf, NO_LIVE_FILES, type LiveFiles } from './liveFiles.js';
 import { godotScenes, isFailedToLoad } from '../resources/loadFailure/godotScenes.js';
@@ -149,6 +149,7 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
     version: 0,
     files,
     treeFiles: {
+      owner: cacheOwner(loader.resources),
       getCached(path) {
         const answer = files.parsedFiles().getCached(path);
         if (!treeReads.has(path)) treeReads.set(path, answer);

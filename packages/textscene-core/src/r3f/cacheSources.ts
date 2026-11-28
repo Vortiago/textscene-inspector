@@ -3,8 +3,20 @@
  * null answer is a file that is loading or has failed, which a walk reads as not cached.
  */
 
+import { perObject } from '../utils/perObject';
+
 export interface CacheSource<T> {
+  /** Snapshot views of a loader share its resource reads across scene reparses. */
+  readonly owner?: object;
   getCached: (path: string) => T | null | undefined;
+}
+
+// The identity token holds no reference to its loader.
+const identityOf = perObject((_source: object) => ({}));
+
+/** @canonical The owner shared by readers of one file cache */
+export function cacheOwner(source: CacheSource<unknown>): object {
+  return source.owner ?? identityOf(source);
 }
 
 /**
@@ -12,7 +24,7 @@ export interface CacheSource<T> {
  *
  * @canonical A `getCached` reader for a walk
  */
-export const NOTHING_CACHED: CacheSource<never> = { getCached: () => undefined };
+export const NOTHING_CACHED: CacheSource<never> = { owner: {}, getCached: () => undefined };
 
 /**
  * `source`, with each path it is asked for handed to `onRead` with the answer it gave.
@@ -24,6 +36,7 @@ export function recordingReads<T>(
   onRead: (path: string, answer: T | null | undefined) => void
 ): CacheSource<T> {
   return {
+    owner: cacheOwner(source),
     getCached: (path) => {
       const answer = source.getCached(path);
       onRead(path, answer);
@@ -104,6 +117,7 @@ function stillAnswered(reads: KeptValue<unknown, unknown>['reads'], sources: Sou
 export function answeredOnce<T>(source: CacheSource<T>): CacheSource<T> {
   const answers = new Map<string, T | null | undefined>();
   return {
+    owner: cacheOwner(source),
     getCached: (path) => {
       const known = answers.get(path);
       if (known !== undefined || answers.has(path)) return known;

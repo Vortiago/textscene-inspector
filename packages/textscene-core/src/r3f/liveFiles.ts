@@ -117,6 +117,7 @@ function liveFilesOver(source: SnapshotSource): LiveFiles {
   }));
   /** Written only here: each parsed-file reader of the source, with each read scheduling a request. */
   const requestingParsed = perObject((files: CacheSource<ParsedResource>): CacheSource<ParsedResource> => ({
+    owner: files.owner,
     getCached(path) {
       scheduleRequest();
       return files.getCached(path);

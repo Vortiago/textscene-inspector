@@ -62,9 +62,10 @@ function buildScopedSection(file: ParsedResource, path: string): ScopedResource 
 }
 
 /** The tables of `file` that its references resolve in. */
-export function fileResources(file: ParsedResource): SceneResources {
-  return { internalResources: file.subResources, externalResources: file.extResources };
-}
+export const fileResources = perObject((file: ParsedResource): SceneResources => ({
+  internalResources: file.subResources,
+  externalResources: file.extResources,
+}));
 
 /**
  * A section and the parsed file that owns it. The file's `ext_resource` and

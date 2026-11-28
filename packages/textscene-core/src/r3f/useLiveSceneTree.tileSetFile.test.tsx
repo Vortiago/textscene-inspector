@@ -3,7 +3,7 @@
  * as live children of the layer with no tile component mounted, once the tree's own request loads it.
  * The tile component reads the same file on the same live files, so both give one answer in each state.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit.js';
@@ -12,10 +12,13 @@ import { ResourceLoader } from '../resources/ResourceLoader.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { busServing } from '../resources/testing/servingFileBus.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
+import { useBuildSolveTree } from './controls/native/buildSolveTree.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 import { useLiveNode } from './liveNode.testkit.js';
-import { liveFilesOf } from './liveFiles.js';
+import { liveFilesOf, NO_LIVE_FILES } from './liveFiles.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
+import { nodeReference } from '../resources/reading/scopedReference.js';
+import { TILE_SET } from '../resources/tileset/kind.js';
 import { useTileSetModel } from './useTileSetModel.js';
 import './nodes/index';
 
@@ -67,7 +70,7 @@ const TILE_SET_PATH = 'res://tiles.tres';
  * A loader over the tile's scene and `tileSetFile` (null: the file is missing), and a wrapper with
  * `MAIN` in context. `isTileSetHeld` keeps the TileSet loading.
  */
-function mount(tileSetFile: string | null = TILE_SET_FILE, isTileSetHeld = false) {
+function mount(tileSetFile: string | null = TILE_SET_FILE, isTileSetHeld = false, sceneText = MAIN) {
   const files: Record<string, string> = { 'res://crate.tscn': CRATE };
   if (tileSetFile !== null) files[TILE_SET_PATH] = tileSetFile;
   const { bus, provider, loads } = busServing(files, isTileSetHeld ? [TILE_SET_PATH] : []);
@@ -75,12 +78,17 @@ function mount(tileSetFile: string | null = TILE_SET_FILE, isTileSetHeld = false
   loader.setProvider(provider);
   // The tree's own reads of scenes stay with their consumers, so the test requests the tile's scene.
   loader.scenes.request('res://crate.tscn');
-  const main = new TscnParser().parse(MAIN);
+  const main = new TscnParser().parse(sceneText);
   const sceneGraph = createSceneGraphFromTscnScene(main);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
       <ResourceLoaderProvider loader={loader}>
-        <SceneResourcesProvider externalResources={main.externalResources}>{children}</SceneResourcesProvider>
+        <SceneResourcesProvider
+          externalResources={main.externalResources}
+          internalResources={main.internalResources}
+        >
+          {children}
+        </SceneResourcesProvider>
       </ResourceLoaderProvider>
     </HierarchyProvider>
   );
@@ -111,6 +119,58 @@ describe('the live tree over a TileSet file', () => {
     expect(tileSetLoads()).toBe(1);
     expect(result.current.tile?.node.name).toBe('@SceneTile@0_0');
     expect(result.current.tileSet.status).toBe('loaded');
+  });
+
+  it('shares a scene tile between a Control forest and a tile component with no loader', () => {
+    const scene = MAIN.replace(
+      '[ext_resource type="TileSet" path="res://tiles.tres" id="tiles"]',
+      [
+        '[ext_resource type="PackedScene" path="res://crate.tscn" id="crate"]',
+        '[sub_resource type="TileSetScenesCollectionSource" id="scenes"]',
+        'scenes/1/scene = ExtResource("crate")',
+        '[sub_resource type="TileSet" id="tiles"]',
+        'sources/0 = SubResource("scenes")',
+      ].join('\n')
+    ).replace('ExtResource("tiles")', 'SubResource("tiles")');
+    const main = new TscnParser().parse(scene);
+    const decode = vi.spyOn(TILE_SET, 'decode');
+    try {
+      renderHook(() => useBuildSolveTree(main.nodes, main.externalResources, main.internalResources));
+      expect(decode).toHaveBeenCalledOnce();
+      const component = NO_LIVE_FILES.current().read(nodeReference('SubResource("tiles")', main), TILE_SET);
+      expect(component.value?.sceneSources.get(0)?.scenes.get(1)?.scene?.path).toBe('res://crate.tscn');
+      expect(component.value).toBe(decode.mock.results[0]!.value);
+    } finally {
+      decode.mockRestore();
+    }
+  });
+
+  it.each(['live tree', 'Control forest'])('shares a built-in TileSet model with the %s', async (reader) => {
+    const scene = MAIN.replace(
+      '[ext_resource type="TileSet" path="res://tiles.tres" id="tiles"]',
+      '[sub_resource type="TileSet" id="tiles"]\ntile_size = Vector2i(32, 32)'
+    ).replace('ExtResource("tiles")', 'SubResource("tiles")');
+    const { wrapper, main, liveFiles } = mount(null, false, scene);
+    const decode = vi.spyOn(TILE_SET, 'decode');
+    try {
+      if (reader === 'live tree') renderHook(() => useLiveNode(SCENE_TILE), { wrapper });
+      else
+        renderHook(() => useBuildSolveTree(main.nodes, main.externalResources, main.internalResources), {
+          wrapper,
+        });
+      await settle();
+      expect(decode).toHaveBeenCalledOnce();
+      const treeModel = decode.mock.results[0]!.value;
+      const reparsed = new TscnParser().parse(scene);
+      expect(liveFiles.current().read(nodeReference('SubResource("tiles")', reparsed), TILE_SET).value).toBe(
+        treeModel
+      );
+      const component = renderHook(() => useTileSetModel('SubResource("tiles")'), { wrapper });
+
+      expect(component.result.current.model).toBe(treeModel);
+    } finally {
+      decode.mockRestore();
+    }
   });
 
   it('reads the TileSet of a tile component on the live files of the tree', async () => {

@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ResourceLoader } from '../ResourceLoader';
 import { busServing } from '../testing/servingFileBus';
 import { loaderServing } from '../testing/servingResourceLoader';
+import { ENVIRONMENT } from '../environment/kind';
 import { FONT_FILES } from '../fileKinds';
 import { loaderSnapshots } from './loaderSnapshots';
 import type { Read } from './read';
@@ -58,6 +59,64 @@ describe('a snapshot over the loader', () => {
 
     expect(source.current()).toBe(snapshot);
     expect(read()).toBe(first);
+  });
+
+  it('keeps the unchanged Environment of each project at the same path', async () => {
+    const project = async (mode: number) => {
+      const text = `[gd_resource type="Environment" format=3]\n\n[resource]\nbackground_mode = ${mode}\n`;
+      const loader = loaderServing({ [A_FILE]: text });
+      await loaded(loader, A_FILE);
+      const source = loaderSnapshots(loader);
+      const ref = nodeReference(A_FILE, sceneTables(''));
+      return () => source.current().read(ref, ENVIRONMENT);
+    };
+    const [readFirst, readSecond] = await Promise.all([project(1), project(2)]);
+    const first = readFirst();
+    const second = readSecond();
+
+    expect(first.value?.properties.background_mode).toBe(1);
+    expect(second.value?.properties.background_mode).toBe(2);
+    expect(readFirst()).toBe(first);
+    expect(readSecond()).toBe(second);
+  });
+
+  it('keeps a built-in value across reparses in each live project', () => {
+    const project = (mode: number) => {
+      const source = loaderSnapshots(loaderServing({}));
+      return () => {
+        source.restart();
+        const tables = sceneTables(`[sub_resource type="Environment" id="env"]\nbackground_mode = ${mode}`);
+        return source.current().read(nodeReference('SubResource("env")', tables), ENVIRONMENT);
+      };
+    };
+    const readFirst = project(1);
+    const readSecond = project(2);
+    const first = readFirst();
+    const second = readSecond();
+
+    expect(readFirst()).toBe(first);
+    expect(readSecond()).toBe(second);
+  });
+
+  it('reuses the refreshed nested answer across two scopes after a reload', async () => {
+    const loader = loaderServing({ [A_FILE]: resourceFile('resource_name = "part"') });
+    await loaded(loader, A_FILE);
+    const source = loaderSnapshots(loader);
+    const { kind } = namedKind();
+    const tables = sceneTables(
+      EXT_A + '\n[sub_resource type="Resource" id="parent"]\nnext = ExtResource("1_a")'
+    );
+    const a = nodeReference('SubResource("parent")', tables);
+    const b = nodeReference('SubResource("parent")', { ...tables });
+    const first = source.current().read(a, kind);
+    expect(source.current().read(b, kind)).toBe(first);
+
+    loader.resources.clearCache(A_FILE);
+    await loaded(loader, A_FILE);
+    const refreshed = source.current().read(a, kind);
+
+    expect(refreshed).not.toBe(first);
+    expect(source.current().read(b, kind)).toBe(refreshed);
   });
 
   it('gives a new value to each decode that read a reloaded file, and to no other', async () => {

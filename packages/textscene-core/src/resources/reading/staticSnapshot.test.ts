@@ -250,6 +250,41 @@ describe('the identity of a decoded value', () => {
     expect(read()).toBe(read());
   });
 
+  it('keeps the nested reference of each live owner of the same built-in IDs', () => {
+    const text = [
+      '[sub_resource type="Resource" id="child"]',
+      'later = SubResource("leaf")',
+      '[sub_resource type="Resource" id="parent"]',
+      'next = SubResource("child")',
+    ].join('\n');
+    const tables = sceneTables(text);
+    const a = nodeReference('SubResource("parent")', tables);
+    const b = nodeReference('SubResource("parent")', { ...tables });
+    const { kind } = namedKind();
+    const snapshot = staticSnapshot({});
+    const first = loadedValue(snapshot.read(a, kind));
+    const second = loadedValue(snapshot.read(b, kind));
+
+    expect(first.next.value?.later?.resources).toBe(a.resources);
+    expect(second.next.value?.later?.resources).toBe(b.resources);
+    expect(loadedValue(snapshot.read(a, kind))).toBe(first);
+    expect(loadedValue(snapshot.read(b, kind))).toBe(second);
+  });
+
+  it('keeps one answer for a file section read through its holder or its address', () => {
+    const snapshot = staticSnapshot({
+      [A_FILE]: resourceFile(
+        'resource_local_to_scene = true\nnext = SubResource("part")',
+        '[sub_resource type="Resource" id="part"]'
+      ),
+    });
+    const { kind } = namedKind();
+    const scene = sceneTables(EXT_A);
+    const holder = loadedValue(snapshot.read(nodeReference(A_FILE, scene), kind));
+
+    expect(snapshot.read(nodeReference(A_FILE + '::part', scene), kind)).toBe(holder.next);
+  });
+
   it('is the same across a new parse of the scene with equal text', () => {
     const { kind } = namedKind();
     const read = () =>
@@ -338,6 +373,22 @@ describe('a read of the value a processor built', () => {
     const snapshot = staticSnapshot({}, { [FONT_FILE]: BUILT });
 
     expect(snapshot.loaded(FONT_FILES, FONT_FILE)).toBe(snapshot.loaded(FONT_FILES, FONT_FILE));
+  });
+
+  it('keeps the whole-file answer of each source when the same reference reads both', () => {
+    const firstFont = { name: 'first' };
+    const secondFont = { name: 'second' };
+    const first = staticSnapshot({}, { [FONT_FILE]: firstFont });
+    const second = staticSnapshot({}, { [FONT_FILE]: secondFont });
+    const reference = nodeReference('ExtResource("1_font")', sceneTables(EXT_FONT));
+    const kind = wholeFileKind();
+    const a = first.read(reference, kind);
+    const b = second.read(reference, kind);
+
+    expect(a.value).toBe(firstFont);
+    expect(b.value).toBe(secondFont);
+    expect(first.read(reference, kind)).toBe(a);
+    expect(second.read(reference, kind)).toBe(b);
   });
 
   it('holds a file of a whole-file kind with the class its ext_resource states, and parses no file', () => {

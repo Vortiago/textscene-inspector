@@ -6,6 +6,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
+import { cacheOwner, NOTHING_CACHED, type CacheSource } from '../r3f/cacheSources';
 import type { ResourceProcessor } from './createResourceProcessor';
 import { PARSED_RESOURCES, type FileKind } from './fileKinds';
 import type { ResourceType } from './ResourceEventBus';
@@ -16,7 +17,7 @@ import { useResourceLoader } from './ResourceLoaderContext';
 import { sameEntries } from '../utils/sameEntries';
 
 /** A file's cache entry, read: undefined while it loads, null once it has failed. */
-export type CachedFileReader<T> = (path: string) => CachedFile<T>;
+export type CachedFileReader<T> = CacheSource<T>['getCached'] & Pick<CacheSource<T>, 'owner'>;
 
 export interface CachedFiles<T> {
   /** The value of a file the plan named: undefined while it loads, null once it has failed. */
@@ -53,15 +54,17 @@ export function useCachedFiles<T extends object>(
   const ambientLoader = useResourceLoader();
   const loader = kind && ambientLoader;
   const cache = kind && loader ? kind.cacheOf(loader) : null;
+  const owner = cacheOwner(loader?.resources ?? NOTHING_CACHED);
   const readPaths = useRef<ReadonlySet<string>>(NO_PATHS);
   const version = useCacheVersion(loader, kind?.busTypes ?? NO_BUS_TYPES, readPaths, {
     onlyReadKeys: true,
   });
   const planned = useMemo(
-    () => (kind ? [...new Set(plan((path) => cache?.getCached(path)))] : []),
+    () =>
+      kind ? [...new Set(plan(Object.assign((path: string) => cache?.getCached(path), { owner })))] : [],
     // `version` is a cache-buster: the cache changes outside React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [plan, kind, cache, version]
+    [plan, kind, cache, owner, version]
   );
   const paths = useStableList(planned);
   // A layout effect, not `useEffect`: `useCacheVersion` judges a load that landed before the commit
@@ -78,7 +81,10 @@ export function useCachedFiles<T extends object>(
   );
   const files = useStableEntries(read);
 
-  const loadedFile = useMemo((): CachedFileReader<T> => (path) => files.get(path), [files]);
+  const loadedFile = useMemo(
+    () => Object.assign((path: string) => files.get(path), { owner }),
+    [files, owner]
+  );
   const isLoading = useMemo(() => loader !== null && hasUnsettledFile(files), [loader, files]);
   usePendingWhile(isLoading);
   return { loadedFile, isLoading };

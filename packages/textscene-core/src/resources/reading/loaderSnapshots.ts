@@ -5,7 +5,13 @@
  */
 
 import type { ParsedResource } from '../../parser/parsedResource';
-import { answeredOnce, recordingReads, type CacheSource } from '../../r3f/cacheSources';
+import {
+  answeredOnce,
+  cacheOwner,
+  NOTHING_CACHED,
+  recordingReads,
+  type CacheSource,
+} from '../../r3f/cacheSources';
 import type { ResourceProcessor } from '../createResourceProcessor';
 import { FILE_KIND_BUSES, LOAD_OUTCOMES, PARSED_RESOURCES, type FileKind } from '../fileKinds';
 import type { LoadOutcome } from '../loadFailure/loadOutcome';
@@ -48,7 +54,10 @@ interface KindReads {
   readonly pinned: Set<string>;
 }
 
-const NO_PARSED_FILES: CacheSource<ParsedResource> = { getCached: () => null };
+const NO_PARSED_FILES: CacheSource<ParsedResource> = {
+  owner: cacheOwner(NOTHING_CACHED),
+  getCached: () => null,
+};
 const NO_LOADER_SNAPSHOT = snapshotOver(NO_PARSED_FILES);
 const NO_FILES = new Map<string, never>();
 
@@ -193,6 +202,7 @@ function keptWhileReloading<T extends object>(cache: ResourceProcessor<T>): Cach
   /** Written only by `getCached`: the last answer of each path that has settled. */
   const last = new Map<string, T | null>();
   return {
+    owner: cacheOwner(cache),
     getCached(path) {
       const answer = cache.getCached(path);
       if (answer !== undefined) last.set(path, answer);
