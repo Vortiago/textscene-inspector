@@ -17,9 +17,8 @@ The Display menu has a Performance toggle, off by default and persisted like Gri
 each top-level canvas runs a frame profile (`r3f/frameProfile/`) and the overlay shows its latest
 window.
 
-- Each call site marks its step with `beginStep` and `endStep`. With no profile on the renderer, a
-  marker is one `WeakMap` lookup and records nothing. The scene-draw and compositor markers mount
-  only while the toggle is on.
+- Each call site runs its draw inside `withFrameStep`. The scope restores the outer step when the
+  draw returns or throws. With no profile on the renderer, the lookup falls through to the draw.
 - The profile splits the frame into segments at each marker. A segment's time belongs to the
   innermost open step, so each step reports its own time and the steps sum to the frame.
 - Each segment also counts its draw calls from `renderer.info`. three resets that count at the

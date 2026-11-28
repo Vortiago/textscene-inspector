@@ -16,7 +16,7 @@ import {
 } from '../../godot/rendering/msaaSampleLocations.js';
 import { perObject } from '../../utils/perObject.js';
 import { drawSurface, visibleSurfaces, type Surface } from '../opaqueSurfaces.js';
-import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { withFrameStep } from '../frameProfile/frameProfile.js';
 import { SCREEN_SPACE_STATE, screenSpaceState } from './screenSpaceState.js';
 import { showBestFitNormals } from './bestFitNormals.js';
 import { resolveSamples, type PrepassBuffers } from './prepassBuffers.js';
@@ -35,11 +35,11 @@ export function drawNormalRoughnessPrepass(
   camera: THREE.Camera,
   buffers: PrepassBuffers
 ): void {
-  beginStep(renderer, 'Normal-roughness prepass');
-  showBestFitNormals(renderer);
-  drawSamplePrepasses(renderer, scene, camera, buffers.samplePrepasses);
-  resolveSamples(renderer, buffers);
-  endStep(renderer, 'Normal-roughness prepass');
+  withFrameStep(renderer, 'Normal-roughness prepass', () => {
+    showBestFitNormals(renderer);
+    drawSamplePrepasses(renderer, scene, camera, buffers.samplePrepasses);
+    resolveSamples(renderer, buffers);
+  });
 }
 
 /**

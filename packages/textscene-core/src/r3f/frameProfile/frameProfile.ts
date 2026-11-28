@@ -27,14 +27,15 @@ const STEP_KEYS: readonly StepKey[] = [...RENDER_STEPS, 'Other'];
 // eslint-disable-next-line no-restricted-syntax -- startFrameProfile replaces an entry and Profile.stop deletes it
 const profiles = new WeakMap<THREE.WebGLRenderer, Profile>();
 
-/** Starts timing `step` on `renderer`, when a profile runs there and a frame is open. */
-export function beginStep(renderer: THREE.WebGLRenderer, step: RenderStep): void {
-  profiles.get(renderer)?.beginStep(step);
-}
-
-/** Stops timing `step` on `renderer`, when it is the innermost open step. */
-export function endStep(renderer: THREE.WebGLRenderer, step: RenderStep): void {
-  profiles.get(renderer)?.endStep(step);
+/** @canonical Run a frame profile step around a synchronous draw. */
+export function withFrameStep(
+  renderer: THREE.WebGLRenderer,
+  step: RenderStep | null,
+  draw: () => void
+): void {
+  const profile = profiles.get(renderer);
+  if (profile && step !== null) profile.runStep(step, draw);
+  else draw();
 }
 
 /** The innermost step open on `renderer`, or null with none open or no profile running. */
@@ -126,8 +127,6 @@ class Profile implements FrameProfile {
   private lastTimestamp: number | null = null;
   private isFrameOpen = false;
   private frameStart = 0;
-  /** The open steps, innermost last. */
-  private readonly openSteps: RenderStep[] = [];
   private isViewDrawOpen = false;
   /** The step whose own time runs now, and the clock reading and draw count it started at. */
   private current: StepKey = 'Other';
@@ -172,7 +171,7 @@ class Profile implements FrameProfile {
     if (!this.isFrameOpen) return;
     this.endSegment();
     this.gpu?.endFrame();
-    this.openSteps.length = 0;
+    this.current = 'Other';
     this.isViewDrawOpen = false;
     this.isFrameOpen = false;
     this.sums.frames += 1;
@@ -181,17 +180,16 @@ class Profile implements FrameProfile {
     if (this.lastTimestamp! - this.windowStart! >= STATS_WINDOW_MS) this.publishWindow();
   }
 
-  beginStep(step: RenderStep): void {
-    if (!this.isFrameOpen) return;
+  runStep(step: RenderStep, draw: () => void): void {
+    if (!this.isFrameOpen) return draw();
     if (this.isTimed) add(this.sums.stepRuns, step, 1);
-    this.openSteps.push(step);
+    const outer = this.current;
     this.switchTo(step);
-  }
-
-  endStep(step: RenderStep): void {
-    if (this.openSteps.at(-1) !== step) return;
-    this.openSteps.pop();
-    this.switchTo(this.openSteps.at(-1) ?? 'Other');
+    try {
+      draw();
+    } finally {
+      if (this.isFrameOpen) this.switchTo(outer);
+    }
   }
 
   countShadowDraws(drawCalls: number): void {
@@ -214,7 +212,7 @@ class Profile implements FrameProfile {
   }
 
   innermostStep(): RenderStep | null {
-    return this.openSteps.at(-1) ?? null;
+    return this.current === 'Other' ? null : this.current;
   }
 
   startTimings(): void {

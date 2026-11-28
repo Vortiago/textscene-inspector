@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useFrame } from '@react-three/fiber';
 import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { RendererProbe } from '../../testing/recordingWebGL';
 import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
 import { createViewStatusStore } from '../viewStatus/viewStatus';
-import { FrameProfiler, SubscriberStep, useSceneRenderCount } from './FrameProfiler';
-import { innermostStep } from './frameProfile';
+import { FrameProfiler, useSceneRenderCount } from './FrameProfiler';
 import type { FrameStats } from './frameStats';
 import { FRAME_INTERVAL_MS, FRAMES_PER_WINDOW, startFrameProfile, timingsOf } from './frameProfile.testkit';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
@@ -111,43 +109,6 @@ describe('a switch of show.performance', () => {
     view.drawSecond();
     expect(view.store.status().frame).not.toHaveProperty('timings');
     await view.unmount();
-  });
-});
-
-describe('SubscriberStep', () => {
-  /** The innermost step a subscriber at `priority` sees, in a frame of a profile on the canvas. */
-  async function stepSeenAt(priority: number, showPerformance: boolean): Promise<string | null> {
-    let renderer: THREE.WebGLRenderer | undefined;
-    let seen: string | null = null;
-    function Subscriber() {
-      useFrame(({ gl }) => (seen = innermostStep(gl)), priority);
-      return null;
-    }
-    const root = await ReactThreeTestRenderer.create(
-      <ViewShowProvider show={{ performance: showPerformance }}>
-        <RendererProbe onRenderer={(found) => (renderer = found)} />
-        <SubscriberStep step="Compositor" priority={1} />
-        <Subscriber />
-      </ViewShowProvider>
-    );
-    const profile = startFrameProfile(renderer!, () => {});
-    profile.beginFrame(0);
-    await root.advanceFrames(1, 16);
-    profile.stop();
-    await root.unmount();
-    return seen;
-  }
-
-  it('times the subscribers at its priority as its step', async () => {
-    expect(await stepSeenAt(1, true)).toBe('Compositor');
-  });
-
-  it('leaves a subscriber at another priority outside its step', async () => {
-    expect(await stepSeenAt(2, true)).toBeNull();
-  });
-
-  it('marks nothing while the toggle is off (edge case)', async () => {
-    expect(await stepSeenAt(1, false)).toBeNull();
   });
 });
 

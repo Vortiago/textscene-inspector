@@ -1,9 +1,8 @@
 /** Times the canvas's own draw of its scene as the Scene draw step. */
 
 import type * as THREE from 'three';
-import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
-import { beginStep, endStep, innermostStep } from './frameProfile.js';
-import type { ViewDrawCounter } from './viewDraw.js';
+import { innermostStep, withFrameStep } from './frameProfile.js';
+import { countViewDraw } from './viewDraw.js';
 import { WRAPS_CANVAS_DRAW } from './frameStats.js';
 
 /**
@@ -16,25 +15,20 @@ export function timeSceneDraws(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   canvasCamera: () => THREE.Camera,
-  counter: ViewDrawCounter | null
+  countsSurfaces: boolean
 ): () => void {
-  /** Whether each render in progress, innermost last, opened the step. */
-  const opened: boolean[] = [];
-  const stopObserving = observeSceneCamera(scene, (camera) => {
+  const render = renderer.render;
+  renderer.render = function (drawn, camera) {
+    if (drawn !== scene || camera !== canvasCamera()) return render.call(this, drawn, camera);
     const outer = innermostStep(renderer);
-    const isCanvasDraw = camera === canvasCamera() && (outer === null || WRAPS_CANVAS_DRAW.has(outer));
-    opened.push(isCanvasDraw);
-    if (!isCanvasDraw) return;
-    beginStep(renderer, 'Scene draw');
-    counter?.open(renderer);
-  });
-  const stopFinishing = observeSceneRenderEnd(scene, () => {
-    if (!opened.pop()) return;
-    counter?.close(renderer, scene);
-    endStep(renderer, 'Scene draw');
-  });
+    if (outer !== null && !WRAPS_CANVAS_DRAW.has(outer)) return render.call(this, drawn, camera);
+    const draw = () => render.call(this, drawn, camera);
+    withFrameStep(renderer, 'Scene draw', () => {
+      if (countsSurfaces) countViewDraw(renderer, scene, draw);
+      else draw();
+    });
+  };
   return () => {
-    stopObserving();
-    stopFinishing();
+    renderer.render = render;
   };
 }
