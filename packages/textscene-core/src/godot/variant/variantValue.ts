@@ -64,7 +64,8 @@ export interface ResourceReference {
 export type VariantValue =
   | { readonly type: typeof T.NIL }
   | { readonly type: typeof T.BOOL; readonly value: boolean }
-  | { readonly type: typeof T.INT | typeof T.FLOAT; readonly value: number }
+  | { readonly type: typeof T.INT; readonly value: number; readonly exactInteger?: bigint }
+  | { readonly type: typeof T.FLOAT; readonly value: number }
   | { readonly type: typeof T.STRING | typeof T.STRING_NAME | typeof T.NODE_PATH; readonly value: string }
   | { readonly type: ComponentType; readonly value: readonly number[] }
   | { readonly type: typeof T.RID; readonly value: number }

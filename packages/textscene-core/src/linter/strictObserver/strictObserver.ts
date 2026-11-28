@@ -1,4 +1,4 @@
-import { loadedResourceId } from '../../godot/variant/resourceId.js';
+import { headingResourceId } from '../../godot/variant/resourceId.js';
 import type { ParseObserver } from '../../parser/TscnParserCore.js';
 import type { BuiltSection } from '../../parser/types.js';
 import type { ParseError, SectionLines } from '../types.js';
@@ -43,8 +43,7 @@ export function strictObserver(): StrictObserver {
     },
 
     onSectionStart: (heading, section, line, idToken) => {
-      resourceId =
-        idToken === undefined ? undefined : (loadedResourceId(idToken.replace(/^&(?=")/, '')) ?? undefined);
+      resourceId = idToken === undefined ? undefined : (headingResourceId(idToken) ?? undefined);
       reads.read(heading, line);
       lines.start();
       if (section !== 'node') {

@@ -1,3 +1,5 @@
+import { decimalFloat } from './decimalFloat.js';
+import { integerToken } from './integerToken.js';
 import { VARIANT_TYPE, variantTypeName } from './variantType.js';
 import {
   COMPONENT_COUNTS,
@@ -11,13 +13,16 @@ import {
 import { DEFAULT_COLOR, htmlColor } from '../math/color.js';
 
 const T = VARIANT_TYPE;
+const NON_ASCII = /[\u0080-\uFFFF]/;
+const utf8Encoder = new TextEncoder();
+const utf8Decoder = new TextDecoder('utf-8', { ignoreBOM: true });
 
 type Token =
   | { kind: 'curlyOpen' | 'curlyClose' | 'bracketOpen' | 'bracketClose' | 'parenOpen' | 'parenClose' }
   | { kind: 'colon' | 'comma' | 'period' | 'equal' | 'eof' }
   | { kind: 'identifier'; text: string }
   | { kind: 'string' | 'stringName'; text: string }
-  | { kind: 'number'; value: number; isFloat: boolean }
+  | { kind: 'number'; value: number; isFloat: boolean; exactInteger?: bigint }
   | { kind: 'color'; value: readonly number[] };
 
 /** A parse error, with Godot's own message. */
@@ -54,7 +59,18 @@ function int64Of(text: string): number {
 class Tokens {
   private at = 0;
 
-  constructor(private readonly text: string) {}
+  private readonly text: string;
+
+  constructor(
+    text: string,
+    private readonly fileStream = false
+  ) {
+    // variant_parser.cpp:65-86
+    this.text =
+      fileStream && NON_ASCII.test(text)
+        ? Array.from(utf8Encoder.encode(text), (byte) => String.fromCharCode(byte)).join('')
+        : text;
+  }
 
   private char(): string {
     return this.text[this.at++] ?? '';
@@ -120,10 +136,13 @@ class Tokens {
         continue;
       }
       if (lead) throw new ParseError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-      text += String.fromCodePoint(code);
+      text += this.fileStream && (code === 0 || code > 255) ? ' ' : String.fromCodePoint(code);
     }
     if (lead) throw new ParseError('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-    return text;
+    if (!this.fileStream || !NON_ASCII.test(text)) return text;
+    // variant_parser.cpp:399-404, ustring.cpp:1695-1716
+    const bytes = Uint8Array.from(text, (c) => (c.codePointAt(0)! <= 255 ? c.charCodeAt(0) : 32));
+    return utf8Decoder.decode(bytes);
   }
 
   private escaped(): number {
@@ -183,6 +202,11 @@ class Tokens {
       c = this.char();
     }
     this.unread(c);
+    if (this.fileStream) {
+      if (isFloat) return { kind: 'number', value: decimalFloat(text), isFloat };
+      const exactInteger = integerToken(text);
+      return { kind: 'number', value: Number(exactInteger), isFloat, exactInteger };
+    }
     return { kind: 'number', value: isFloat ? Number.parseFloat(text) : int64Of(text), isFloat };
   }
 
@@ -303,6 +327,8 @@ const BUILTIN_TYPES: ReadonlyMap<string, number> = new Map(
 
 /** What the reader asks its caller: which classes exist, and the file a resource id names. */
 export interface VariantReading {
+  /** Read bytes and number tokens through Godot's text resource loader. */
+  readonly fileStream?: true;
   /** Every class exists where it is absent. */
   readonly classExists?: (className: string) => boolean;
   /** The file an `ExtResource` or a `SubResource` id names. Absent reads the id as a path. */
@@ -334,6 +360,8 @@ class ValueReader {
       case 'identifier':
         return this.identified(token.text);
       case 'number':
+        if (token.exactInteger !== undefined)
+          return { type: T.INT, value: token.value, exactInteger: token.exactInteger };
         return { type: token.isFloat ? T.FLOAT : T.INT, value: token.value };
       case 'string':
         return { type: T.STRING, value: token.text };
@@ -622,7 +650,7 @@ export type VariantRead = { readonly value: VariantValue } | { readonly error: s
 
 /** `VariantParser::parse`: the first value, the rest unread. */
 export function readVariant(text: string, reading: VariantReading = {}): VariantRead {
-  const tokens = new Tokens(text);
+  const tokens = new Tokens(text, reading.fileStream);
   try {
     return { value: new ValueReader(tokens, reading).value(tokens.next()) };
   } catch (error) {

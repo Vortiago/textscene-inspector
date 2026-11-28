@@ -44,3 +44,8 @@ describe('stringify of a Color, whose components print with four decimals', () =
     expect(str('Color(nan, inf, -inf, 1)')).toBe('(nan, inf, -inf, 1.0)');
   });
 });
+
+it('prints the full integer part of a large float', () => {
+  expect(str('1e21')).toBe('1000000000000000000000.0');
+  expect(str('90071992547409920.0')).toBe('90071992547409920.0');
+});

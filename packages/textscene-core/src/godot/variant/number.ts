@@ -5,6 +5,7 @@
  */
 
 import { storedReal } from '../math/real.js';
+import { integerToken } from './integerToken.js';
 import { decimalFloat } from './decimalFloat.js';
 import { compositeSpellings } from './variantConversion.js';
 
@@ -110,6 +111,7 @@ export function parseGodotFloat(value: string): number | null {
 // variant_parser.cpp:486-489, binder_common.h:175
 export function floatSetterArgument(raw: string, converted: number): number {
   const token = raw.trim();
+  if (INT_TOKEN_RE.test(token)) return storedReal(Number(integerToken(token)));
   return storedReal(
     !Object.hasOwn(NON_FINITE_FLOATS, token) && /[.eE]/.test(token) && TSCN_FLOAT_RE.test(token)
       ? decimalFloat(token)

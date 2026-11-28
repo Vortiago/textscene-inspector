@@ -12,6 +12,9 @@ const INT64_LIMIT = 2 ** 63;
 
 /** `printf("%.*lf")`, which rounds an exact tie to even where `toFixed` rounds it away from zero. */
 function printFixed(value: number, decimals: number): string {
+  // ustring.cpp:1461-1467
+  if (Math.abs(value) >= 1e21)
+    return BigInt(value).toString() + (decimals > 0 ? '.' + '0'.repeat(decimals) : '');
   const fixed = value.toFixed(decimals);
   const exact = value.toFixed(Math.min(100, decimals + 30));
   const rest = exact.slice(exact.length - 30);
@@ -46,7 +49,7 @@ function isInt64Integral(value: number): boolean {
 /** `String::num_real` (`ustring.cpp:1572-1617`): `digits` is 14 for a double and 6 for a float. */
 function numReal(value: number, hasTrailing: boolean, digits: number): string {
   if (!Number.isFinite(value)) return num(value, 0);
-  if (isInt64Integral(value)) return `${value === 0 ? 0 : value}${hasTrailing ? '.0' : ''}`;
+  if (isInt64Integral(value)) return `${BigInt(value)}${hasTrailing ? '.0' : ''}`;
   const magnitude = Math.abs(value);
   return num(value, magnitude > 10 ? digits - Math.floor(Math.log10(magnitude)) : digits);
 }
@@ -140,7 +143,7 @@ export function stringify(value: VariantValue): string {
     case T.BOOL:
       return value.value ? 'true' : 'false';
     case T.INT:
-      return intText(value.value);
+      return value.exactInteger?.toString() ?? intText(value.value);
     case T.FLOAT:
       return numReal(value.value, true, DOUBLE_DIGITS);
     case T.STRING:

@@ -34,6 +34,7 @@ describe('AnimatedTexture setters', () => {
     ['speed_scale', '999.99993896484375'],
     ['speed_scale', 'nan'],
     ['speed_scale', '2e4294967296'],
+    ['speed_scale', '92233720368547758082'],
   ])('accepts %s = %s', (key, value) => {
     expect(lint(resource(`${key} = ${value}`))).toEqual([]);
   });
@@ -84,6 +85,22 @@ describe('AnimatedTexture setters', () => {
       expect(diagnostics[0]?.message).toContain('own AnimatedTexture');
     }
   );
+
+  it.each([
+    ['true', '"true"'],
+    ['@"a"', '"a"'],
+    ['1e21', '"1000000000000000000000.0"'],
+    [String.raw`"\é"`, '"é"'],
+    ['"é"', String.raw`"\é"`],
+    ['Vector2(1, 2)', '"(1.0, 2.0)"'],
+    ['[9223372036854775807]', '"[9223372036854775807]"'],
+  ])('reports an error for heading ID %s referred to as %s', (heading, ref) => {
+    const file = `[gd_resource type="Resource" format=3]\n[sub_resource type="AnimatedTexture" id=${heading}]\nframe_0/texture = SubResource(${ref})\n[resource]\n`;
+    const diagnostics = lint(file);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toBeAtTier('error');
+    expect(diagnostics[0]?.message).toContain('own AnimatedTexture');
+  });
 
   it('reports the original line for a refused frame write followed by null', () => {
     const file =

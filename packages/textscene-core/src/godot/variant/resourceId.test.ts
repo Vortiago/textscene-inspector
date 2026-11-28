@@ -3,6 +3,10 @@ import { loadedResourceId } from './resourceId.js';
 import { resolvedResourceRef, resourceRef } from './resourceRef.js';
 
 it.each([
+  [String.raw`"x\éy"`, 'xéy'],
+  [String.raw`"x\💡y"`, 'x💡y'],
+  [String.raw`"a\u0000b"`, 'a b'],
+  ['1e21', '1000000000000000000000.0'],
   ['01', '1'],
   ['"01"', '01'],
   ['""', ''],
