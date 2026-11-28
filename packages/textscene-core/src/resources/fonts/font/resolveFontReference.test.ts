@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { resolveFontReference } from './resolveFontReference';
+import { loaderServing } from '../../testing/servingResourceLoader';
+import { loaderSnapshots } from '../../reading/loaderSnapshots';
+import { nodeReference } from '../../reading/scopedReference';
+import { FONT } from './kind';
 import type { FontFileResource, FontResource } from './types';
 
 const FONT_PATH = 'res://fonts/a.ttf';
@@ -30,6 +34,20 @@ describe('resolveFontReference', () => {
       font: null,
       paths: [FONT_PATH],
     });
+  });
+
+  it('shares an embedded FontFile with a component that reads the same section', () => {
+    const resources = {
+      externalResources: [],
+      internalResources: [{ id: 'face', type: 'FontFile', data: { data: 'PackedByteArray(0, 1, 0, 0)' } }],
+    };
+    const ref = 'SubResource("face")';
+    const font = resolveFontReference(ref, resources, nothingLoaded).font;
+    const source = loaderSnapshots(loaderServing({}));
+    const component = source.current().read(nodeReference(ref, { ...resources }), FONT);
+
+    expect(font?.kind).toBe('file');
+    expect(component.value).toBe(font);
   });
 
   it('serves the font once it is loaded', () => {

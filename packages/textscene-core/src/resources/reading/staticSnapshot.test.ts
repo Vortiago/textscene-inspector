@@ -257,8 +257,9 @@ describe('the identity of a decoded value', () => {
       '[sub_resource type="Resource" id="parent"]',
       'next = SubResource("child")',
     ].join('\n');
-    const a = nodeReference('SubResource("parent")', sceneTables(text));
-    const b = nodeReference('SubResource("parent")', sceneTables(text));
+    const tables = sceneTables(text);
+    const a = nodeReference('SubResource("parent")', tables);
+    const b = nodeReference('SubResource("parent")', { ...tables });
     const { kind } = namedKind();
     const snapshot = staticSnapshot({});
     const first = loadedValue(snapshot.read(a, kind));

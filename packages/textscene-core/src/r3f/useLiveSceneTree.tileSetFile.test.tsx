@@ -12,10 +12,12 @@ import { ResourceLoader } from '../resources/ResourceLoader.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { busServing } from '../resources/testing/servingFileBus.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
+import { useBuildSolveTree } from './controls/native/buildSolveTree.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 import { useLiveNode } from './liveNode.testkit.js';
 import { liveFilesOf } from './liveFiles.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
+import { nodeReference } from '../resources/reading/scopedReference.js';
 import { TILE_SET } from '../resources/tileset/kind.js';
 import { useTileSetModel } from './useTileSetModel.js';
 import './nodes/index';
@@ -119,18 +121,26 @@ describe('the live tree over a TileSet file', () => {
     expect(result.current.tileSet.status).toBe('loaded');
   });
 
-  it('gives the tile component the model the tree decoded for a built-in TileSet', async () => {
+  it.each(['live tree', 'Control forest'])('shares a built-in TileSet model with the %s', async (reader) => {
     const scene = MAIN.replace(
       '[ext_resource type="TileSet" path="res://tiles.tres" id="tiles"]',
       '[sub_resource type="TileSet" id="tiles"]\ntile_size = Vector2i(32, 32)'
     ).replace('ExtResource("tiles")', 'SubResource("tiles")');
-    const { wrapper } = mount(null, false, scene);
+    const { wrapper, main, liveFiles } = mount(null, false, scene);
     const decode = vi.spyOn(TILE_SET, 'decode');
     try {
-      renderHook(() => useLiveNode(SCENE_TILE), { wrapper });
+      if (reader === 'live tree') renderHook(() => useLiveNode(SCENE_TILE), { wrapper });
+      else
+        renderHook(() => useBuildSolveTree(main.nodes, main.externalResources, main.internalResources), {
+          wrapper,
+        });
       await settle();
       expect(decode).toHaveBeenCalledOnce();
       const treeModel = decode.mock.results[0]!.value;
+      const reparsed = new TscnParser().parse(scene);
+      expect(liveFiles.current().read(nodeReference('SubResource("tiles")', reparsed), TILE_SET).value).toBe(
+        treeModel
+      );
       const component = renderHook(() => useTileSetModel('SubResource("tiles")'), { wrapper });
 
       expect(component.result.current.model).toBe(treeModel);

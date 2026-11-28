@@ -54,6 +54,7 @@ type FollowedRead =
   | { readonly fileKind: FileKind<object>; readonly address: string; readonly answer: Read<unknown> };
 
 interface Decoded {
+  readonly slot: string;
   readonly properties: Readonly<Record<string, string>>;
   readonly reads: readonly FollowedRead[];
   readonly answer: Read<unknown>;
@@ -76,6 +77,9 @@ const cacheOf = perObject((_source: object) =>
   perObject((_kind: ResourceKind<unknown>) => new DecodeCache())
 );
 
+// File adapters can read the same built-in section from different views of its tables.
+const sameSectionOf = perObject((_kind: ResourceKind<unknown>) => new WeakMap<object, WeakRef<Decoded>>());
+
 // A new parse has new tables, so it can find the previous plain decode only by its strings.
 function weakDecodeSlots() {
   const slots = new Map<string, WeakRef<Decoded>>();
@@ -85,11 +89,10 @@ function weakDecodeSlots() {
     if (!slots.get(slot)?.deref()) slots.delete(slot);
   });
   return {
-    get: (slot: string) => slots.get(slot)?.deref(),
-    set(slot: string, entry: Decoded) {
+    get: (slot: string) => slots.get(slot),
+    set(slot: string, entry: Decoded, ref = new WeakRef(entry)) {
       const previous = slots.get(slot);
       if (previous) expired.unregister(previous);
-      const ref = new WeakRef(entry);
       slots.set(slot, ref);
       expired.register(entry, slot, ref);
       const { answer } = entry;
@@ -99,6 +102,7 @@ function weakDecodeSlots() {
         if ((typeof value === 'object' && value !== null) || typeof value === 'function')
           observed.set(value, entry);
       }
+      return ref;
     },
   };
 }
@@ -268,9 +272,17 @@ function decoded<T>(
   // A slot for each holding: a resource read both ways keeps both values, and its texture with them.
   const slot = `${held.type}|${located.key}|${held.isHeldLocally ? 'local' : 'shared'}`;
   const owned = slots?.get(slot);
-  const kept = owned ?? (shared ? cache.shared?.get(slot) : undefined);
-  if (kept && stillHolds(kept, located, files, stack)) {
-    if (!owned && !isWholeFile) cache.keep(located.resources, slot, kept);
+  if (owned && stillHolds(owned, located, files, stack)) return owned.answer as Read<T>;
+  const prior = shared ? cache.shared?.get(slot) : undefined;
+  const section = held.address === null ? sameSectionOf(kind) : undefined;
+  const parsed = section?.get(held.properties);
+  for (const ref of [prior, parsed === prior ? undefined : parsed]) {
+    const kept = ref?.deref();
+    if (!ref || !kept || kept === owned || kept.slot !== slot || !stillHolds(kept, located, files, stack))
+      continue;
+    if (!isWholeFile) cache.keep(located.resources, slot, kept);
+    if (ref !== prior) (cache.shared ??= weakDecodeSlots()).set(slot, kept, ref);
+    if (section && ref !== parsed) section.set(held.properties, ref);
     return kept.answer as Read<T>;
   }
 
@@ -308,13 +320,17 @@ function decoded<T>(
   const answer: Read<T> =
     value === null ? declined(reads) : built ? (built.answer as Read<T>) : { status: 'loaded', value };
   const entry: Decoded = {
+    slot,
     properties: located.held.properties,
     reads,
     answer,
   };
   if (!isWholeFile || handsOnReference) cache.keep(located.resources, slot, entry);
   else slots?.delete(slot);
-  if (shared && !handsOnReference) (cache.shared ??= weakDecodeSlots()).set(slot, entry);
+  if (shared && !handsOnReference) {
+    const ref = (cache.shared ??= weakDecodeSlots()).set(slot, entry);
+    section?.set(held.properties, ref);
+  }
   return answer;
 }
 

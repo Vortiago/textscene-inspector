@@ -98,6 +98,27 @@ describe('a snapshot over the loader', () => {
     expect(readSecond()).toBe(second);
   });
 
+  it('reuses the refreshed nested answer across two scopes after a reload', async () => {
+    const loader = loaderServing({ [A_FILE]: resourceFile('resource_name = "part"') });
+    await loaded(loader, A_FILE);
+    const source = loaderSnapshots(loader);
+    const { kind } = namedKind();
+    const tables = sceneTables(
+      EXT_A + '\n[sub_resource type="Resource" id="parent"]\nnext = ExtResource("1_a")'
+    );
+    const a = nodeReference('SubResource("parent")', tables);
+    const b = nodeReference('SubResource("parent")', { ...tables });
+    const first = source.current().read(a, kind);
+    expect(source.current().read(b, kind)).toBe(first);
+
+    loader.resources.clearCache(A_FILE);
+    await loaded(loader, A_FILE);
+    const refreshed = source.current().read(a, kind);
+
+    expect(refreshed).not.toBe(first);
+    expect(source.current().read(b, kind)).toBe(refreshed);
+  });
+
   it('gives a new value to each decode that read a reloaded file, and to no other', async () => {
     const { bus, provider, files } = busServing({
       [A_FILE]: resourceFile('resource_name = "a"'),

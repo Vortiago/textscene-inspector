@@ -103,7 +103,6 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     const loadedFiles = new Map<FileKind<object>, CacheSource<object>>();
     const snapshot = snapshotOver({
       ...parsedFiles,
-      owner: loader,
       loaded(fileKind, address) {
         let files = loadedFiles.get(fileKind);
         if (!files) loadedFiles.set(fileKind, (files = recordedIn(kindReads(fileKind))));
@@ -194,6 +193,7 @@ function keptWhileReloading<T extends object>(cache: ResourceProcessor<T>): Cach
   /** Written only by `getCached`: the last answer of each path that has settled. */
   const last = new Map<string, T | null>();
   return {
+    owner: cache,
     getCached(path) {
       const answer = cache.getCached(path);
       if (answer !== undefined) last.set(path, answer);
